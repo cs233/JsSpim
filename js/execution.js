@@ -6,6 +6,7 @@ class Execution {
         Execution.started = false;
         Execution.playing = false;
         Execution.skipBreakpoint = false;
+        // Execution.cycles = 0;
 
         Elements.stepButton.disabled = false;
         Elements.playButton.disabled = false;
@@ -60,7 +61,11 @@ class Execution {
     static play() {
         if (!Execution.playing) return;
         if (Execution.speed === Execution.maxSpeed) {
-            Execution.step(0);
+            Execution.draw_cycle = 8192;
+            Execution.step(Execution.draw_cycle); // This number refers to the number of cycles to elapse before the program draws to the screen
+            // Execution.cycles++;
+            // console.log("Passed " + (Execution.cycles * Execution.draw_cycle));
+            setTimeout(Execution.play, 0);
         } else {
             Execution.step();
             setTimeout(Execution.play, Execution.maxSpeed - Execution.speed);
