@@ -61,11 +61,13 @@ contains(QMAKE_CXX, em++) {
 
     MEM_SIZES = TEXT_SIZE=65536 DATA_SIZE=131072 K_TEXT_SIZE=65536
     DEFINES += $${MEM_SIZES} DEFAULT_EXCEPTION_HANDLER="\"\\\"/usr/share/spim/exceptions.s\\\"\""
-    QMAKE_POST_LINK += sed -i\'\' \'s/throw\"getitimer() is not implemented yet\"//g\' wasm.js;\
-	                      sed -i\'\' \'s/throw\"setitimer() is not implemented yet\"//g\' wasm.js
+    QMAKE_POST_LINK += sed -i\'\' \'s/throw\"getitimer() is not implemented yet\"//g\' wasm.js; \
+	                      sed -i\'\' \'s/throw\"setitimer() is not implemented yet\"//g\' wasm.js; \
+                        rm -f $${MY_TARGET}.html qtlogo.svg qtloader.js
+    QMAKE_CLEAN += $${MY_TARGET}.wasm $${MY_TARGET}.js $${MY_TARGET}.data
+} else {
+    QMAKE_CLEAN += $${MY_TARGET} $${MY_TARGET}-debug $${MY_TARGET}-tsan
 }
-
-QMAKE_CLEAN += $${MY_TARGET} $${MY_TARGET}-debug $${MY_TARGET}-tsan
 
 defined(TSAN, "var"):!equals(TSAN, 0) {             # TSAN Settings
     message("Building thread sanitizer Makefile")
