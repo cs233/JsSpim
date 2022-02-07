@@ -2,7 +2,13 @@
 .DS_Store
 parser_yacc.cpp
 parser_yacc.h
+scanner_lex.cpp
 lex.yy.cpp
 .vscode/ipch/
 .idea/
 cmake-build-debug/
+wasm.*
+Makefile
+qtloader.js
+qtlogo.svg
+.qmake.stash
