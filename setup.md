@@ -103,7 +103,7 @@ qmake will then be installed in build/qtbase/bin
 ```
 sudo ln -s $PWD/qtbase/bin/qmake /usr/bin/qmake-wasm <--- causing errs bruhhhhh
 
-# here's my alternative -phil
+# try this one 
 (printf 'alias qmake-wasm=\"%s/qtbase/bin/qmake\"\n' $PWD) >> ~/.bash_profile; source ~/.bash_profile
 ```
 
@@ -113,3 +113,11 @@ Now, when you do `qmake-wasm --version`, the output should be:
 QMake version 3.1
 Using Qt version 5.15.2 in
 ```
+
+### Running JsSpim
+
+```
+python3 emrun.py --no_browser index.html
+```
+
+then open `localhost:6931` in your browser
