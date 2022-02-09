@@ -123,9 +123,9 @@ val getSpecialRegVals() {
   specialRegs[6] = LO;
   specialRegs[7] = FIR;
   specialRegs[8] = FCSR;
-  specialRegs[9] = FCCR;
-  specialRegs[10] = FEXR;
-  specialRegs[11] = FENR;
+  specialRegs[9] = 0;
+  specialRegs[10] = 0;
+  specialRegs[11] = 0;
 
   return val(typed_memory_view(12, specialRegs));
 }

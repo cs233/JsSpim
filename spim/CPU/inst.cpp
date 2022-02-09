@@ -56,8 +56,9 @@ static void i_type_inst_full_word (int opcode, int rt, int rs, imm_expr *expr,
 static void inst_cmp (instruction *inst1, instruction *inst2);
 static instruction *make_r_type_inst (int opcode, int rd, int rs, int rt);
 static instruction *mk_i_inst (int32 value, int opcode, int rs, int rt, int offset);
-static instruction *mk_j_inst (int32, int opcode, int target);
-static instruction *mk_r_inst (int32, int opcode, int rs, int rt, int rd, int shamt);
+static instruction *mk_j_inst (int32 value, int opcode, int target);
+static instruction *mk_r_inst (int32 value, int opcode, int rs, int rt, int rd, int shamt);
+static instruction *mk_co_r_inst (int32 value, int opcode, int fd, int fs, int ft);
 static void produce_immediate (imm_expr *expr, int rt, int value_known, int32 value);
 static void sort_a_opcode_table ();
 static void sort_i_opcode_table ();
@@ -83,7 +84,6 @@ static mem_addr next_k_text_pc;
 
 
 #define INST_PC (in_kernel ? next_k_text_pc : next_text_pc)
-
 
 
 /* Set ADDRESS at which the next instruction is stored. */
@@ -1532,7 +1532,7 @@ inst_decode (int32 val)
       return (mk_i_inst (val, i_opcode, BIN_BASE(val), BIN_FT(val), val & 0xffff));
 
     case FP_R2ds_TYPE_INST:
-      return (mk_r_inst (val, i_opcode, BIN_FS(val), 0, BIN_FD(val), 0));
+      return (mk_co_r_inst (val, i_opcode, BIN_FS(val), 0, BIN_FD(val)));
 
     case FP_R2ts_TYPE_INST:
       return (mk_r_inst (val, i_opcode, 0, BIN_RT(val), BIN_FS(val), 0));
@@ -1545,7 +1545,7 @@ inst_decode (int32 val)
       }
 
     case FP_R3_TYPE_INST:
-      return (mk_r_inst (val, i_opcode, BIN_FS(val), BIN_FT(val), BIN_FD(val), 0));
+      return (mk_co_r_inst (val, i_opcode, BIN_FS(val), BIN_FT(val), BIN_FD(val)));
 
     case MOVC_TYPE_INST:
       return (mk_r_inst (val, i_opcode, BIN_RS(val), BIN_RT(val), BIN_RD(val), 0));
@@ -1581,6 +1581,19 @@ mk_r_inst (int32 val, int opcode, int rs, int rt, int rd, int shamt)
   return (inst);
 }
 
+static instruction *
+mk_co_r_inst (int32 val, int opcode, int fs, int ft, int fd)
+{
+  instruction *inst = (instruction *) zmalloc (sizeof (instruction));
+
+  SET_OPCODE (inst, opcode);
+  SET_FS (inst, fs);
+  SET_FT (inst, ft);
+  SET_FD (inst, fd);
+  SET_ENCODING (inst, val);
+  SET_EXPR (inst, NULL);
+  return (inst);
+}
 
 static instruction *
 mk_i_inst (int32 val, int opcode, int rs, int rt, int offset)

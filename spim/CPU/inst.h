@@ -138,6 +138,9 @@ typedef struct inst_s
 #define ND(INST)		((RT(INST) & 0x2) >> 1)
 #define TF(INST)		(RT(INST) & 0x1)
 
+#define CCFP(INST)	(FD(INST) >> 2)
+#define NDFP(INST)	((FD(INST) & 0x2) >> 1)
+#define TFF(INST)	  (FD(INST) & 0x1)
 
 #define TARGET(INST)		(INST)->r_t.target
 #define SET_TARGET(INST, VAL)	(INST)->r_t.target = (mem_addr)(VAL)
