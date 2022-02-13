@@ -78,19 +78,19 @@ main:
 #
 # Test the timer:
 #
-	.data
-timer_:	.asciiz "Testing timer\n"
-	.text
-	li $v0 4	# syscall 4 (print_str)
-	la $a0 timer_
-	syscall
-
-	mtc0 $0 $9	# Clear count register
-timer1_:
-	mfc0 $9 $9
-	bne $9 10 timer1_# Count up to 10
-
-
+#	.data
+#timer_:	.asciiz "Testing timer\n"
+#	.text
+#	li $v0 4	# syscall 4 (print_str)
+#	la $a0 timer_
+#	syscall
+#
+#	mtc0 $0 $9	# Clear count register
+#timer1_:
+#	mfc0 $9 $9
+#	bne $9 10 timer1_# Count up to 10
+#
+#
 #
 # Test .ASCIIZ
 #
