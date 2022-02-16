@@ -8,8 +8,7 @@ class RegisterUtils {
             "s0", "s1", "s2", "s3", "s4", "s5", "s6", "s7",
             "t8", "t9", "k0", "k1", "gp", "sp", "s8", "ra"]
             .map((name, index) => `R${index} (${name})`);
-        const specialRegNames = ["PC", "EPC", "Cause", "BadVAddr", "Status", "HI", "LO"];
-        const specialFloatRegNames = ["FIR", "FCSR", "FCCR", "FEXR", "FENR"];
+        const specialRegNames = ["PC", "EPC", "Cause", "BadVAddr", "Status", "HI", "LO", "FIR", "FCSR"];
         const floatRegNames = Array(32).fill(0).map((_, i) => `FG${i}`);
         const doubleRegNames = Array(16).fill(0).map((_, i) => `FP${i}`);
 
@@ -19,8 +18,7 @@ class RegisterUtils {
         this.doubleRegVals = Module.getDoubleRegVals();
 
         this.generalRegs = generalRegNames.map(name => new Register(name));
-        this.specialIntRegs = specialRegNames.map(name => new Register(name));
-        this.specialFloatRegs = specialFloatRegNames.map(name => new Register(name));
+        this.specialRegs = specialRegNames.map(name => new Register(name));
         this.floatRegs = floatRegNames.map(name => new FloatRegister(name));
         this.doubleRegs = doubleRegNames.map(name => new FloatRegister(name));
 
@@ -30,14 +28,12 @@ class RegisterUtils {
 
     static initElement() {
         Elements.generalReg.innerHTML = "";
-        Elements.specialIntReg.innerHTML = "";
-        Elements.specialFloatReg.innerHTML = "";
+        Elements.specialReg.innerHTML = "";
         Elements.floatReg.innerHTML = "";
         Elements.doubleReg.innerHTML = "";
 
         this.generalRegs.forEach(e => Elements.generalReg.appendChild(e.element));
-        this.specialIntRegs.forEach(e => Elements.specialIntReg.appendChild(e.element));
-        this.specialFloatRegs.forEach(e => Elements.specialFloatReg.appendChild(e.element));
+        this.specialRegs.forEach(e => Elements.specialReg.appendChild(e.element));
         this.floatRegs.forEach(e => Elements.floatReg.appendChild(e.element));
         this.doubleRegs.forEach(e => Elements.doubleReg.appendChild(e.element));
     }
@@ -45,9 +41,7 @@ class RegisterUtils {
     static update() {
         // values in special registers needs to be refreshed
         this.specialRegVals = Module.getSpecialRegVals();
-        this.specialIntRegs.forEach((reg, i) => reg.updateValue(this.specialRegVals[i]));
-        this.specialFloatRegs.forEach((reg, i) => reg.updateValue(this.specialRegVals[i + 7]));
-
+        this.specialRegs.forEach((reg, i) => reg.updateValue(this.specialRegVals[i]));
 
         this.generalRegs.forEach((reg, i) => reg.updateValue(this.generalRegVals[i]));
         this.floatRegs.forEach((reg, i) => reg.updateValue(this.floatRegVals[i]));
@@ -57,8 +51,7 @@ class RegisterUtils {
     static changeRadix(radix) {
         this.radix = Number.parseInt(radix);
         this.generalRegs.forEach(e => e.valueElement.innerText = e.formatValue());
-        this.specialIntRegs.forEach(e => e.valueElement.innerText = e.formatValue());
-        this.specialFloatRegs.forEach(e => e.valueElement.innerText = e.formatValue());
+        this.specialRegs.forEach(e => e.valueElement.innerText = e.formatValue());
     }
 
     static getSP() {

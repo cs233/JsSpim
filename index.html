@@ -71,11 +71,9 @@
 
     <div class="card-body">
         <h6>Special Registers</h6>
-        <pre id="special-int-regs" class="reg-lines"></pre>
+        <pre id="special-regs" class="reg-lines"></pre>
         <h6>General Registers</h6>
         <pre id="general-regs" class="reg-lines"></pre>
-        <h6>Special Float Registers</h6>
-        <pre id="special-float-regs" class="reg-lines"></pre>
         <h6>Single Precision</h6>
         <pre id="float-regs" class="reg-lines"></pre>
         <h6>Double Precision</h6>
@@ -222,8 +220,7 @@
         kernelDataContainer: document.getElementById('kernel-data-container'),
         stack: document.getElementById('stack-content'),
         generalReg: document.getElementById('general-regs'),
-        specialIntReg: document.getElementById('special-int-regs'),
-        specialFloatReg: document.getElementById('special-float-regs'),
+        specialReg: document.getElementById('special-regs'),
         floatReg: document.getElementById('float-regs'),
         doubleReg: document.getElementById('double-regs'),
     });

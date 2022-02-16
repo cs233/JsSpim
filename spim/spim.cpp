@@ -113,7 +113,7 @@ val getFloatRegVals() { return val(typed_memory_view(32, (float *) FPR)); }
 val getDoubleRegVals() { return val(typed_memory_view(16, (double *) FPR)); }
 
 val getSpecialRegVals() {
-  static unsigned int specialRegs[12];
+  static unsigned int specialRegs[9];
   specialRegs[0] = PC;
   specialRegs[1] = CP0_EPC;
   specialRegs[2] = CP0_Cause;
@@ -123,11 +123,8 @@ val getSpecialRegVals() {
   specialRegs[6] = LO;
   specialRegs[7] = FIR;
   specialRegs[8] = FCSR;
-  specialRegs[9] = 0;
-  specialRegs[10] = 0;
-  specialRegs[11] = 0;
 
-  return val(typed_memory_view(12, specialRegs));
+  return val(typed_memory_view(9, specialRegs));
 }
 
 EMSCRIPTEN_BINDINGS(init) { function("init", &init); }
