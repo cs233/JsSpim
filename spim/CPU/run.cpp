@@ -1303,10 +1303,15 @@ run_spim (mem_addr initial_PC, int steps_to_run, bool display)
 
 	    case Y_CTC1_OP:
 	      FCR[FS (inst)] = R[RT (inst)];
-
+        
 	      if (FIR_REG == FS (inst))
 		{
 		  /* Read only register */
+		  FIR = FIR_MASK;
+		}
+		  else if (25 == FS (inst)) 	// FCCR => set FCC to R[RT]
+		{
+			ASSIGN_FCC(R[RT (inst)]);
 		}
 	      else if (FCSR_REG == FS (inst))
 		{
