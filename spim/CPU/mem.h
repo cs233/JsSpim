@@ -30,6 +30,11 @@
    OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 */
 
+#ifndef MEM_H
+#define MEM_H
+
+#include "reg.h"
+
 
 /* A note on directions:  "Bottom" of memory is the direction of
    decreasing addresses.  "Top" is the direction of increasing addresses.*/
@@ -39,84 +44,71 @@
 
 typedef int32 /*@alt unsigned int @*/ mem_word;
 
-
-/* The text segment and boundaries. */
-
-extern instruction **text_seg;
-
-extern bool text_modified;	/* => text segment was written */
-
-#define TEXT_BOT ((mem_addr) 0x400000)
-
-extern mem_addr text_top;
-
-
-/* Amount to grow text segment when we run out of space for instructions. */
-
-#define TEXT_CHUNK_SIZE	4096
-
-
-/* The data segment and boundaries. */
-
-extern mem_word *data_seg;
-
-extern bool data_modified;	/* => a data segment was written */
-
-extern short *data_seg_h;	/* Points to same vector as DATA_SEG */
-
 #define BYTE_TYPE signed char
 
+typedef struct memimage {
+	/* The text segment. */
+	instruction **text_seg;
+	unsigned *text_prof;
+	int text_modified;		/* => text segment was written */
+	mem_addr text_top;
 
-extern BYTE_TYPE *data_seg_b;	/* Ditto */
+	/* The data segment. */
+	mem_word *data_seg;
+	bool data_modified;		/* => a data segment was written */
+	short *data_seg_h;		/* Points to same vector as DATA_SEG */
+	BYTE_TYPE *data_seg_b;		/* Ditto */
+	mem_addr data_top;
+	mem_addr gp_midpoint;		/* Middle of $gp area */
 
+	/* The stack segment. */
+	mem_word *stack_seg;
+	short *stack_seg_h;		/* Points to same vector as STACK_SEG */
+	BYTE_TYPE *stack_seg_b;		/* Ditto */
+	mem_addr stack_bot;
+
+	/* Used for SPIMbot stuff. */
+	mem_word *special_seg;
+	short *special_seg_h;
+	BYTE_TYPE *special_seg_b;
+
+	/* The kernel text segment. */
+	instruction **k_text_seg;
+	unsigned *k_text_prof;
+	mem_addr k_text_top;
+
+	/* The kernel data segment. */
+	mem_word *k_data_seg;
+	short *k_data_seg_h;
+	BYTE_TYPE *k_data_seg_b;
+	mem_addr k_data_top;
+
+} mem_image_t;
+
+/* The text boundaries. */
+#define TEXT_BOT ((mem_addr) 0x400000)
+/* Amount to grow text segment when we run out of space for instructions. */
+#define TEXT_CHUNK_SIZE	4096
+
+/* The data boundaries. */
 #define DATA_BOT ((mem_addr) 0x10000000)
 
-extern mem_addr data_top;
-
-extern mem_addr gp_midpoint;	/* Middle of $gp area */
-
-
-/* The stack segment and boundaries. */
-
-extern mem_word *stack_seg;
-
-extern short *stack_seg_h;	/* Points to same vector as STACK_SEG */
-
-extern BYTE_TYPE *stack_seg_b;	/* Ditto */
-
-extern mem_addr stack_bot;
-
+/* The stack boundaries. */
 /* Exclusive, but include 4K at top of stack. */
-
 #define STACK_TOP ((mem_addr) 0x80000000)
 
-
-/* The kernel text segment and boundaries. */
-
-extern instruction **k_text_seg;
-
+/* The kernel text boundaries. */
 #define K_TEXT_BOT ((mem_addr) 0x80000000)
 
-extern mem_addr k_text_top;
-
-
-/* Kernel data segment and boundaries. */
-
-extern mem_word *k_data_seg;
-
-extern short *k_data_seg_h;
-
-extern BYTE_TYPE *k_data_seg_b;
-
+/* The Kernel data boundaries. */
 #define K_DATA_BOT ((mem_addr) 0x90000000)
-
-extern mem_addr k_data_top;
-
 
 /* Memory-mapped IO area: */
 #define MM_IO_BOT		((mem_addr) 0xffff0000)
 #define MM_IO_TOP		((mem_addr) 0xffffffff)
 
+#define SPECIAL_BOT		((mem_addr) 0xfffe0000)
+#define SPECIAL_TOP		((mem_addr) 0xffff0000)
 
 /* Read from console: */
 #define RECV_CTRL_ADDR		((mem_addr) 0xffff0000)

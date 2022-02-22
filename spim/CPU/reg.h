@@ -30,6 +30,9 @@
    OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 */
 
+#ifndef REG_H
+#define REG_H
+
 
 typedef int32 /*@alt unsigned int @*/ reg_word;
 typedef uint32 u_reg_word;
@@ -39,12 +42,37 @@ typedef uint32 u_reg_word;
 
 #define R_LENGTH	32
 
-extern reg_word R[R_LENGTH];
+typedef struct regimage {
+	int context;
 
-extern reg_word HI, LO;
+	int RFE_cycle;
 
-extern mem_addr PC, nPC;
+	/* General purpose registers: */
+	reg_word R[R_LENGTH];
+	reg_word HI, LO;
+	mem_addr PC, nPC;
 
+	/* Floating Point Coprocessor (1) registers: */
+	double *FPR;		/* Dynamically allocate so overlay */
+	float *FGR;		/* is possible */
+	int *FWR;		/* is possible */
+
+	/* Coprocessor registers: */
+	reg_word CCR[4][32], CPR[4][32];
+
+	int exception_occurred;
+
+	bool in_kernel = false;			/* => data goes to kdata, not data */
+
+	mem_addr next_text_pc;
+	mem_addr next_k_text_pc;
+	mem_addr next_data_pc;		/* Location for next datum in user process */
+	mem_addr next_k_data_pc;	/* Location for next datum in kernel */
+	mem_addr next_gp_item_addr;	/* Address of next item accessed off $gp */
+	bool auto_alignment = true;
+} reg_image_t;
+
+extern int cycle;
 
 /* Argument passing registers */
 
@@ -68,12 +96,6 @@ extern mem_addr PC, nPC;
 #define REG_GP		28
 
 extern char *int_reg_names[];
-
-
-
-/* Coprocessor registers: */
-
-extern reg_word CCR[4][32], CPR[4][32];
 
 
 
@@ -169,10 +191,6 @@ extern reg_word CCR[4][32], CPR[4][32];
 #define FGR_LENGTH	32
 #define FPR_LENGTH	16
 
-extern double *FPR;		/* Dynamically allocate so overlay */
-extern float *FGR;		/* is possible */
-extern int *FWR;		/* is possible */
-
 
 #define FPR_S(REGNO)	(FGR[REGNO])
 
@@ -239,3 +257,5 @@ extern int *FWR;		/* is possible */
 #define FCSR_Flag_O	0x00000010
 #define FCSR_Flag_U	0x00000008
 #define FCSR_Flag_I	0x00000004
+
+#endif
