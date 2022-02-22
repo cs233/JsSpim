@@ -125,7 +125,7 @@ class UserData extends DataSegment {
     constructor() {
         super();
         this.element = Elements.userData;
-        this.content = Module.getUserData();
+        this.content = Module.getUserData(0);
         this.startAddress = 0x10000000;
     }
 
@@ -136,7 +136,7 @@ class UserData extends DataSegment {
                 this.addLine(addr);
         }
 
-        this.content = Module.getUserData();
+        this.content = Module.getUserData(0);
         this.lines.forEach(e => e.updateValues());
     }
 }
@@ -145,7 +145,7 @@ class KernelData extends DataSegment {
     constructor() {
         super();
         this.element = Elements.kernelData;
-        this.content = Module.getKernelData();
+        this.content = Module.getKernelData(0);
         this.startAddress = 0x90000000;
     }
 }
@@ -153,7 +153,7 @@ class KernelData extends DataSegment {
 class Stack extends Memory {
     constructor() {
         super();
-        this.content = Module.getStack();
+        this.content = Module.getStack(0);
         this.element = Elements.stack;
     }
 

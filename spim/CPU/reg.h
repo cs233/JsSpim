@@ -43,8 +43,6 @@ typedef uint32 u_reg_word;
 #define R_LENGTH	32
 
 typedef struct regimage {
-	int context;
-
 	int RFE_cycle;
 
 	/* General purpose registers: */
@@ -97,25 +95,23 @@ extern int cycle;
 
 extern char *int_reg_names[];
 
-
-
 /* Exeception handling registers (Coprocessor 0): */
 
 /* BadVAddr register: */
 #define CP0_BadVAddr_Reg 8
-#define CP0_BadVAddr	(CPR[0][CP0_BadVAddr_Reg])
+#define CP0_BadVAddr CPR[0][CP0_BadVAddr_Reg]
 
 /* Count register: */
-#define CP0_Count_Reg	9
-#define CP0_Count	(CPR[0][CP0_Count_Reg]) /* ToDo */
+#define CP0_Count_Reg 9
+#define CP0_Count CPR[0][CP0_Count_Reg] /* ToDo */
 
 /* Compare register: */
-#define CP0_Compare_Reg	11
-#define CP0_Compare	(CPR[0][CP0_Compare_Reg]) /* ToDo */
+#define CP0_Compare_Reg 11
+#define CP0_Compare CPR[0][CP0_Compare_Reg] /* ToDo */
 
 /* Status register: */
-#define CP0_Status_Reg	12
-#define CP0_Status	(CPR[0][CP0_Status_Reg])
+#define CP0_Status_Reg 12
+#define CP0_Status CPR[0][CP0_Status_Reg]
 /* Implemented fields: */
 #define CP0_Status_CU	0xf0000000
 #define CP0_Status_IM	0x0000ff00
@@ -137,8 +133,8 @@ extern char *int_reg_names[];
 			 | CP0_Status_IE)
 
 /* Cause register: */
-#define CP0_Cause_Reg	13
-#define CP0_Cause	(CPR[0][CP0_Cause_Reg])
+#define CP0_Cause_Reg 13
+#define CP0_Cause CPR[0][CP0_Cause_Reg]
 /* Implemented fields: */
 #define CP0_Cause_BD	0x80000000
 #define CP0_Cause_IP	0x0000ff00
@@ -160,15 +156,14 @@ extern char *int_reg_names[];
 			 | CP0_Cause_IP3	\
 			 | CP0_Cause_IP2	\
 			 | CP0_Cause_ExcCode)
-#define CP0_ExCode	((CP0_Cause & CP0_Cause_ExcCode) >> 2)
 
 /* EPC register: */
-#define CP0_EPC_Reg	14
-#define CP0_EPC		(CPR[0][CP0_EPC_Reg])
+#define CP0_EPC_Reg 14
+#define CP0_EPC CPR[0][CP0_EPC_Reg]
 
 /* Config register: */
-#define CP0_Config_Reg	16
-#define CP0_Config	(CPR[0][CP0_Config_Reg])
+#define CP0_Config_Reg 16
+#define CP0_Config CPR[0][CP0_Config_Reg]
 /* Implemented fields: */
 #define CP0_Config_BE	0x000080000
 #define CP0_Config_AT	0x000060000
@@ -179,7 +174,7 @@ extern char *int_reg_names[];
 			 | CP0_Config_AR	\
 			 | CP0_Config_MT)
 
-
+reg_word CP0_ExCode(reg_image_t &REG)	{ return ((REG.CP0_Cause & CP0_Cause_ExcCode) >> 2); }
 
 /* Floating Point Coprocessor (1) registers.
 
@@ -192,31 +187,31 @@ extern char *int_reg_names[];
 #define FPR_LENGTH	16
 
 
-#define FPR_S(REGNO)	(FGR[REGNO])
+#define FPR_S(REGNO)		FGR[REGNO]
 
 #define FPR_D(REGNO)	(((REGNO) & 0x1) \
 			 ? (run_error ("Odd FP double register number\n") , 0.0) \
 			 : FPR[(REGNO) / 2])
 
-#define FPR_W(REGNO)	(FWR[REGNO])
+#define FPR_W(REGNO)		FWR[REGNO]
 
 
-#define SET_FPR_S(REGNO, VALUE)	{FGR[REGNO] = (float) (VALUE);}
+void SET_FPR_S(reg_image_t &REGIMG, size_t REGNO, reg_word VALUE)	{REGIMG.FGR[REGNO] = (float) (VALUE);}
 
-#define SET_FPR_D(REGNO, VALUE) {if ((REGNO) & 0x1) \
+void SET_FPR_D(reg_image_t &REGIMG, size_t REGNO, reg_word VALUE) {if ((REGNO) & 0x1) \
 				 run_error ("Odd FP double register number\n"); \
-				 else FPR[(REGNO) / 2] = (double) (VALUE);}
+				 else REGIMG.FPR[(REGNO) / 2] = (double) (VALUE);}
 
-#define SET_FPR_W(REGNO, VALUE) {FWR[REGNO] = (int32) (VALUE);}
+void SET_FPR_W(reg_image_t &REGIMG, size_t REGNO, reg_word VALUE) {REGIMG.FWR[REGNO] = (int32) (VALUE);}
 
 
 /* Floating point control registers: */
 
-#define FCR		(CPR[1])
+#define FCR CPR[1]
 
 
-#define FIR_REG		0
-#define FIR		(FCR[FIR_REG])
+#define FIR_REG 0
+#define FIR FCR[FIR_REG]
 
 /* Implemented fields: */
 #define FIR_W		0x0008000
@@ -225,8 +220,8 @@ extern char *int_reg_names[];
 #define FIR_MASK	(FIR_W | FIR_D | FIR_S)
 
 
-#define FCSR_REG	31
-#define FCSR		(FCR[FCSR_REG])
+#define FCSR_REG 31
+#define FCSR FCR[FCSR_REG]
 
 /* Implemented fields: */
 #define FCSR_FCC	0xfe800000

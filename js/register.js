@@ -12,10 +12,10 @@ class RegisterUtils {
         const floatRegNames = Array(32).fill(0).map((_, i) => `FG${i}`);
         const doubleRegNames = Array(16).fill(0).map((_, i) => `FP${i}`);
 
-        this.specialRegVals = Module.getSpecialRegVals();
-        this.generalRegVals = Module.getGeneralRegVals();
-        this.floatRegVals = Module.getFloatRegVals();
-        this.doubleRegVals = Module.getDoubleRegVals();
+        this.specialRegVals = Module.getSpecialRegVals(0);
+        this.generalRegVals = Module.getGeneralRegVals(0);
+        this.floatRegVals = Module.getFloatRegVals(0);
+        this.doubleRegVals = Module.getDoubleRegVals(0);
 
         this.generalRegs = generalRegNames.map(name => new Register(name));
         this.specialRegs = specialRegNames.map(name => new Register(name));
@@ -40,7 +40,7 @@ class RegisterUtils {
 
     static update() {
         // values in special registers needs to be refreshed
-        this.specialRegVals = Module.getSpecialRegVals();
+        this.specialRegVals = Module.getSpecialRegVals(0);
         this.specialRegs.forEach((reg, i) => reg.updateValue(this.specialRegVals[i]));
 
         this.generalRegs.forEach((reg, i) => reg.updateValue(this.generalRegVals[i]));

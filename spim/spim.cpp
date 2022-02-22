@@ -37,14 +37,17 @@
 #include <stdio.h>
 #include <stdarg.h>
 
-#include "spim.h"
-#include "string-stream.h"
-#include "spim-utils.h"
-#include "inst.h"
-#include "reg.h"
-#include "mem.h"
-#include "data.h"
-#include "version.h"
+#include "CPU/spim.h"
+#include "CPU/string-stream.h"
+#include "CPU/spim-utils.h"
+#include "CPU/inst.h"
+#include "CPU/image.h"
+#include "CPU/parser.h"
+#include "CPU/sym-tbl.h"
+#include "CPU/scanner.h"
+#include "CPU/parser_yacc.h"
+#include "CPU/data.h"
+#include "CPU/version.h"
 
 using namespace emscripten;
 
@@ -59,7 +62,7 @@ bool mapped_io;            /* => activate memory-mapped IO */
 int spim_return_value;        /* Value returned when spim exits */
 
 static str_stream ss;
-void init() {
+/*void init() {
   error("Based on <a href='http://spimsimulator.sourceforge.net/'>SPIM</a> %s "
         "by <a href='https://people.epfl.ch/james.larus'>James Larus</a>.\n",
         SPIM_VERSION);
@@ -68,10 +71,10 @@ void init() {
   initialize_run_stack(0, nullptr);
   read_assembly_file("input.s");
   PC = starting_address();
-}
+}*/
 
 
-int step(int step_size, bool cont_bkpt) {
+/*int step(int step_size, bool cont_bkpt) {
   mem_addr addr = PC == 0 ? starting_address() : PC;
   if (step_size == 0) step_size = DEFAULT_RUN_STEPS;
 
@@ -90,45 +93,45 @@ int step(int step_size, bool cont_bkpt) {
   }
 
   return 1;
-}
+}*/
 
 
-std::string getUserText() {
+std::string getUserText(int ctx) {
   ss_clear(&ss);
-  format_insts(&ss, TEXT_BOT, text_top);
+  format_insts(&ss, TEXT_BOT, memview(ctx).text_top);
   return std::string(ss_to_string(&ss));
 }
 
-std::string getKernelText() {
+std::string getKernelText(int ctx) {
   ss_clear(&ss);
-  format_insts(&ss, K_TEXT_BOT, k_text_top);
+  format_insts(&ss, K_TEXT_BOT, memview(ctx).k_text_top);
   return std::string(ss_to_string(&ss));
 }
 
-val getStack() { return val(typed_memory_view(STACK_LIMIT / 16, (unsigned int *) stack_seg)); }
-val getUserData() { return val(typed_memory_view(data_top - DATA_BOT, (unsigned int *) data_seg)); }
-val getKernelData() { return val(typed_memory_view(k_data_top - K_DATA_BOT, (unsigned int *) k_data_seg)); }
-val getGeneralRegVals() { return val(typed_memory_view(32, (unsigned int *) R)); }
-val getFloatRegVals() { return val(typed_memory_view(32, (float *) FPR)); }
-val getDoubleRegVals() { return val(typed_memory_view(16, (double *) FPR)); }
+val getStack(int ctx) { return val(typed_memory_view(STACK_LIMIT / 16, (unsigned int *) memview(ctx).stack_seg)); }
+val getUserData(int ctx) { return val(typed_memory_view(memview(ctx).data_top - DATA_BOT, (unsigned int *) memview(ctx).data_seg)); }
+val getKernelData(int ctx) { return val(typed_memory_view(memview(ctx).k_data_top - K_DATA_BOT, (unsigned int *) memview(ctx).k_data_seg)); }
+val getGeneralRegVals(int ctx) { return val(typed_memory_view(32, (unsigned int *) regview(ctx).R)); }
+val getFloatRegVals(int ctx) { return val(typed_memory_view(32, (float *) regview(ctx).FPR)); }
+val getDoubleRegVals(int ctx) { return val(typed_memory_view(16, (double *) regview(ctx).FPR)); }
 
-val getSpecialRegVals() {
+val getSpecialRegVals(int ctx) {
   static unsigned int specialRegs[9];
-  specialRegs[0] = PC;
-  specialRegs[1] = CP0_EPC;
-  specialRegs[2] = CP0_Cause;
-  specialRegs[3] = CP0_BadVAddr;
-  specialRegs[4] = CP0_Status;
-  specialRegs[5] = HI;
-  specialRegs[6] = LO;
-  specialRegs[7] = FIR;
-  specialRegs[8] = FCSR;
+  specialRegs[0] = regview(ctx).PC;
+  specialRegs[1] = regview(ctx).CP0_EPC;
+  specialRegs[2] = regview(ctx).CP0_Cause;
+  specialRegs[3] = regview(ctx).CP0_BadVAddr;
+  specialRegs[4] = regview(ctx).CP0_Status;
+  specialRegs[5] = regview(ctx).HI;
+  specialRegs[6] = regview(ctx).LO;
+  specialRegs[7] = regview(ctx).FIR;
+  specialRegs[8] = regview(ctx).FCSR;
 
   return val(typed_memory_view(9, specialRegs));
 }
 
-EMSCRIPTEN_BINDINGS(init) { function("init", &init); }
-EMSCRIPTEN_BINDINGS(step) { function("step", &step); }
+//EMSCRIPTEN_BINDINGS(init) { function("init", &init); }
+//EMSCRIPTEN_BINDINGS(step) { function("step", &step); }
 EMSCRIPTEN_BINDINGS(getUserText) { function("getUserText", &getUserText); }
 EMSCRIPTEN_BINDINGS(getKernelText) { function("getKernelText", &getKernelText); }
 EMSCRIPTEN_BINDINGS(getStack) { function("getStack", &getStack); }
@@ -138,8 +141,8 @@ EMSCRIPTEN_BINDINGS(getGeneralRegVals) { function("getGeneralRegVals", &getGener
 EMSCRIPTEN_BINDINGS(getFloatRegVals) { function("getFloatRegVals", &getFloatRegVals); }
 EMSCRIPTEN_BINDINGS(getDoubleRegVals) { function("getDoubleRegVals", &getDoubleRegVals); }
 EMSCRIPTEN_BINDINGS(getSpecialRegVals) { function("getSpecialRegVals", &getSpecialRegVals); }
-EMSCRIPTEN_BINDINGS(delete_breakpoint) { function("deleteBreakpoint", &delete_breakpoint); }
-EMSCRIPTEN_BINDINGS(add_breakpoint) { function("addBreakpoint", &add_breakpoint); }
+//EMSCRIPTEN_BINDINGS(delete_breakpoint) { function("deleteBreakpoint", &delete_breakpoint); }
+//EMSCRIPTEN_BINDINGS(add_breakpoint) { function("addBreakpoint", &add_breakpoint); }
 
 /* Print an error message. */
 

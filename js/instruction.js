@@ -6,10 +6,10 @@ class InstructionUtils {
         Elements.userTextContent.innerHTML = '';
         Elements.kernelTextContent.innerHTML = '';
 
-        const userText = Module.getUserText().split("\n").slice(0, -1).map(e => new Instruction(e));
+        const userText = Module.getUserText(0).split("\n").slice(0, -1).map(e => new Instruction(e));
         userText.forEach(e => Elements.userTextContent.appendChild(e.element));
 
-        const kernelText = Module.getKernelText().split("\n").slice(0, -1).map(e => new Instruction(e));
+        const kernelText = Module.getKernelText(0).split("\n").slice(0, -1).map(e => new Instruction(e));
         kernelText.forEach(e => Elements.kernelTextContent.appendChild(e.element));
 
         InstructionUtils.instructionList = [...userText, ...kernelText];

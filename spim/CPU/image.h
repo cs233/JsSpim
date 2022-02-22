@@ -7,7 +7,7 @@
 #define NUM_CONTEXTS 2
 
 typedef struct mipsimage {
-    int context;
+    int ctx;
     mem_image_t mem;
     reg_image_t reg;
 } mips_image_t;
@@ -21,5 +21,7 @@ void ctx_init(int ctx) { images[ctx].ctx = ctx; ctx_switch(ctx); }
 void ctx_increment() { ctx_switch(curr_ctx+1); }
 mem_image_t &mem() { return images[curr_ctx].mem; }
 reg_image_t &reg() { return images[curr_ctx].reg; }
+const mem_image_t &memview(int ctx) { return images[ctx].mem; }
+const reg_image_t &regview(int ctx) { return images[ctx].reg; }
 
 #endif
