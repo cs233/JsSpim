@@ -30,6 +30,11 @@
    OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 */
 
+#ifndef INST_H
+#define INST_H
+
+#include "spim.h"
+#include "string-stream.h"
 
 /* Represenation of the expression that produce a value for an instruction's
    immediate field.  Immediates have the form: label +/- offset. */
@@ -274,3 +279,5 @@ void text_begins_at_point (mem_addr addr);
 imm_expr *upper_bits_of_expr (imm_expr *old_expr);
 void user_kernel_text_segment (bool to_kernel);
 bool is_zero_imm (imm_expr *expr);
+
+#endif

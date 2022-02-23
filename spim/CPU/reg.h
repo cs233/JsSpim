@@ -187,13 +187,13 @@ reg_word CP0_ExCode(reg_image_t &REG)	{ return ((REG.CP0_Cause & CP0_Cause_ExcCo
 #define FPR_LENGTH	16
 
 
-#define FPR_S(REGNO)		FGR[REGNO]
+#define FPR_S(REGIMG, REGNO)	reg().FGR[REGNO]
 
-#define FPR_D(REGNO)	(((REGNO) & 0x1) \
+#define FPR_D(REGIMG, REGNO)	(((REGNO) & 0x1) \
 			 ? (run_error ("Odd FP double register number\n") , 0.0) \
-			 : FPR[(REGNO) / 2])
+			 : REGIMG.FPR[(REGNO) / 2])
 
-#define FPR_W(REGNO)		FWR[REGNO]
+#define FPR_W(REGIMG, REGNO)	reg().FWR[REGNO]
 
 
 void SET_FPR_S(reg_image_t &REGIMG, size_t REGNO, reg_word VALUE)	{REGIMG.FGR[REGNO] = (float) (VALUE);}
@@ -229,9 +229,9 @@ void SET_FPR_W(reg_image_t &REGIMG, size_t REGNO, reg_word VALUE) {REGIMG.FWR[RE
 #define CC0_bit 23
 #define CC1_bit 25
 #define CC_mask(n) ((((n) == 0) || ((n) > 7)) ? (1 << CC0_bit) : (1 << (CC1_bit + (n) - 1)))
-#define FCC(n) (((FCSR & CC_mask(n)) == 0) ? 0 : 1)
-#define SET_FCC(n, v) if ((v) == 0) { FCSR &= ~CC_mask(n); } else { FCSR |= CC_mask(n); }                //sets bit n [0, 7] of the FCC
-#define ASSIGN_FCC(n) for (int __i = 0; __i < 8; ++__i) {int __n=(n&(1<<__i)); SET_FCC(__i, __n!=0);}    //sets all FCC bits for an 8-bit input n
+#define FCC(reg, n) (((reg.FCSR & CC_mask(n)) == 0) ? 0 : 1)
+#define SET_FCC(reg, n, v) if ((v) == 0) { reg.FCSR &= ~CC_mask(n); } else { reg.FCSR |= CC_mask(n); }                //sets bit n [0, 7] of the FCC
+#define ASSIGN_FCC(reg, n) for (int __i = 0; __i < 8; ++__i) {int __n=(n&(1<<__i)); SET_FCC(reg, __i, __n!=0);}    //sets all FCC bits for an 8-bit input n
 
 /* Floating point Cause / FEXR (not implemented): */
 #define FCSR_Cause_E	0x00020000

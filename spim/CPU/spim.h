@@ -30,6 +30,8 @@
    OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 */
 
+#ifndef SPIM_H
+#define SPIM_H
 
 #ifndef NULL
 #define NULL 0
@@ -258,3 +260,5 @@ extern mem_addr initial_stack_limit;
 extern int initial_k_text_size;
 extern int initial_k_data_size;
 extern mem_addr initial_k_data_limit;
+
+#endif

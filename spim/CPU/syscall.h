@@ -61,3 +61,6 @@ void handle_exception ();
 #define EXIT2_SYSCALL		17
 
 #define PRINT_HEX_SYSCALL   34
+
+/* Exported variables. */
+extern mem_addr last_exception_addr;

@@ -30,6 +30,8 @@
    OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 */
 
+#ifndef STRING_STREAM_H
+#define STRING_STREAM_H
 
 typedef struct str_stm
 {
@@ -46,3 +48,5 @@ void ss_erase (str_stream* ss, int n);
 int ss_length (str_stream* ss);
 char* ss_to_string (str_stream* ss);
 void ss_printf (str_stream* ss, char* fmt, ...);
+
+#endif

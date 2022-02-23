@@ -338,7 +338,7 @@ copy_int_to_stack (int n)
 {
   set_mem_word (reg().R[REG_SP], n);
   reg().R[REG_SP] -= BYTES_PER_WORD;
-  return ((mem_addr) reg().R[REG_SP] + BYTES_PER_WORD);
+  return ((mem_addr) reg().R[REG_SP] + BYTES_PER_WORD); 
 }
 
 
