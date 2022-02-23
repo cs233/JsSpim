@@ -35,39 +35,10 @@
 #include "string-stream.h"
 #include "spim-utils.h"
 #include "inst.h"
-#include "reg.h"
-#include "mem.h"
+#include "image.h"
 
-/* Exported Variables: */
 
-reg_word R[R_LENGTH];
-reg_word HI, LO;
-int HI_present, LO_present;
-mem_addr PC, nPC;
-double *FPR;			/* Dynamically allocate so overlay */
-float *FGR;			/* is possible */
-int *FWR;			/* is possible */
-reg_word CCR[4][32], CPR[4][32];
 
-instruction **text_seg;
-bool text_modified;		/* => text segment was written */
-mem_addr text_top;
-mem_word *data_seg;
-bool data_modified;		/* => a data segment was written */
-short *data_seg_h;		/* Points to same vector as DATA_SEG */
-BYTE_TYPE *data_seg_b;		/* Ditto */
-mem_addr data_top;
-mem_addr gp_midpoint;		/* Middle of $gp area */
-mem_word *stack_seg;
-short *stack_seg_h;		/* Points to same vector as STACK_SEG */
-BYTE_TYPE *stack_seg_b;		/* Ditto */
-mem_addr stack_bot;
-instruction **k_text_seg;
-mem_addr k_text_top;
-mem_word *k_data_seg;
-short *k_data_seg_h;
-BYTE_TYPE *k_data_seg_b;
-mem_addr k_data_top;
 
 
 /* Local functions: */
@@ -126,63 +97,63 @@ make_memory (int text_size, int data_size, int data_limit,
     data_size = 65536;
   data_size = ROUND_UP(data_size, BYTES_PER_WORD); /* Keep word aligned */
 
-  if (text_seg == NULL)
-    text_seg = (instruction **) xmalloc (BYTES_TO_INST(text_size));
+  if (mem().text_seg == NULL)
+    mem().text_seg = (instruction **) xmalloc (BYTES_TO_INST(text_size));
   else
     {
-      free_instructions (text_seg, (text_top - TEXT_BOT) / BYTES_PER_WORD);
-      text_seg = (instruction **) realloc (text_seg, BYTES_TO_INST(text_size));
+      free_instructions (mem().text_seg, (mem().text_top - TEXT_BOT) / BYTES_PER_WORD);
+      mem().text_seg = (instruction **) realloc (mem().text_seg, BYTES_TO_INST(text_size));
     }
-  memclr (text_seg, BYTES_TO_INST(text_size));
-  text_top = TEXT_BOT + text_size;
+  memclr (mem().text_seg, BYTES_TO_INST(text_size));
+  mem().text_top = TEXT_BOT + text_size;
 
   data_size = ROUND_UP(data_size, BYTES_PER_WORD); /* Keep word aligned */
-  if (data_seg == NULL)
-    data_seg = (mem_word *) xmalloc (data_size);
+  if (mem().data_seg == NULL)
+    mem().data_seg = (mem_word *) xmalloc (data_size);
   else
-    data_seg = (mem_word *) realloc (data_seg, data_size);
-  memclr (data_seg, data_size);
-  data_seg_b = (BYTE_TYPE *) data_seg;
-  data_seg_h = (short *) data_seg;
-  data_top = DATA_BOT + data_size;
+    mem().data_seg = (mem_word *) realloc (mem().data_seg, data_size);
+  memclr (mem().data_seg, data_size);
+  mem().data_seg_b = (BYTE_TYPE *) mem().data_seg;
+  mem().data_seg_h = (short *) mem().data_seg;
+  mem().data_top = DATA_BOT + data_size;
   data_size_limit = data_limit;
 
   stack_size = ROUND_UP(stack_size, BYTES_PER_WORD); /* Keep word aligned */
-  if (stack_seg == NULL)
-    stack_seg = (mem_word *) xmalloc (stack_size);
+  if (mem().stack_seg == NULL)
+    mem().stack_seg = (mem_word *) xmalloc (stack_size);
   else
-    stack_seg = (mem_word *) realloc (stack_seg, stack_size);
-  memclr (stack_seg, stack_size);
-  stack_seg_b = (BYTE_TYPE *) stack_seg;
-  stack_seg_h = (short *) stack_seg;
-  stack_bot = STACK_TOP - stack_size;
+    mem().stack_seg = (mem_word *) realloc (mem().stack_seg, stack_size);
+  memclr (mem().stack_seg, stack_size);
+  mem().stack_seg_b = (BYTE_TYPE *) mem().stack_seg;
+  mem().stack_seg_h = (short *) mem().stack_seg;
+  mem().stack_bot = STACK_TOP - stack_size;
   stack_size_limit = stack_limit;
 
-  if (k_text_seg == NULL)
-    k_text_seg = (instruction **) xmalloc (BYTES_TO_INST(k_text_size));
+  if (mem().k_text_seg == NULL)
+    mem().k_text_seg = (instruction **) xmalloc (BYTES_TO_INST(k_text_size));
   else
     {
-      free_instructions (k_text_seg,
-			 (k_text_top - K_TEXT_BOT) / BYTES_PER_WORD);
-      k_text_seg = (instruction **) realloc(k_text_seg,
+      free_instructions (mem().k_text_seg,
+			 (mem().k_text_top - K_TEXT_BOT) / BYTES_PER_WORD);
+      mem().k_text_seg = (instruction **) realloc(mem().k_text_seg,
 					    BYTES_TO_INST(k_text_size));
     }
-  memclr (k_text_seg, BYTES_TO_INST(k_text_size));
-  k_text_top = K_TEXT_BOT + k_text_size;
+  memclr (mem().k_text_seg, BYTES_TO_INST(k_text_size));
+  mem().k_text_top = K_TEXT_BOT + k_text_size;
 
   k_data_size = ROUND_UP(k_data_size, BYTES_PER_WORD); /* Keep word aligned */
-  if (k_data_seg == NULL)
-    k_data_seg = (mem_word *) xmalloc (k_data_size);
+  if (mem().k_data_seg == NULL)
+    mem().k_data_seg = (mem_word *) xmalloc (k_data_size);
   else
-    k_data_seg = (mem_word *) realloc (k_data_seg, k_data_size);
-  memclr (k_data_seg, k_data_size);
-  k_data_seg_b = (BYTE_TYPE *) k_data_seg;
-  k_data_seg_h = (short *) k_data_seg;
-  k_data_top = K_DATA_BOT + k_data_size;
+    mem().k_data_seg = (mem_word *) realloc (mem().k_data_seg, k_data_size);
+  memclr (mem().k_data_seg, k_data_size);
+  mem().k_data_seg_b = (BYTE_TYPE *) mem().k_data_seg;
+  mem().k_data_seg_h = (short *) mem().k_data_seg;
+  mem().k_data_top = K_DATA_BOT + k_data_size;
   k_data_size_limit = k_data_limit;
 
-  text_modified = true;
-  data_modified = true;
+  mem().text_modified = true;
+  mem().data_modified = true;
 }
 
 
@@ -203,7 +174,7 @@ void
 expand_data (int addl_bytes)
 {
   int delta = ROUND_UP(addl_bytes, BYTES_PER_WORD); /* Keep word aligned */
-  int old_size = data_top - DATA_BOT;
+  int old_size = mem().data_top - DATA_BOT;
   int new_size = old_size + delta;
   BYTE_TYPE *p;
 
@@ -213,16 +184,16 @@ expand_data (int addl_bytes)
 	     addl_bytes, new_size);
       run_error ("Use -ldata # with # > %d\n", new_size);
     }
-  data_seg = (mem_word *) realloc (data_seg, new_size);
-  if (data_seg == NULL)
+  mem().data_seg = (mem_word *) realloc (mem().data_seg, new_size);
+  if (mem().data_seg == NULL)
     fatal_error ("realloc failed in expand_data\n");
 
-  data_seg_b = (BYTE_TYPE *) data_seg;
-  data_seg_h = (short *) data_seg;
-  data_top += delta;
+  mem().data_seg_b = (BYTE_TYPE *) mem().data_seg;
+  mem().data_seg_h = (short *) mem().data_seg;
+  mem().data_top += delta;
 
   /* Zero new memory */
-  for (p = data_seg_b + old_size; p < data_seg_b + new_size; )
+  for (p = mem().data_seg_b + old_size; p < mem().data_seg_b + new_size; )
     *p ++ = 0;
 }
 
@@ -235,7 +206,7 @@ void
 expand_stack (int addl_bytes)
 {
   int delta = ROUND_UP(addl_bytes, BYTES_PER_WORD); /* Keep word aligned */
-  int old_size = STACK_TOP - stack_bot;
+  int old_size = STACK_TOP - mem().stack_bot;
   int new_size = old_size + MAX (delta, old_size);
   mem_word *new_seg;
   mem_word *po, *pn;
@@ -249,15 +220,15 @@ expand_stack (int addl_bytes)
   new_seg = (mem_word *) xmalloc (new_size);
   memset(new_seg, 0, new_size);
 
-  po = stack_seg + (old_size / BYTES_PER_WORD - 1);
+  po = mem().stack_seg + (old_size / BYTES_PER_WORD - 1);
   pn = new_seg + (new_size / BYTES_PER_WORD - 1);
-  for ( ; po >= stack_seg ; ) *pn -- = *po --;
+  for ( ; po >= mem().stack_seg ; ) *pn -- = *po --;
 
-  free (stack_seg);
-  stack_seg = new_seg;
-  stack_seg_b = (BYTE_TYPE *) stack_seg;
-  stack_seg_h = (short *) stack_seg;
-  stack_bot -= (new_size - old_size);
+  free (mem().stack_seg);
+  mem().stack_seg = new_seg;
+  mem().stack_seg_b = (BYTE_TYPE *) mem().stack_seg;
+  mem().stack_seg_h = (short *) mem().stack_seg;
+  mem().stack_bot -= (new_size - old_size);
 }
 
 
@@ -267,7 +238,7 @@ void
 expand_k_data (int addl_bytes)
 {
   int delta = ROUND_UP(addl_bytes, BYTES_PER_WORD); /* Keep word aligned */
-  int old_size = k_data_top - K_DATA_BOT;
+  int old_size = mem().k_data_top - K_DATA_BOT;
   int new_size = old_size + delta;
   BYTE_TYPE *p;
 
@@ -276,17 +247,17 @@ expand_k_data (int addl_bytes)
       run_error ("Can't expand kernel data segment by %d bytes to %d bytes.\nUse -lkdata # with # > %d\n",
                  addl_bytes, new_size, new_size);
     }
-  k_data_seg = (mem_word *) realloc (k_data_seg, new_size);
-  if (k_data_seg == NULL)
+  mem().k_data_seg = (mem_word *) realloc (mem().k_data_seg, new_size);
+  if (mem().k_data_seg == NULL)
     fatal_error ("realloc failed in expand_k_data\n");
 
-  k_data_seg_b = (BYTE_TYPE *) k_data_seg;
-  k_data_seg_h = (short *) k_data_seg;
-  k_data_top += delta;
+  mem().k_data_seg_b = (BYTE_TYPE *) mem().k_data_seg;
+  mem().k_data_seg_h = (short *) mem().k_data_seg;
+  mem().k_data_top += delta;
 
   /* Zero new memory */
-  for (p = k_data_seg_b + old_size / BYTES_PER_WORD;
-       p < k_data_seg_b + new_size / BYTES_PER_WORD; )
+  for (p = mem().k_data_seg_b + old_size / BYTES_PER_WORD;
+       p < mem().k_data_seg_b + new_size / BYTES_PER_WORD; )
     *p ++ = 0;
 }
 
@@ -297,16 +268,16 @@ expand_k_data (int addl_bytes)
 void*
 mem_reference(mem_addr addr)
 {
-  if ((addr >= TEXT_BOT) && (addr < text_top))
-    return addr - TEXT_BOT + (char*) text_seg;
-  else if ((addr >= DATA_BOT) && (addr < data_top))
-    return addr - DATA_BOT + (char*) data_seg;
-  else if ((addr >= stack_bot) && (addr < STACK_TOP))
-    return addr - stack_bot + (char*) stack_seg;
-  else if ((addr >= K_TEXT_BOT) && (addr < k_text_top))
-    return addr - K_TEXT_BOT + (char*) k_text_seg;
-  else if ((addr >= K_DATA_BOT) && (addr < k_data_top))
-    return addr - K_DATA_BOT + (char*) k_data_seg;
+  if ((addr >= TEXT_BOT) && (addr < mem().text_top))
+    return addr - TEXT_BOT + (char*) mem().text_seg;
+  else if ((addr >= DATA_BOT) && (addr < mem().data_top))
+    return addr - DATA_BOT + (char*) mem().data_seg;
+  else if ((addr >= mem().stack_bot) && (addr < STACK_TOP))
+    return addr - mem().stack_bot + (char*) mem().stack_seg;
+  else if ((addr >= K_TEXT_BOT) && (addr < mem().k_text_top))
+    return addr - K_TEXT_BOT + (char*) mem().k_text_seg;
+  else if ((addr >= K_DATA_BOT) && (addr < mem().k_data_top))
+    return addr - K_DATA_BOT + (char*) mem().k_data_seg;
   else
     {
       run_error ("Memory address out of bounds\n");
@@ -318,10 +289,10 @@ mem_reference(mem_addr addr)
 instruction*
 read_mem_inst(mem_addr addr)
 {
-  if ((addr >= TEXT_BOT) && (addr < text_top) && !(addr & 0x3))
-    return text_seg [(addr - TEXT_BOT) >> 2];
-  else if ((addr >= K_TEXT_BOT) && (addr < k_text_top) && !(addr & 0x3))
-    return k_text_seg [(addr - K_TEXT_BOT) >> 2];
+  if ((addr >= TEXT_BOT) && (addr < mem().text_top) && !(addr & 0x3))
+    return mem().text_seg [(addr - TEXT_BOT) >> 2];
+  else if ((addr >= K_TEXT_BOT) && (addr < mem().k_text_top) && !(addr & 0x3))
+    return mem().k_text_seg [(addr - K_TEXT_BOT) >> 2];
   else
     return bad_text_read (addr);
 }
@@ -330,12 +301,12 @@ read_mem_inst(mem_addr addr)
 reg_word
 read_mem_byte(mem_addr addr)
 {
-  if ((addr >= DATA_BOT) && (addr < data_top))
-    return data_seg_b [addr - DATA_BOT];
-  else if ((addr >= stack_bot) && (addr < STACK_TOP))
-    return stack_seg_b [addr - stack_bot];
-  else if ((addr >= K_DATA_BOT) && (addr < k_data_top))
-    return k_data_seg_b [addr - K_DATA_BOT];
+  if ((addr >= DATA_BOT) && (addr < mem().data_top))
+    return mem().data_seg_b [addr - DATA_BOT];
+  else if ((addr >= mem().stack_bot) && (addr < STACK_TOP))
+    return mem().stack_seg_b [addr - mem().stack_bot];
+  else if ((addr >= K_DATA_BOT) && (addr < mem().k_data_top))
+    return mem().k_data_seg_b [addr - K_DATA_BOT];
   else
     return bad_mem_read (addr, 0);
 }
@@ -344,12 +315,12 @@ read_mem_byte(mem_addr addr)
 reg_word
 read_mem_half(mem_addr addr)
 {
-  if ((addr >= DATA_BOT) && (addr < data_top) && !(addr & 0x1))
-    return data_seg_h [(addr - DATA_BOT) >> 1];
-  else if ((addr >= stack_bot) && (addr < STACK_TOP) && !(addr & 0x1))
-    return stack_seg_h [(addr - stack_bot) >> 1];
-  else if ((addr >= K_DATA_BOT) && (addr < k_data_top) && !(addr & 0x1))
-    return k_data_seg_h [(addr - K_DATA_BOT) >> 1];
+  if ((addr >= DATA_BOT) && (addr < mem().data_top) && !(addr & 0x1))
+    return mem().data_seg_h [(addr - DATA_BOT) >> 1];
+  else if ((addr >= mem().stack_bot) && (addr < STACK_TOP) && !(addr & 0x1))
+    return mem().stack_seg_h [(addr - mem().stack_bot) >> 1];
+  else if ((addr >= K_DATA_BOT) && (addr < mem().k_data_top) && !(addr & 0x1))
+    return mem().k_data_seg_h [(addr - K_DATA_BOT) >> 1];
   else
     return bad_mem_read (addr, 0x1);
 }
@@ -358,12 +329,12 @@ read_mem_half(mem_addr addr)
 reg_word
 read_mem_word(mem_addr addr)
 {
-  if ((addr >= DATA_BOT) && (addr < data_top) && !(addr & 0x3))
-    return data_seg [(addr - DATA_BOT) >> 2];
-  else if ((addr >= stack_bot) && (addr < STACK_TOP) && !(addr & 0x3))
-    return stack_seg [(addr - stack_bot) >> 2];
-  else if ((addr >= K_DATA_BOT) && (addr < k_data_top) && !(addr & 0x3))
-    return k_data_seg [(addr - K_DATA_BOT) >> 2];
+  if ((addr >= DATA_BOT) && (addr < mem().data_top) && !(addr & 0x3))
+    return mem().data_seg [(addr - DATA_BOT) >> 2];
+  else if ((addr >= mem().stack_bot) && (addr < STACK_TOP) && !(addr & 0x3))
+    return mem().stack_seg [(addr - mem().stack_bot) >> 2];
+  else if ((addr >= K_DATA_BOT) && (addr < mem().k_data_top) && !(addr & 0x3))
+    return mem().k_data_seg [(addr - K_DATA_BOT) >> 2];
   else
     return bad_mem_read (addr, 0x3);
 }
@@ -372,11 +343,11 @@ read_mem_word(mem_addr addr)
 void
 set_mem_inst(mem_addr addr, instruction* inst)
 {
-  text_modified = true;
-  if ((addr >= TEXT_BOT) && (addr < text_top) && !(addr & 0x3))
-    text_seg [(addr - TEXT_BOT) >> 2] = inst;
-  else if ((addr >= K_TEXT_BOT) && (addr < k_text_top) && !(addr & 0x3))
-    k_text_seg [(addr - K_TEXT_BOT) >> 2] = inst;
+  mem().text_modified = true;
+  if ((addr >= TEXT_BOT) && (addr < mem().text_top) && !(addr & 0x3))
+    mem().text_seg [(addr - TEXT_BOT) >> 2] = inst;
+  else if ((addr >= K_TEXT_BOT) && (addr < mem().k_text_top) && !(addr & 0x3))
+    mem().k_text_seg [(addr - K_TEXT_BOT) >> 2] = inst;
   else
     bad_text_write (addr, inst);
 }
@@ -385,13 +356,13 @@ set_mem_inst(mem_addr addr, instruction* inst)
 void
 set_mem_byte(mem_addr addr, reg_word value)
 {
-  data_modified = true;
-  if ((addr >= DATA_BOT) && (addr < data_top))
-    data_seg_b [addr - DATA_BOT] = (BYTE_TYPE) value;
-  else if ((addr >= stack_bot) && (addr < STACK_TOP))
-    stack_seg_b [addr - stack_bot] = (BYTE_TYPE) value;
-  else if ((addr >= K_DATA_BOT) && (addr < k_data_top))
-    k_data_seg_b [addr - K_DATA_BOT] = (BYTE_TYPE) value;
+  mem().data_modified = true;
+  if ((addr >= DATA_BOT) && (addr < mem().data_top))
+    mem().data_seg_b [addr - DATA_BOT] = (BYTE_TYPE) value;
+  else if ((addr >= mem().stack_bot) && (addr < STACK_TOP))
+    mem().stack_seg_b [addr - mem().stack_bot] = (BYTE_TYPE) value;
+  else if ((addr >= K_DATA_BOT) && (addr <mem(). k_data_top))
+    mem().k_data_seg_b [addr - K_DATA_BOT] = (BYTE_TYPE) value;
   else
     bad_mem_write (addr, value, 0);
 }
@@ -400,13 +371,13 @@ set_mem_byte(mem_addr addr, reg_word value)
 void
 set_mem_half(mem_addr addr, reg_word value)
 {
-  data_modified = true;
-  if ((addr >= DATA_BOT) && (addr < data_top) && !(addr & 0x1))
-    data_seg_h [(addr - DATA_BOT) >> 1] = (short) value;
-  else if ((addr >= stack_bot) && (addr < STACK_TOP) && !(addr & 0x1))
-    stack_seg_h [(addr - stack_bot) >> 1] = (short) value;
-  else if ((addr >= K_DATA_BOT) && (addr < k_data_top) && !(addr & 0x1))
-    k_data_seg_h [(addr - K_DATA_BOT) >> 1] = (short) value;
+  mem().data_modified = true;
+  if ((addr >= DATA_BOT) && (addr < mem().data_top) && !(addr & 0x1))
+    mem().data_seg_h [(addr - DATA_BOT) >> 1] = (short) value;
+  else if ((addr >= mem().stack_bot) && (addr < STACK_TOP) && !(addr & 0x1))
+    mem().stack_seg_h [(addr - mem().stack_bot) >> 1] = (short) value;
+  else if ((addr >= K_DATA_BOT) && (addr < mem().k_data_top) && !(addr & 0x1))
+    mem().k_data_seg_h [(addr - K_DATA_BOT) >> 1] = (short) value;
   else
     bad_mem_write (addr, value, 0x1);
 }
@@ -415,13 +386,13 @@ set_mem_half(mem_addr addr, reg_word value)
 void
 set_mem_word(mem_addr addr, reg_word value)
 {
-  data_modified = true;
-  if ((addr >= DATA_BOT) && (addr < data_top) && !(addr & 0x3))
-    data_seg [(addr - DATA_BOT) >> 2] = (mem_word) value;
-  else if ((addr >= stack_bot) && (addr < STACK_TOP) && !(addr & 0x3))
-    stack_seg [(addr - stack_bot) >> 2] = (mem_word) value;
-  else if ((addr >= K_DATA_BOT) && (addr < k_data_top) && !(addr & 0x3))
-    k_data_seg [(addr - K_DATA_BOT) >> 2] = (mem_word) value;
+  mem().data_modified = true;
+  if ((addr >= DATA_BOT) && (addr < mem().data_top) && !(addr & 0x3))
+    mem().data_seg [(addr - DATA_BOT) >> 2] = (mem_word) value;
+  else if ((addr >= mem().stack_bot) && (addr < STACK_TOP) && !(addr & 0x3))
+    mem().stack_seg [(addr - mem().stack_bot) >> 2] = (mem_word) value;
+  else if ((addr >= K_DATA_BOT) && (addr < mem().k_data_top) && !(addr & 0x3))
+    mem().k_data_seg [(addr - K_DATA_BOT) >> 2] = (mem_word) value;
   else
     bad_mem_write (addr, value, 0x3);
 }
@@ -432,7 +403,7 @@ set_mem_word(mem_addr addr, reg_word value)
 static instruction *
 bad_text_read (mem_addr addr)
 {
-  RAISE_EXCEPTION (ExcCode_IBE, CP0_BadVAddr = addr);
+  RAISE_EXCEPTION (ExcCode_IBE, reg().CP0_BadVAddr = addr);
   return (inst_decode (0));
 }
 
@@ -440,7 +411,7 @@ bad_text_read (mem_addr addr)
 static void
 bad_text_write (mem_addr addr, instruction *inst)
 {
-  RAISE_EXCEPTION (ExcCode_IBE, CP0_BadVAddr = addr);
+  RAISE_EXCEPTION (ExcCode_IBE, reg().CP0_BadVAddr = addr);
   set_mem_word (addr, ENCODING (inst));
 }
 
@@ -451,12 +422,12 @@ bad_mem_read (mem_addr addr, int mask)
   mem_word tmp;
 
   if ((addr & mask) != 0)
-    RAISE_EXCEPTION (ExcCode_AdEL, CP0_BadVAddr = addr)
-  else if (addr >= TEXT_BOT && addr < text_top)
+    RAISE_EXCEPTION (ExcCode_AdEL, reg().CP0_BadVAddr = addr)
+  else if (addr >= TEXT_BOT && addr < mem().text_top)
     switch (mask)
       {
       case 0x0:
-	tmp = ENCODING (text_seg [(addr - TEXT_BOT) >> 2]);
+	tmp = ENCODING (mem().text_seg [(addr - TEXT_BOT) >> 2]);
 #ifdef SPIM_BIGENDIAN
 	tmp = (unsigned)tmp >> (8 * (3 - (addr & 0x3)));
 #else
@@ -465,7 +436,7 @@ bad_mem_read (mem_addr addr, int mask)
 	return (0xff & tmp);
 
       case 0x1:
-	tmp = ENCODING (text_seg [(addr - TEXT_BOT) >> 2]);
+	tmp = ENCODING (mem().text_seg [(addr - TEXT_BOT) >> 2]);
 #ifdef SPIM_BIGENDIAN
 	tmp = (unsigned)tmp >> (8 * (2 - (addr & 0x2)));
 #else
@@ -475,7 +446,7 @@ bad_mem_read (mem_addr addr, int mask)
 
       case 0x3:
 	{
-	instruction *inst = text_seg [(addr - TEXT_BOT) >> 2];
+	instruction *inst = mem().text_seg [(addr - TEXT_BOT) >> 2];
 	if (inst == NULL)
 	  return 0;
 	else
@@ -485,20 +456,20 @@ bad_mem_read (mem_addr addr, int mask)
       default:
 	run_error ("Bad mask (0x%x) in bad_mem_read\n", mask);
       }
-  else if (addr > data_top
-	   && addr < stack_bot
+  else if (addr > mem().data_top
+	   && addr < mem().stack_bot
 	   /* If more than 16 MB below stack, probably is bad data ref */
-	   && addr > stack_bot - 16*K*K)
+	   && addr > mem().stack_bot - 16*K*K)
     {
       /* Grow stack segment */
-      expand_stack (stack_bot - addr + 4);
+      expand_stack (mem().stack_bot - addr + 4);
       return (0);
     }
   else if (MM_IO_BOT <= addr && addr <= MM_IO_TOP)
     return (read_memory_mapped_IO (addr));
   else
     /* Address out of range */
-    RAISE_EXCEPTION (ExcCode_DBE, CP0_BadVAddr = addr)
+    RAISE_EXCEPTION (ExcCode_DBE, reg().CP0_BadVAddr = addr)
   return (0);
 }
 
@@ -510,13 +481,13 @@ bad_mem_write (mem_addr addr, mem_word value, int mask)
 
   if ((addr & mask) != 0)
     /* Unaligned address fault */
-    RAISE_EXCEPTION (ExcCode_AdES, CP0_BadVAddr = addr)
-    else if (addr >= TEXT_BOT && addr < text_top)
+    RAISE_EXCEPTION (ExcCode_AdES, reg().CP0_BadVAddr = addr)
+    else if (addr >= TEXT_BOT && addr < mem().text_top)
   {
     switch (mask)
     {
     case 0x0:
-      tmp = ENCODING (text_seg [(addr - TEXT_BOT) >> 2]);
+      tmp = ENCODING (mem().text_seg [(addr - TEXT_BOT) >> 2]);
 #ifdef SPIM_BIGENDIAN
       tmp = ((tmp & ~(0xff << (8 * (3 - (addr & 0x3)))))
 	       | (value & 0xff) << (8 * (3 - (addr & 0x3))));
@@ -527,7 +498,7 @@ bad_mem_write (mem_addr addr, mem_word value, int mask)
       break;
 
     case 0x1:
-      tmp = ENCODING (text_seg [(addr - TEXT_BOT) >> 2]);
+      tmp = ENCODING (mem().text_seg [(addr - TEXT_BOT) >> 2]);
 #ifdef SPIM_BIGENDIAN
       tmp = ((tmp & ~(0xffff << (8 * (2 - (addr & 0x2)))))
 	       | (value & 0xffff) << (8 * (2 - (addr & 0x2))));
@@ -546,40 +517,40 @@ bad_mem_write (mem_addr addr, mem_word value, int mask)
       run_error ("Bad mask (0x%x) in bad_mem_read\n", mask);
     }
 
-    if (text_seg [(addr - TEXT_BOT) >> 2] != NULL)
+    if (mem().text_seg [(addr - TEXT_BOT) >> 2] != NULL)
     {
-      free_inst (text_seg[(addr - TEXT_BOT) >> 2]);
+      free_inst (mem().text_seg[(addr - TEXT_BOT) >> 2]);
     }
-    text_seg [(addr - TEXT_BOT) >> 2] = inst_decode (tmp);
+    mem().text_seg [(addr - TEXT_BOT) >> 2] = inst_decode (tmp);
 
-    text_modified = true;
+    mem().text_modified = true;
   }
-  else if (addr > data_top
-	   && addr < stack_bot
+  else if (addr > mem().data_top
+	   && addr < mem().stack_bot
 	   /* If more than 16 MB below stack, probably is bad data ref */
-	   && addr > stack_bot - 16*K*K)
+	   && addr > mem().stack_bot - 16*K*K)
   {
     /* Grow stack segment */
-    expand_stack (stack_bot - addr + 4);
-    if (addr >= stack_bot)
+    expand_stack (mem().stack_bot - addr + 4);
+    if (addr >= mem().stack_bot)
     {
       if (mask == 0)
-	stack_seg_b [addr - stack_bot] = (char)value;
+	mem().stack_seg_b [addr - mem().stack_bot] = (char)value;
       else if (mask == 1)
-	stack_seg_h [(addr - stack_bot) >> 1] = (short)value;
+	mem().stack_seg_h [(addr - mem().stack_bot) >> 1] = (short)value;
       else
-	stack_seg [(addr - stack_bot) >> 2] = value;
+	mem().stack_seg [(addr - mem().stack_bot) >> 2] = value;
     }
     else
-      RAISE_EXCEPTION (ExcCode_DBE, CP0_BadVAddr = addr)
+      RAISE_EXCEPTION (ExcCode_DBE, reg().CP0_BadVAddr = addr)
 
-    data_modified = true;
+    mem().data_modified = true;
   }
   else if (MM_IO_BOT <= addr && addr <= MM_IO_TOP)
     write_memory_mapped_IO (addr, value);
   else
     /* Address out of range */
-    RAISE_EXCEPTION (ExcCode_DBE, CP0_BadVAddr = addr)
+    RAISE_EXCEPTION (ExcCode_DBE, reg().CP0_BadVAddr = addr)
 }
 
 
@@ -750,23 +721,23 @@ print_mem (mem_addr addr)
   if ((addr & 0x3) != 0)
     addr &= ~0x3;		/* Address must be word-aligned */
 
-  if (TEXT_BOT <= addr && addr < text_top)
+  if (TEXT_BOT <= addr && addr < mem().text_top)
     print_inst (addr);
-  else if (DATA_BOT <= addr && addr < data_top)
+  else if (DATA_BOT <= addr && addr < mem().data_top)
     {
       value = read_mem_word (addr);
       write_output (message_out, "Data seg @ 0x%08x (%d) = 0x%08x (%d)\n",
 		    addr, addr, value, value);
     }
-  else if (stack_bot <= addr && addr < STACK_TOP)
+  else if (mem().stack_bot <= addr && addr < STACK_TOP)
     {
       value = read_mem_word (addr);
       write_output (message_out, "Stack seg @ 0x%08x (%d) = 0x%08x (%d)\n",
 		    addr, addr, value, value);
     }
-  else if (K_TEXT_BOT <= addr && addr < k_text_top)
+  else if (K_TEXT_BOT <= addr && addr < mem().k_text_top)
     print_inst (addr);
-  else if (K_DATA_BOT <= addr && addr < k_data_top)
+  else if (K_DATA_BOT <= addr && addr < mem().k_data_top)
     {
       value = read_mem_word (addr);
       write_output (message_out,

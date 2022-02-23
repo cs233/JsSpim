@@ -62,16 +62,20 @@ bool mapped_io;            /* => activate memory-mapped IO */
 int spim_return_value;        /* Value returned when spim exits */
 
 static str_stream ss;
-/*void init() {
+void init() {
   error("Based on <a href='http://spimsimulator.sourceforge.net/'>SPIM</a> %s "
         "by <a href='https://people.epfl.ch/james.larus'>James Larus</a>.\n",
         SPIM_VERSION);
+        
+  for (int i = 0; i < NUM_CONTEXTS; ++i) {
+    initialize_world(DEFAULT_EXCEPTION_HANDLER, false);
+    initialize_run_stack(0, nullptr);
+    read_assembly_file("input.s");
+  }
 
-  initialize_world(DEFAULT_EXCEPTION_HANDLER, false);
-  initialize_run_stack(0, nullptr);
-  read_assembly_file("input.s");
-  PC = starting_address();
-}*/
+  ctx_switch(0);
+  reg().PC = starting_address();
+}
 
 
 /*int step(int step_size, bool cont_bkpt) {

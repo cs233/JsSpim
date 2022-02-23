@@ -24,4 +24,7 @@ reg_image_t &reg() { return images[curr_ctx].reg; }
 const mem_image_t &memview(int ctx) { return images[ctx].mem; }
 const reg_image_t &regview(int ctx) { return images[ctx].reg; }
 
+#define DATA_PC (reg().in_kernel ? reg().next_k_data_pc : reg().next_data_pc)
+#define INST_PC (reg().in_kernel ? reg().next_k_text_pc : reg().next_text_pc)
+
 #endif

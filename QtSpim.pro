@@ -87,7 +87,6 @@ defined(TSAN, "var"):!equals(TSAN, 0) {             # TSAN Settings
 
 SOURCES += spim/spim.cpp\
         spim/CPU/data.cpp\
-        spim/CPU/display-utils.cpp\
         spim/CPU/inst.cpp\
         spim/CPU/mem.cpp\
         spim/CPU/run.cpp\

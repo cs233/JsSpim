@@ -35,49 +35,24 @@
 #include "string-stream.h"
 #include "spim-utils.h"
 #include "inst.h"
-#include "reg.h"
-#include "mem.h"
+#include "image.h"
 #include "sym-tbl.h"
 #include "parser.h"
 #include "run.h"
 #include "data.h"
 
-
-/* The first 64K of the data segment are dedicated to small data
-   segment, which is pointed to by $gp. This register points to the
-   middle of the segment, so we can use the full offset field in an
-   instruction. */
-
-static mem_addr next_data_pc;	/* Location for next datum in user process */
-
-static mem_addr next_k_data_pc;	/* Location for next datum in kernel */
-
-static bool in_kernel = 0;	/* => data goes to kdata, not data */
-
-#define DATA_PC (in_kernel ? next_k_data_pc : next_data_pc)
-
-static mem_addr next_gp_item_addr; /* Address of next item accessed off $gp */
-
-static bool auto_alignment = true; /* => align literal to natural bound*/
-
-
-
-/* If TO_KERNEL is true, subsequent data will be placed in the
-   kernel data segment.  If false, data will go to the user's data
-   segment.*/
-
 void
 user_kernel_data_segment (bool to_kernel)
 {
-    in_kernel = to_kernel;
+    reg().in_kernel = to_kernel;
 }
 
 
 void
 end_of_assembly_file ()
 {
-  in_kernel = false;
-  auto_alignment = true;
+  reg().in_kernel = false;
+  reg().auto_alignment = true;
 }
 
 
@@ -89,13 +64,13 @@ void
 data_begins_at_point (mem_addr addr)
 {
   if (bare_machine)
-    next_data_pc = addr;
+    reg().next_data_pc = addr;
   else
     {
-      next_gp_item_addr = addr;
-      gp_midpoint = addr + 32*K;
-      R[REG_GP] = gp_midpoint;
-      next_data_pc = addr + 64 * K;
+      reg().next_gp_item_addr = addr;
+      mem().gp_midpoint = addr + 32*K;
+      reg().R[REG_GP] = mem().gp_midpoint;
+      reg().next_data_pc = addr + 64 * K;
     }
 }
 
@@ -106,7 +81,7 @@ data_begins_at_point (mem_addr addr)
 void
 k_data_begins_at_point (mem_addr addr)
 {
-    next_k_data_pc = addr;
+    reg().next_k_data_pc = addr;
 }
 
 
@@ -118,17 +93,17 @@ void
 align_data (int alignment)
 {
   if (alignment == 0)
-    auto_alignment = false;
-  else if (in_kernel)
+    reg().auto_alignment = false;
+  else if (reg().in_kernel)
     {
-      next_k_data_pc =
-	(next_k_data_pc + (1 << alignment) - 1) & (-1 << alignment);
-      fix_current_label_address (next_k_data_pc);
+      reg().next_k_data_pc =
+	(reg().next_k_data_pc + (1 << alignment) - 1) & (-1 << alignment);
+      fix_current_label_address (reg().next_k_data_pc);
     }
   else
     {
-      next_data_pc = (next_data_pc + (1 << alignment) - 1) & (-1 << alignment);
-      fix_current_label_address (next_data_pc);
+      reg().next_data_pc = (reg().next_data_pc + (1 << alignment) - 1) & (-1 << alignment);
+      fix_current_label_address (reg().next_data_pc);
     }
 }
 
@@ -136,7 +111,7 @@ align_data (int alignment)
 void
 set_data_alignment (int alignment)
 {
-  if (auto_alignment)
+  if (reg().auto_alignment)
     align_data (alignment);
 }
 
@@ -144,7 +119,7 @@ set_data_alignment (int alignment)
 void
 enable_data_alignment ()
 {
-  auto_alignment = true;
+  reg().auto_alignment = true;
 }
 
 
@@ -153,10 +128,10 @@ enable_data_alignment ()
 void
 set_data_pc (mem_addr addr)
 {
-  if (in_kernel)
-    next_k_data_pc = addr;
+  if (reg().in_kernel)
+    reg().next_k_data_pc = addr;
   else
-    next_data_pc = addr;
+    reg().next_data_pc = addr;
 }
 
 
@@ -175,17 +150,17 @@ current_data_pc ()
 void
 increment_data_pc (int delta)
 {
-  if (in_kernel)
+  if (reg().in_kernel)
     {
-      next_k_data_pc += delta;
-      if (k_data_top <= next_k_data_pc)
-        expand_k_data(ROUND_UP(next_k_data_pc - k_data_top + 1, 64*K));
+      reg().next_k_data_pc += delta;
+      if (mem().k_data_top <= reg().next_k_data_pc)
+        expand_k_data(ROUND_UP(reg().next_k_data_pc - mem().k_data_top + 1, 64*K));
     }
   else
     {
-      next_data_pc += delta;
-      if (data_top <= next_data_pc)
-        expand_data(ROUND_UP(next_data_pc - data_top + 1, 64*K));
+      reg().next_data_pc += delta;
+      if (mem().data_top <= reg().next_data_pc)
+        expand_data(ROUND_UP(reg().next_data_pc - mem().data_top + 1, 64*K));
     }
 }
 
@@ -200,11 +175,11 @@ extern_directive (char *name, int size)
   if (!bare_machine
       && !sym->gp_flag   // Not already a global symbol
       && size > 0 && size <= SMALL_DATA_SEG_MAX_SIZE
-      && next_gp_item_addr + size < gp_midpoint + 32*K)
+      && reg().next_gp_item_addr + size < mem().gp_midpoint + 32*K)
     {
       sym->gp_flag = 1;
-      sym->addr = next_gp_item_addr;
-      next_gp_item_addr += size;
+      sym->addr = reg().next_gp_item_addr;
+      reg().next_gp_item_addr += size;
     }
 }
 
@@ -216,17 +191,17 @@ lcomm_directive (char *name, int size)
 {
   if (!bare_machine
       && size > 0 && size <= SMALL_DATA_SEG_MAX_SIZE
-      && next_gp_item_addr + size < gp_midpoint + 32*K)
+      && reg().next_gp_item_addr + size < mem().gp_midpoint + 32*K)
     {
-      label *sym = record_label (name, next_gp_item_addr, 1);
+      label *sym = record_label (name, reg().next_gp_item_addr, 1);
       sym->gp_flag = 1;
 
-      next_gp_item_addr += size;
+      reg().next_gp_item_addr += size;
       /* Don't need to initialize since memory starts with 0's */
     }
   else
     {
-      (void)record_label (name, next_data_pc, 1);
+      (void)record_label (name, reg().next_data_pc, 1);
 
       for ( ; size > 0; size --)
 	{

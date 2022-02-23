@@ -47,8 +47,7 @@
 #include "spim.h"
 #include "string-stream.h"
 #include "inst.h"
-#include "reg.h"
-#include "mem.h"
+#include "image.h"
 #include "sym-tbl.h"
 #include "syscall.h"
 
@@ -117,10 +116,10 @@ do_syscall ()
      use than the real syscall and are portable to non-MIPS operating
      systems. */
 
-  switch (R[REG_V0])
+  switch (reg().R[REG_V0])
     {
     case PRINT_INT_SYSCALL:
-      write_output (console_out, "%d", R[REG_A0]);
+      write_output (console_out, "%d", reg().R[REG_A0]);
       break;
 
     case PRINT_FLOAT_SYSCALL:
@@ -132,11 +131,11 @@ do_syscall ()
       }
 
     case PRINT_DOUBLE_SYSCALL:
-      write_output (console_out, "%.18g", FPR[REG_FA0 / 2]);
+      write_output (console_out, "%.18g", reg().FPR[REG_FA0 / 2]);
       break;
 
     case PRINT_STRING_SYSCALL:
-      write_output (console_out, "%s", mem_reference (R[REG_A0]));
+      write_output (console_out, "%s", mem_reference (reg().R[REG_A0]));
       break;
 
     case READ_INT_SYSCALL:
@@ -144,7 +143,7 @@ do_syscall ()
 	static char str [256];
 
 	read_input (str, 256);
-	R[REG_RES] = atol (str);
+	reg().R[REG_RES] = atol (str);
 	break;
       }
 
@@ -162,28 +161,28 @@ do_syscall ()
 	static char str [256];
 
 	read_input (str, 256);
-	FPR [REG_FRES] = atof (str);
+	reg().FPR [REG_FRES] = atof (str);
 	break;
       }
 
     case READ_STRING_SYSCALL:
       {
-	read_input ( (char *) mem_reference (R[REG_A0]), R[REG_A1]);
-	data_modified = true;
+	read_input ( (char *) mem_reference (reg().R[REG_A0]), reg().R[REG_A1]);
+	mem().data_modified = true;
 	break;
       }
 
     case SBRK_SYSCALL:
       {
-	mem_addr x = data_top;
-	expand_data (R[REG_A0]);
-	R[REG_RES] = x;
-	data_modified = true;
+	mem_addr x = mem().data_top;
+	expand_data (reg().R[REG_A0]);
+	reg().R[REG_RES] = x;
+	mem().data_modified = true;
 	break;
       }
 
     case PRINT_CHARACTER_SYSCALL:
-      write_output (console_out, "%c", R[REG_A0]);
+      write_output (console_out, "%c", reg().R[REG_A0]);
       break;
 
     case READ_CHARACTER_SYSCALL:
@@ -192,7 +191,7 @@ do_syscall ()
 
 	read_input (str, 2);
 	if (*str == '\0') *str = '\n';      /* makes xspim = spim */
-	R[REG_RES] = (long) str[0];
+	reg().R[REG_RES] = (long) str[0];
 	break;
       }
 
@@ -201,7 +200,7 @@ do_syscall ()
       return (0);
 
     case EXIT2_SYSCALL:
-      spim_return_value = R[REG_A0];	/* value passed to spim's exit() call */
+      spim_return_value = reg().R[REG_A0];	/* value passed to spim's exit() call */
       return (0);
 
     case OPEN_SYSCALL:
@@ -217,13 +216,13 @@ do_syscall ()
     case READ_SYSCALL:
       {
 	/* Test if address is valid */
-	(void)mem_reference (R[REG_A1] + R[REG_A2] - 1);
+	(void)mem_reference (reg().R[REG_A1] + reg().R[REG_A2] - 1);
 #ifdef _WIN32
-	R[REG_RES] = _read(R[REG_A0], mem_reference (R[REG_A1]), R[REG_A2]);
+	reg().R[REG_RES] = _read(reg().R[REG_A0], mem_reference (reg().R[REG_A1]), reg().R[REG_A2]);
 #else
-	R[REG_RES] = read(R[REG_A0], mem_reference (R[REG_A1]), R[REG_A2]);
+	reg().R[REG_RES] = read(reg().R[REG_A0], mem_reference (reg().R[REG_A1]), reg().R[REG_A2]);
 #endif
-	data_modified = true;
+	mem().data_modified = true;
 	break;
       }
 
@@ -232,9 +231,9 @@ do_syscall ()
 	/* Test if address is valid */
 	(void)mem_reference (R[REG_A1] + R[REG_A2] - 1);
 #ifdef _WIN32
-	R[REG_RES] = _write(R[REG_A0], mem_reference (R[REG_A1]), R[REG_A2]);
+	reg().R[REG_RES] = _write(reg().R[REG_A0], mem_reference (reg().R[REG_A1]), reg().R[REG_A2]);
 #else
-	R[REG_RES] = write(R[REG_A0], mem_reference (R[REG_A1]), R[REG_A2]);
+	reg().R[REG_RES] = write(reg().R[REG_A0], mem_reference (reg().R[REG_A1]), reg().R[REG_A2]);
 #endif
 	break;
       }
@@ -242,15 +241,19 @@ do_syscall ()
     case CLOSE_SYSCALL:
       {
 #ifdef _WIN32
-	R[REG_RES] = _close(R[REG_A0]);
+	reg().R[REG_RES] = _close(reg().R[REG_A0]);
 #else
-	R[REG_RES] = close(R[REG_A0]);
+	reg().R[REG_RES] = close(reg().R[REG_A0]);
 #endif
 	break;
       }
 
+case PRINT_HEX_SYSCALL:
+    write_output (console_out, "%x", reg().R[REG_A0]);
+    break;
+
     default:
-      run_error ("Unknown system call: %d\n", R[REG_V0]);
+      run_error ("Unknown system call: %d\n", reg().R[REG_V0]);
       break;
     }
 

@@ -38,8 +38,7 @@
 #include "string-stream.h"
 #include "spim-utils.h"
 #include "inst.h"
-#include "reg.h"
-#include "mem.h"
+#include "image.h"
 #include "sym-tbl.h"
 #include "parser.h"
 #include "scanner.h"
@@ -65,25 +64,9 @@ static void sort_i_opcode_table ();
 static void sort_name_table ();
 
 
-/* Local variables: */
-
-/* True means store instructions in kernel, not user, text segment */
-
-static bool in_kernel = 0;
-
 /* Instruction used as breakpoint by SPIM: */
 
 static instruction *break_inst = NULL;
-
-
-/* Locations for next instruction in user and kernel text segments */
-
-static mem_addr next_text_pc;
-
-static mem_addr next_k_text_pc;
-
-
-#define INST_PC (in_kernel ? next_k_text_pc : next_text_pc)
 
 
 /* Set ADDRESS at which the next instruction is stored. */
@@ -91,14 +74,14 @@ static mem_addr next_k_text_pc;
 void
 text_begins_at_point (mem_addr addr)
 {
-  next_text_pc = addr;
+  reg().next_text_pc = addr;
 }
 
 
 void
 k_text_begins_at_point (mem_addr addr)
 {
-  next_k_text_pc = addr;
+  reg().next_k_text_pc = addr;
 }
 
 
@@ -107,10 +90,10 @@ k_text_begins_at_point (mem_addr addr)
 void
 set_text_pc (mem_addr addr)
 {
-  if (in_kernel)
-    next_k_text_pc = addr;
+  if (reg().in_kernel)
+    reg().next_k_text_pc = addr;
   else
-    next_text_pc = addr;
+    reg().next_text_pc = addr;
 }
 
 
@@ -128,16 +111,16 @@ current_text_pc ()
 void
 increment_text_pc (int delta)
 {
-  if (in_kernel)
+  if (reg().in_kernel)
     {
-      next_k_text_pc += delta;
-      if (k_text_top <= next_k_text_pc)
+      reg().next_k_text_pc += delta;
+      if (mem().k_text_top <= reg().next_k_text_pc)
         run_error("Can't expand kernel text segment\n");
     }
   else
     {
-      next_text_pc += delta;
-      if (text_top <= next_text_pc)
+      reg().next_text_pc += delta;
+      if (mem().text_top <= reg().next_text_pc)
         run_error("Can't expand text segment\n");
     }
 }
@@ -149,7 +132,7 @@ increment_text_pc (int delta)
 void
 user_kernel_text_segment (bool to_kernel)
 {
-  in_kernel = to_kernel;
+  reg().in_kernel = to_kernel;
 }
 
 
@@ -165,9 +148,9 @@ store_instruction (instruction *inst)
     }
   else if (text_dir)
     {
-      exception_occurred = 0;
+      reg().exception_occurred = 0;
       set_mem_inst (INST_PC, inst);
-      if (exception_occurred)
+      if (reg().exception_occurred)
 	error ("Invalid address (0x%08x) for instruction\n", INST_PC);
       else
 	increment_text_pc (BYTES_PER_WORD);
@@ -670,10 +653,10 @@ inst_to_string(mem_addr addr)
   str_stream ss;
   instruction *inst;
 
-  exception_occurred = 0;
+  reg().exception_occurred = 0;
   inst = read_mem_inst (addr);
 
-  if (exception_occurred)
+  if (reg().exception_occurred)
     {
       error ("Can't print instruction not in text segment (0x%08x)\n", addr);
       return "";
@@ -1204,7 +1187,7 @@ make_addr_expr (int offs, char *sym, int reg_no)
   if (reg_no == 0 && sym != NULL && (lab = lookup_label (sym))->gp_flag)
     {
       expr->reg_no = REG_GP;
-      expr->imm = make_imm_expr (offs + lab->addr - gp_midpoint, NULL, false);
+      expr->imm = make_imm_expr (offs + lab->addr - mem().gp_midpoint, NULL, false);
     }
   else
     {

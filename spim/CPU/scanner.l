@@ -32,6 +32,7 @@
 */
 
 
+#include <string.h>
 #include "spim.h"
 #include "string-stream.h"
 #include "spim-utils.h"
@@ -57,6 +58,8 @@ int line_no;		/* Line number in input file*/
 
 
 /* Local Variables: */
+static char *file_name;   /* The name of the current file */
+static int file_name_len; /* To avoid recomputing for each source line */
 
 /* Track which line we are reading and where it began in the buffer. */
 static int current_line_no = 0;
@@ -315,7 +318,7 @@ static char scan_escape (char **str);
 
 
 void
-initialize_scanner (FILE *in_file)
+initialize_scanner (FILE *in_file, char *in_file_name)
 {
   if (yyin != in_file)
   {
@@ -338,6 +341,8 @@ initialize_scanner (FILE *in_file)
   current_line = NULL;
   line_returned = 0;
   eof_returned = 0;
+  file_name = strdup(in_file_name); /* will leak some memory */
+  file_name_len = strlen(file_name);
 }
 
 void
@@ -718,8 +723,8 @@ source_line ()
       c1 = *eol1;
       *eol1 = '\0';
 
-      r = (char *) xmalloc (eol1 - current_line + 10);
-      sprintf (r, "%d: %s", current_line_no, current_line);
+      r = (char *) xmalloc (eol1 - current_line + 11 + file_name_len);
+      sprintf (r, "%s:%d: %s", file_name, current_line_no, current_line);
 
       /* Restore end-of-line character and, if necessary, yylex's null byte. */
       *eol1 = c1;

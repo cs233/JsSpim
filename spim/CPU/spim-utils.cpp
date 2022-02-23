@@ -42,14 +42,14 @@
 #include "spim-utils.h"
 #include "inst.h"
 #include "data.h"
-#include "reg.h"
-#include "mem.h"
+#include "image.h"
 #include "scanner.h"
 #include "parser.h"
 #include "parser_yacc.h"
 #include "run.h"
 #include "sym-tbl.h"
 
+bkpt *bkpts = NULL;
 
 /* Internal functions: */
 
@@ -81,11 +81,15 @@ mem_addr initial_k_data_limit = K_DATA_LIMIT;
 /* Initialize or reinitialize the state of the machine. */
 
 void
-initialize_world (char* exception_file_names, bool print_message)
+initialize_world (size_t ctx, char *exception_file_paths, char *exception_file_name, bool print_message)
 {
+  
+  ctx_init(ctx);
+  reg().auto_alignment = 1;
+  
   /* Allocate the floating point registers */
-  if (FGR == NULL)
-    FPR = (double *) xmalloc (FPR_LENGTH * sizeof (double));
+  if (reg().FGR == NULL)
+    reg().FPR = (double *) xmalloc (FPR_LENGTH * sizeof (double));
   /* Allocate the memory */
   make_memory (initial_text_size,
 	       initial_data_size, initial_data_limit,
@@ -100,7 +104,7 @@ initialize_world (char* exception_file_names, bool print_message)
   data_begins_at_point (DATA_BOT);
   text_begins_at_point (TEXT_BOT);
 
-  if (exception_file_names != NULL)
+  if (exception_file_paths != NULL)
     {
       bool old_bare = bare_machine;
       bool old_accept = accept_pseudo_insts;
@@ -112,12 +116,12 @@ initialize_world (char* exception_file_names, bool print_message)
       accept_pseudo_insts = true;
 
       /* strtok modifies the string, so we must back up the string prior to use. */
-      if ((files = strdup (exception_file_names)) == NULL)
+      if ((files = strdup (exception_file_paths)) == NULL)
          fatal_error ("Insufficient memory to complete.\n");
 
       for (filename = strtok (files, ";"); filename != NULL; filename = strtok (NULL, ";"))
          {
-            if (!read_assembly_file (filename))
+            if (!read_assembly_file (filename, exception_file_name))
                fatal_error ("Cannot read exception handler: %s\n", filename);
 
             if (print_message)
@@ -136,7 +140,7 @@ initialize_world (char* exception_file_names, bool print_message)
 	(void)record_label ("main", 0, 0);
       }
     }
-  initialize_scanner (stdin);
+  initialize_scanner (stdin, "");
   delete_all_breakpoints ();
 }
 
@@ -156,29 +160,30 @@ write_startup_message ()
 void
 initialize_registers ()
 {
-  memclr (FPR, FPR_LENGTH * sizeof (double));
-  FGR = (float *) FPR;
-  FWR = (int *) FPR;
+  memclr (reg().FPR, FPR_LENGTH * sizeof (double));
+  reg().FGR = (float *) reg().FPR;
+  reg().FWR = (int *) reg().FPR;
 
-  memclr (R, R_LENGTH * sizeof (reg_word));
-  R[REG_SP] = STACK_TOP - BYTES_PER_WORD - 4096; /* Initialize $sp */
-  HI = LO = 0;
-  PC = 0;
+  memclr (reg().R, R_LENGTH * sizeof (reg_word));
+  reg().R[REG_SP] = STACK_TOP - BYTES_PER_WORD - 4096; /* Initialize $sp */
+  reg().HI = reg().LO = 0;
+  reg().PC = 0;
 
-  CP0_BadVAddr = 0;
-  CP0_Count = 0;
-  CP0_Compare = 0;
-  CP0_Status = (CP0_Status_CU & 0x30000000) | CP0_Status_IM | CP0_Status_UM;
-  CP0_Cause = 0;
-  CP0_EPC = 0;
+  reg().CP0_BadVAddr = 0;
+  reg().CP0_Count = 0;
+  reg().CP0_Compare = 0;
+  reg().CP0_Status = (CP0_Status_CU & 0x30000000) | CP0_Status_IM | CP0_Status_UM;
+  reg().CP0_Cause = 0;
+  reg().CP0_EPC = 0;
 #ifdef SPIM_BIGENDIAN
-  CP0_Config =  CP0_Config_BE;
+  reg().CP0_Config =  reg().CP0_Config_BE;
 #else
-  CP0_Config = 0;
+  reg().CP0_Config = 0;
 #endif
 
-  FIR = FIR_W | FIR_D | FIR_S;	/* Word, double, & single implemented */
-  FCSR = 0x0;
+  reg().FIR = FIR_W | FIR_D | FIR_S;	/* Word, double, & single implemented */
+  reg().FCSR = 0x0;
+  reg().RFE_cycle = 0;
 }
 
 
@@ -186,19 +191,23 @@ initialize_registers ()
    successful and false otherwise. */
 
 bool
-read_assembly_file (char *name)
+read_assembly_file (char *fpath, char *file_name)
 {
-  FILE *file = fopen (name, "rt");
+  FILE *file = fopen (fpath, "rt");
 
   if (file == NULL)
     {
-      error ("Cannot open file: `%s'\n", name);
+      error ("Cannot open file: `%s'\n", fpath);
       return false;
     }
   else
     {
-      initialize_scanner (file);
-      initialize_parser (name);
+      if (file_name == NULL) {
+          file_name = strrchr(fpath, '/');
+          file_name = file_name == NULL ? fpath : file_name + 1;
+      }
+      initialize_scanner (file, file_name);
+      initialize_parser (fpath);
 
       while (!yyparse ()) ;
 
@@ -276,7 +285,7 @@ initialize_run_stack (int argc, char **argv)
   mem_addr addrs[10000];
 
 
-  R[REG_SP] = STACK_TOP - 1; /* Initialize $sp */
+  reg().R[REG_SP] = STACK_TOP - 1; /* Initialize $sp */
 
   /* Put strings on stack: */
   /* env: */
@@ -289,24 +298,24 @@ initialize_run_stack (int argc, char **argv)
     addrs[j++] = copy_str_to_stack (argv[i]);
 
   /* Align stack pointer for word-size data */
-  R[REG_SP] = R[REG_SP] & ~3;	/* Round down to nearest word */
-  R[REG_SP] -= BYTES_PER_WORD;	/* First free word on stack */
-  R[REG_SP] = R[REG_SP] & ~7;	/* Double-word align stack-pointer*/
+  reg().R[REG_SP] = reg().R[REG_SP] & ~3;	/* Round down to nearest word */
+  reg().R[REG_SP] -= BYTES_PER_WORD;	/* First free word on stack */
+  reg().R[REG_SP] = reg().R[REG_SP] & ~7;	/* Double-word align stack-pointer*/
 
   /* Build vectors on stack: */
   /* env: */
   (void)copy_int_to_stack (0);	/* Null-terminate vector */
   for (i = env_j - 1; i >= 0; i--)
-    R[REG_A2] = copy_int_to_stack (addrs[i]);
+    reg().R[REG_A2] = copy_int_to_stack (addrs[i]);
 
   /* argv: */
   (void)copy_int_to_stack (0);	/* Null-terminate vector */
   for (i = j - 1; i >= env_j; i--)
-    R[REG_A1] = copy_int_to_stack (addrs[i]);
+    reg().R[REG_A1] = copy_int_to_stack (addrs[i]);
 
   /* argc: */
-  R[REG_A0] = argc;
-  set_mem_word (R[REG_SP], argc); /* Leave argc on stack */
+  reg().R[REG_A0] = argc;
+  set_mem_word (reg().R[REG_SP], argc); /* Leave argc on stack */
 }
 
 
@@ -316,20 +325,20 @@ copy_str_to_stack (char *s)
   int i = (int)strlen (s);
   while (i >= 0)
     {
-      set_mem_byte (R[REG_SP], s[i]);
-      R[REG_SP] -= 1;
+      set_mem_byte (reg().R[REG_SP], s[i]);
+      reg().R[REG_SP] -= 1;
       i -= 1;
     }
-  return ((mem_addr) R[REG_SP] + 1); /* Leaves stack pointer byte-aligned!! */
+  return ((mem_addr) reg().R[REG_SP] + 1); /* Leaves stack pointer byte-aligned!! */
 }
 
 
 static mem_addr
 copy_int_to_stack (int n)
 {
-  set_mem_word (R[REG_SP], n);
-  R[REG_SP] -= BYTES_PER_WORD;
-  return ((mem_addr) R[REG_SP] + BYTES_PER_WORD);
+  set_mem_word (reg().R[REG_SP], n);
+  reg().R[REG_SP] -= BYTES_PER_WORD;
+  return ((mem_addr) reg().R[REG_SP] + BYTES_PER_WORD);
 }
 
 
@@ -365,20 +374,6 @@ run_program (mem_addr pc, int steps, bool display, bool cont_bkpt, bool* continu
   else
     return false;
 }
-
-
-/* Record of where a breakpoint was placed and the instruction previously
-   in memory. */
-
-typedef struct bkptrec
-{
-  mem_addr addr;
-  instruction *inst;
-  struct bkptrec *next;
-} bkpt;
-
-
-static bkpt *bkpts = NULL;
 
 
 /* Set a breakpoint at memory location ADDR. */

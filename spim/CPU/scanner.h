@@ -33,7 +33,7 @@
 
 /* Exported functions (besides yylex): */
 
-void initialize_scanner (FILE *in_file);
+void initialize_scanner (FILE *in_file, char *in_file_name);
 void push_scanner (FILE *in_file);
 void pop_scanner ();
 char* erroneous_line ();
