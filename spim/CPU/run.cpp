@@ -1705,7 +1705,6 @@ raise_exception (int excode)
     {
       /* Ignore interrupt exception when interrupts disabled.  */
       reg().exception_occurred = 1;
-	  last_exception_addr = reg().PC;
       if (running_in_delay_slot)
 	{
 	  /* In delay slot */

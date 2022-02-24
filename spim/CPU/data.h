@@ -30,6 +30,8 @@
    OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 */
 
+#ifndef DATA_H
+#define DATA_H
 
 /* Exported functions: */
 
@@ -52,3 +54,5 @@ void store_half (int value);
 void store_string (char *string, int length, bool null_terminate);
 void store_word (int value);
 void user_kernel_data_segment (bool to_kernel);
+
+#endif

@@ -587,7 +587,7 @@ check_memory_mapped_IO ()
       recv_buffer_full_timer = RECV_INTERVAL;
       if (recv_control & RECV_INT_ENABLE)
 	{
-	  RAISE_INTERRUPT (RECV_INT_LEVEL);
+	  RAISE_INTERRUPT (reg(), RECV_INT_LEVEL);
 	}
     }
 
@@ -604,7 +604,7 @@ check_memory_mapped_IO ()
       trans_control |= TRANS_READY;
       if (trans_control & TRANS_INT_ENABLE)
 	{
-	  RAISE_INTERRUPT (TRANS_INT_LEVEL);
+	  RAISE_INTERRUPT (reg(), TRANS_INT_LEVEL);
 	}
     }
 }
@@ -626,14 +626,14 @@ write_memory_mapped_IO (mem_addr addr, mem_word value)
 	  if (trans_control & TRANS_READY)
 	    {
 	      /* Raise interrupt on enabling a ready transmitter */
-	      RAISE_INTERRUPT (TRANS_INT_LEVEL);
+	      RAISE_INTERRUPT (reg(), TRANS_INT_LEVEL);
 	    }
 	}
       else
 	{
 	  /* Disable interrupts: */
 	  trans_control &= ~TRANS_INT_ENABLE;
-	  CLEAR_INTERRUPT (TRANS_INT_LEVEL); /* Clear IP bit in Cause */
+	  CLEAR_INTERRUPT (reg(), TRANS_INT_LEVEL); /* Clear IP bit in Cause */
 	}
       break;
 
@@ -647,7 +647,7 @@ write_memory_mapped_IO (mem_addr addr, mem_word value)
 	  /* Device is busy for a while: */
 	  trans_control &= ~TRANS_READY;
 	  trans_buffer_full_timer = TRANS_LATENCY;
-          CLEAR_INTERRUPT (TRANS_INT_LEVEL); /* Clear IP bit in Cause */
+          CLEAR_INTERRUPT (reg(), TRANS_INT_LEVEL); /* Clear IP bit in Cause */
 	}
       break;
 
@@ -660,14 +660,14 @@ write_memory_mapped_IO (mem_addr addr, mem_word value)
 	  if (recv_control & RECV_READY)
 	    {
 	      /* Raise interrupt on enabling a ready receiver */
-	      RAISE_INTERRUPT (RECV_INT_LEVEL);
+	      RAISE_INTERRUPT (reg(), RECV_INT_LEVEL);
 	    }
 	}
       else
 	{
 	  /* Disable interrupts: */
 	  recv_control &= ~RECV_INT_ENABLE;
-	  CLEAR_INTERRUPT (RECV_INT_LEVEL); /* Clear IP bit in Cause */
+	  CLEAR_INTERRUPT (reg(), RECV_INT_LEVEL); /* Clear IP bit in Cause */
 	}
       break;
 
@@ -700,7 +700,7 @@ read_memory_mapped_IO (mem_addr addr)
     case RECV_BUFFER_ADDR:
       recv_control &= ~RECV_READY; /* Buffer now empty */
       recv_buffer_full_timer = 0;
-      CLEAR_INTERRUPT (RECV_INT_LEVEL); /* Clear IP bit in Cause */
+      CLEAR_INTERRUPT (reg(), RECV_INT_LEVEL); /* Clear IP bit in Cause */
       return (recv_buffer & 0xff);
 
     default:

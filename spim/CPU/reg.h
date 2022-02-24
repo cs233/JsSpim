@@ -174,7 +174,7 @@ extern char *int_reg_names[];
 			 | CP0_Config_AR	\
 			 | CP0_Config_MT)
 
-reg_word CP0_ExCode(reg_image_t &REG)	{ return ((REG.CP0_Cause & CP0_Cause_ExcCode) >> 2); }
+inline reg_word CP0_ExCode(reg_image_t &REG)	{ return ((REG.CP0_Cause & CP0_Cause_ExcCode) >> 2); }
 
 /* Floating Point Coprocessor (1) registers.
 
@@ -187,22 +187,25 @@ reg_word CP0_ExCode(reg_image_t &REG)	{ return ((REG.CP0_Cause & CP0_Cause_ExcCo
 #define FPR_LENGTH	16
 
 
-#define FPR_S(REGIMG, REGNO)	reg().FGR[REGNO]
+#define FPR_S(REGIMG, REGNO)	REGIMG.FGR[REGNO]
 
 #define FPR_D(REGIMG, REGNO)	(((REGNO) & 0x1) \
 			 ? (run_error ("Odd FP double register number\n") , 0.0) \
 			 : REGIMG.FPR[(REGNO) / 2])
 
-#define FPR_W(REGIMG, REGNO)	reg().FWR[REGNO]
+#define FPR_W(REGIMG, REGNO)	REGIMG.FWR[REGNO]
 
 
-void SET_FPR_S(reg_image_t &REGIMG, size_t REGNO, reg_word VALUE)	{REGIMG.FGR[REGNO] = (float) (VALUE);}
+inline void SET_FPR_S(reg_image_t &REGIMG, size_t REGNO, reg_word VALUE)	
+	{REGIMG.FGR[REGNO] = (float) (VALUE);}
 
-void SET_FPR_D(reg_image_t &REGIMG, size_t REGNO, reg_word VALUE) {if ((REGNO) & 0x1) \
-				 run_error ("Odd FP double register number\n"); \
-				 else REGIMG.FPR[(REGNO) / 2] = (double) (VALUE);}
+inline void SET_FPR_D(reg_image_t &REGIMG, size_t REGNO, reg_word VALUE) 
+	{if ((REGNO) & 0x1) \
+		run_error ("Odd FP double register number\n"); \
+		else REGIMG.FPR[(REGNO) / 2] = (double) (VALUE);}
 
-void SET_FPR_W(reg_image_t &REGIMG, size_t REGNO, reg_word VALUE) {REGIMG.FWR[REGNO] = (int32) (VALUE);}
+inline void SET_FPR_W(reg_image_t &REGIMG, size_t REGNO, reg_word VALUE) 
+	{REGIMG.FWR[REGNO] = (int32) (VALUE);}
 
 
 /* Floating point control registers: */

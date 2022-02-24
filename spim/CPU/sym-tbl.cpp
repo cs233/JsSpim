@@ -35,8 +35,7 @@
 #include "string-stream.h"
 #include "spim-utils.h"
 #include "inst.h"
-#include "reg.h"
-#include "mem.h"
+#include "image.h"
 #include "data.h"
 #include "parser.h"
 #include "sym-tbl.h"
@@ -269,7 +268,7 @@ resolve_label_uses (label *sym)
   for (use = sym->uses; use != NULL; use = next_use)
     {
       resolve_a_label_sub (sym, use->inst, use->addr);
-      if (use->inst != NULL && use->addr >= DATA_BOT && use->addr < stack_bot)
+      if (use->inst != NULL && use->addr >= DATA_BOT && use->addr < mem().stack_bot)
 	{
 	  set_mem_word (use->addr, inst_encode (use->inst));
 	  free_inst (use->inst);

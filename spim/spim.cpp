@@ -70,7 +70,7 @@ void init() {
   for (int i = 0; i < NUM_CONTEXTS; ++i) {
     initialize_world(DEFAULT_EXCEPTION_HANDLER, false);
     initialize_run_stack(0, nullptr);
-    read_assembly_file("input.s");
+    read_assembly_file("./", "input.s");
   }
 
   ctx_switch(0);

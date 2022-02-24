@@ -49,14 +49,14 @@
 #include "run.h"
 #include "sym-tbl.h"
 
-bkpt *bkpts = NULL;
-
 /* Internal functions: */
 
 static mem_addr copy_int_to_stack (int n);
 static mem_addr copy_str_to_stack (char *s);
 static void delete_all_breakpoints ();
 
+
+bkpt *bkpts = NULL;
 
 int exception_occurred;
 
@@ -352,23 +352,23 @@ run_program (mem_addr pc, int steps, bool display, bool cont_bkpt, bool* continu
 {
   if (cont_bkpt && inst_is_breakpoint (pc))
     {
-      mem_addr addr = PC == 0 ? pc : PC;
+      mem_addr addr = reg().PC == 0 ? pc : reg().PC;
 
       delete_breakpoint (addr);
       exception_occurred = 0;
       *continuable = run_spim (addr, 1, display);
       add_breakpoint (addr);
       steps -= 1;
-      pc = PC;
+      pc = reg().PC;
     }
 
   exception_occurred = 0;
   *continuable = run_spim (pc, steps, display);
-  if (exception_occurred && CP0_ExCode == ExcCode_Bp)
+  if (exception_occurred && CP0_ExCode(reg()) == ExcCode_Bp)
   {
       /* Turn off EXL bit, so subsequent interrupts set EPC since the break is
       handled by SPIM code, not MIPS code. */
-      CP0_Status &= ~CP0_Status_EXL;
+      reg().CP0_Status &= ~CP0_Status_EXL;
       return true;
   }
   else

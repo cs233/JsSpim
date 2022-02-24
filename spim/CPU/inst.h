@@ -185,16 +185,16 @@ extern int exception_occurred;
 	}								\
 
 
-#define RAISE_INTERRUPT(LEVEL)						\
+#define RAISE_INTERRUPT(REGIMG, LEVEL)						\
 	{								\
 	/* Set IP (pending) bit for interrupt level. */			\
-	CP0_Cause |= (1 << ((LEVEL) + 8));				\
+	REGIMG.CP0_Cause |= (1 << ((LEVEL) + 8));				\
 	}								\
 
-#define CLEAR_INTERRUPT(LEVEL)						\
+#define CLEAR_INTERRUPT(REGIMG, LEVEL)						\
 	{								\
 	/* Clear IP (pending) bit for interrupt level. */		\
-	CP0_Cause &= ~(1 << ((LEVEL) + 8));				\
+	REGIMG.CP0_Cause &= ~(1 << ((LEVEL) + 8));				\
 	}								\
 
 /* Recognized exceptions: */

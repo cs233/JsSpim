@@ -124,7 +124,7 @@ do_syscall ()
 
     case PRINT_FLOAT_SYSCALL:
       {
-	float val = FPR_S (REG_FA0);
+	float val = FPR_S (reg(), REG_FA0);
 
 	write_output (console_out, "%.8f", val);
 	break;
@@ -152,7 +152,7 @@ do_syscall ()
 	static char str [256];
 
 	read_input (str, 256);
-	FPR_S (REG_FRES) = (float) atof (str);
+	FPR_S (reg(), REG_FRES) = (float) atof (str);
 	break;
       }
 
@@ -208,7 +208,7 @@ do_syscall ()
 #ifdef _WIN32
         R[REG_RES] = _open((char*)mem_reference (R[REG_A0]), R[REG_A1], R[REG_A2]);
 #else
-	R[REG_RES] = open((char*)mem_reference (R[REG_A0]), R[REG_A1], R[REG_A2]);
+	reg().R[REG_RES] = open((char*)mem_reference (reg().R[REG_A0]), reg().R[REG_A1], reg().R[REG_A2]);
 #endif
 	break;
       }
@@ -229,7 +229,7 @@ do_syscall ()
     case WRITE_SYSCALL:
       {
 	/* Test if address is valid */
-	(void)mem_reference (R[REG_A1] + R[REG_A2] - 1);
+	(void)mem_reference (reg().R[REG_A1] + reg().R[REG_A2] - 1);
 #ifdef _WIN32
 	reg().R[REG_RES] = _write(reg().R[REG_A0], mem_reference (reg().R[REG_A1]), reg().R[REG_A2]);
 #else
@@ -267,35 +267,35 @@ case PRINT_HEX_SYSCALL:
 void
 handle_exception ()
 {
-  if (!quiet && CP0_ExCode != ExcCode_Int)
-    error ("Exception occurred at PC=0x%08x\n", CP0_EPC);
+  if (!quiet && CP0_ExCode(reg()) != ExcCode_Int)
+    error ("Exception occurred at PC=0x%08x\n", reg().CP0_EPC);
 
   exception_occurred = 0;
-  PC = EXCEPTION_ADDR;
+  reg().PC = EXCEPTION_ADDR;
 
-  switch (CP0_ExCode)
+  switch (CP0_ExCode(reg()))
     {
     case ExcCode_Int:
       break;
 
     case ExcCode_AdEL:
       if (!quiet)
-	error ("  Unaligned address in inst/data fetch: 0x%08x\n", CP0_BadVAddr);
+	error ("  Unaligned address in inst/data fetch: 0x%08x\n", reg().CP0_BadVAddr);
       break;
 
     case ExcCode_AdES:
       if (!quiet)
-	error ("  Unaligned address in store: 0x%08x\n", CP0_BadVAddr);
+	error ("  Unaligned address in store: 0x%08x\n", reg().CP0_BadVAddr);
       break;
 
     case ExcCode_IBE:
       if (!quiet)
-	error ("  Bad address in text read: 0x%08x\n", CP0_BadVAddr);
+	error ("  Bad address in text read: 0x%08x\n", reg().CP0_BadVAddr);
       break;
 
     case ExcCode_DBE:
       if (!quiet)
-	error ("  Bad address in data/stack read: 0x%08x\n", CP0_BadVAddr);
+	error ("  Bad address in data/stack read: 0x%08x\n", reg().CP0_BadVAddr);
       break;
 
     case ExcCode_Sys:

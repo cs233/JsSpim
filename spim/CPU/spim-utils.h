@@ -30,6 +30,11 @@
    OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 */
 
+#ifndef SPIM_UTILS_H
+#define SPIM_UTILS_H
+
+#include "inst.h"
+
 
 /* Triple containing a string and two integers.	 Used in tables
    mapping from a name to values. */
@@ -41,7 +46,18 @@ typedef struct
   int value2;
 } name_val_val;
 
+/* Record of where a breakpoint was placed and the instruction previously
+   in memory. */
 
+typedef struct bkptrec
+{
+  mem_addr addr;
+  instruction *inst;
+  struct bkptrec *next;
+} bkpt;
+
+
+extern bkpt *bkpts;
 
 /* Exported functions: */
 
@@ -58,10 +74,12 @@ void initialize_world (char *exception_file_names, bool print_message);
 void list_breakpoints ();
 name_val_val *map_int_to_name_val_val (name_val_val tbl[], int tbl_len, int num);
 name_val_val *map_string_to_name_val_val (name_val_val tbl[], int tbl_len, char *id);
-bool read_assembly_file (char *name);
+bool read_assembly_file (char *fpath, char *file_name);
 bool run_program (mem_addr pc, int steps, bool display, bool cont_bkpt, bool* continuable);
 mem_addr starting_address ();
 char *str_copy (char *str);
 void write_startup_message ();
 void *xmalloc (int);
 void *zmalloc (int);
+
+#endif
