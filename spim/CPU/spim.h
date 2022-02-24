@@ -131,7 +131,7 @@ typedef uint32 /*@alt int @*/ mem_addr;
 /* Maximum size of data segment. */
 
 #ifndef DATA_LIMIT
-#define DATA_LIMIT	(K*K)	/* 1 MB */
+#define DATA_LIMIT	(16*K*K)	/* 16 MB */
 #endif
 
 /* Initial size of k_data segment. */

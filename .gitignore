@@ -4,7 +4,7 @@ parser_yacc.cpp
 parser_yacc.h
 scanner_lex.cpp
 lex.yy.cpp
-.vscode/ipch/
+.vscode/
 .idea/
 cmake-build-debug/
 wasm.*

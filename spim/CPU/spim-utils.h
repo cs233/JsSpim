@@ -70,7 +70,7 @@ void format_registers (str_stream *ss, int print_gpr_hex, int print_fpr_hex);
 void initialize_registers ();
 void initialize_stack (const char *command_line);
 void initialize_run_stack (int argc, char **argv);
-void initialize_world (char *exception_file_names, bool print_message);
+void initialize_world (size_t ctx, char *exception_file_paths, char *exception_file_name, bool print_message);
 void list_breakpoints ();
 name_val_val *map_int_to_name_val_val (name_val_val tbl[], int tbl_len, int num);
 name_val_val *map_string_to_name_val_val (name_val_val tbl[], int tbl_len, char *id);

@@ -68,7 +68,7 @@ void init() {
         SPIM_VERSION);
         
   for (int i = 0; i < NUM_CONTEXTS; ++i) {
-    initialize_world(DEFAULT_EXCEPTION_HANDLER, false);
+    initialize_world(i, DEFAULT_EXCEPTION_HANDLER, "", false);
     initialize_run_stack(0, nullptr);
     read_assembly_file("./", "input.s");
   }
@@ -134,7 +134,7 @@ val getSpecialRegVals(int ctx) {
   return val(typed_memory_view(9, specialRegs));
 }
 
-//EMSCRIPTEN_BINDINGS(init) { function("init", &init); }
+EMSCRIPTEN_BINDINGS(init) { function("init", &init); }
 //EMSCRIPTEN_BINDINGS(step) { function("step", &step); }
 EMSCRIPTEN_BINDINGS(getUserText) { function("getUserText", &getUserText); }
 EMSCRIPTEN_BINDINGS(getKernelText) { function("getKernelText", &getKernelText); }
