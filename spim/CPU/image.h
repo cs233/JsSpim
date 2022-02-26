@@ -4,7 +4,7 @@
 #include "mem.h"
 #include "reg.h"
 
-#define NUM_CONTEXTS 2
+#define NUM_CONTEXTS 1
 
 typedef struct mipsimage {
     int ctx;

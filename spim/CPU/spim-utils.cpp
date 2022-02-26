@@ -81,9 +81,8 @@ mem_addr initial_k_data_limit = K_DATA_LIMIT;
 /* Initialize or reinitialize the state of the machine. */
 
 void
-initialize_world (size_t ctx, char *exception_file_paths, char *exception_file_name, bool print_message)
+initialize_world (size_t ctx, char *exception_files, bool print_message)
 {
-  
   ctx_init(ctx);
   reg().auto_alignment = 1;
   
@@ -104,7 +103,7 @@ initialize_world (size_t ctx, char *exception_file_paths, char *exception_file_n
   data_begins_at_point (DATA_BOT);
   text_begins_at_point (TEXT_BOT);
 
-  if (exception_file_paths != NULL)
+  if (exception_files != NULL)
     {
       bool old_bare = bare_machine;
       bool old_accept = accept_pseudo_insts;
@@ -116,12 +115,12 @@ initialize_world (size_t ctx, char *exception_file_paths, char *exception_file_n
       accept_pseudo_insts = true;
 
       /* strtok modifies the string, so we must back up the string prior to use. */
-      if ((files = strdup (exception_file_paths)) == NULL)
+      if ((files = strdup (exception_files)) == NULL)
          fatal_error ("Insufficient memory to complete.\n");
 
       for (filename = strtok (files, ";"); filename != NULL; filename = strtok (NULL, ";"))
          {
-            if (!read_assembly_file (filename, exception_file_name))
+            if (!read_assembly_file (filename))
                fatal_error ("Cannot read exception handler: %s\n", filename);
 
             if (print_message)
@@ -191,7 +190,7 @@ initialize_registers ()
    successful and false otherwise. */
 
 bool
-read_assembly_file (char *fpath, char *file_name)
+read_assembly_file (char *fpath)
 {
   FILE *file = fopen (fpath, "rt");
 
@@ -202,10 +201,10 @@ read_assembly_file (char *fpath, char *file_name)
     }
   else
     {
-      if (file_name == NULL) {
-          file_name = strrchr(fpath, '/');
-          file_name = file_name == NULL ? fpath : file_name + 1;
-      }
+      char *file_name;
+      file_name = strrchr(fpath, '/');
+      file_name = file_name == NULL ? fpath : file_name + 1;
+    
       initialize_scanner (file, file_name);
       initialize_parser (fpath);
 
