@@ -95,6 +95,8 @@ extern int cycle;
 
 extern char *int_reg_names[];
 
+
+
 /* Exeception handling registers (Coprocessor 0): */
 
 /* BadVAddr register: */

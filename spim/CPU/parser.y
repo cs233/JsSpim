@@ -450,6 +450,7 @@
 #include "scanner.h"
 #include "parser.h"
 
+#define YYDEBUG 1
 
 /* return (0) */
 #define LINE_PARSE_DONE YYACCEPT

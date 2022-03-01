@@ -36,6 +36,7 @@
 #include "spim.h"
 #include "string-stream.h"
 
+
 /* Represenation of the expression that produce a value for an instruction's
    immediate field.  Immediates have the form: label +/- offset. */
 
@@ -171,12 +172,6 @@ typedef struct inst_s
 
 #define UIMM_MIN  	(unsigned)0
 #define UIMM_MAX  	((unsigned)((1<<16)-1))
-
-
-
-/* Raise an exception! */
-
-extern int exception_occurred;
 
 #define RAISE_EXCEPTION(EXCODE, MISC)					\
 	{								\

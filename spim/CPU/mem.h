@@ -85,6 +85,7 @@ typedef struct memimage {
 
 } mem_image_t;
 
+
 /* The text boundaries. */
 #define TEXT_BOT ((mem_addr) 0x400000)
 /* Amount to grow text segment when we run out of space for instructions. */

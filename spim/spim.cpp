@@ -45,7 +45,6 @@
 #include "CPU/parser.h"
 #include "CPU/sym-tbl.h"
 #include "CPU/scanner.h"
-#include "CPU/parser_yacc.h"
 #include "CPU/data.h"
 #include "CPU/version.h"
 

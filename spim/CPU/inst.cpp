@@ -1013,13 +1013,13 @@ set_breakpoint (mem_addr addr)
   if (break_inst == NULL)
     break_inst = make_r_type_inst (Y_BREAK_OP, 1, 0, 0);
 
-  exception_occurred = 0;
+  reg().exception_occurred = 0;
   old_inst = read_mem_inst (addr);
   if (old_inst == break_inst)
     return (NULL);
 
   set_mem_inst (addr, break_inst);
-  if (exception_occurred)
+  if (reg().exception_occurred)
     return (NULL);
   else
     return (old_inst);

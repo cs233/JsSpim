@@ -361,7 +361,7 @@ set_mem_byte(mem_addr addr, reg_word value)
     mem().data_seg_b [addr - DATA_BOT] = (BYTE_TYPE) value;
   else if ((addr >= mem().stack_bot) && (addr < STACK_TOP))
     mem().stack_seg_b [addr - mem().stack_bot] = (BYTE_TYPE) value;
-  else if ((addr >= K_DATA_BOT) && (addr <mem(). k_data_top))
+  else if ((addr >= K_DATA_BOT) && (addr < mem().k_data_top))
     mem().k_data_seg_b [addr - K_DATA_BOT] = (BYTE_TYPE) value;
   else
     bad_mem_write (addr, value, 0);

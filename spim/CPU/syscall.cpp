@@ -270,7 +270,7 @@ handle_exception ()
   if (!quiet && CP0_ExCode(reg()) != ExcCode_Int)
     error ("Exception occurred at PC=0x%08x\n", reg().CP0_EPC);
 
-  exception_occurred = 0;
+  reg().exception_occurred = 0;
   reg().PC = EXCEPTION_ADDR;
 
   switch (CP0_ExCode(reg()))
@@ -304,7 +304,7 @@ handle_exception ()
       break;
 
     case ExcCode_Bp:
-      exception_occurred = 0;
+      reg().exception_occurred = 0;
       return;
 
     case ExcCode_RI:
