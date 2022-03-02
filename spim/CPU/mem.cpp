@@ -129,6 +129,13 @@ make_memory (int text_size, int data_size, int data_limit,
   mem().stack_bot = STACK_TOP - stack_size;
   stack_size_limit = stack_limit;
 
+  if (mem().special_seg == NULL) {
+    mem().special_seg = (mem_word *) xmalloc (SPECIAL_TOP - SPECIAL_BOT);
+         mem().special_seg_b = (BYTE_TYPE *) mem().special_seg;
+         mem().special_seg_h = (short *) mem().special_seg;
+  }
+  memclr (mem().special_seg, (SPECIAL_TOP - SPECIAL_BOT));
+
   if (mem().k_text_seg == NULL)
     mem().k_text_seg = (instruction **) xmalloc (BYTES_TO_INST(k_text_size));
   else
@@ -307,6 +314,8 @@ read_mem_byte(mem_addr addr)
     return mem().stack_seg_b [addr - mem().stack_bot];
   else if ((addr >= K_DATA_BOT) && (addr < mem().k_data_top))
     return mem().k_data_seg_b [addr - K_DATA_BOT];
+  else if ((addr >= SPECIAL_BOT) && (addr < SPECIAL_TOP))
+    return mem().special_seg_b [addr - SPECIAL_BOT];
   else
     return bad_mem_read (addr, 0);
 }
@@ -321,6 +330,8 @@ read_mem_half(mem_addr addr)
     return mem().stack_seg_h [(addr - mem().stack_bot) >> 1];
   else if ((addr >= K_DATA_BOT) && (addr < mem().k_data_top) && !(addr & 0x1))
     return mem().k_data_seg_h [(addr - K_DATA_BOT) >> 1];
+  else if ((addr >= SPECIAL_BOT) && (addr < SPECIAL_TOP) && !(addr & 0x1))
+    return mem().special_seg_h [(addr - SPECIAL_BOT) >> 1];
   else
     return bad_mem_read (addr, 0x1);
 }
@@ -335,6 +346,8 @@ read_mem_word(mem_addr addr)
     return mem().stack_seg [(addr - mem().stack_bot) >> 2];
   else if ((addr >= K_DATA_BOT) && (addr < mem().k_data_top) && !(addr & 0x3))
     return mem().k_data_seg [(addr - K_DATA_BOT) >> 2];
+  else if ((addr >= SPECIAL_BOT) && (addr < SPECIAL_TOP) && !(addr & 0x3))
+    return mem().special_seg [(addr - SPECIAL_BOT) >> 2];
   else
     return bad_mem_read (addr, 0x3);
 }
@@ -363,6 +376,8 @@ set_mem_byte(mem_addr addr, reg_word value)
     mem().stack_seg_b [addr - mem().stack_bot] = (BYTE_TYPE) value;
   else if ((addr >= K_DATA_BOT) && (addr < mem().k_data_top))
     mem().k_data_seg_b [addr - K_DATA_BOT] = (BYTE_TYPE) value;
+  else if ((addr >= SPECIAL_BOT) && (addr < SPECIAL_TOP))
+    mem().special_seg [addr - SPECIAL_BOT] = (BYTE_TYPE) value;
   else
     bad_mem_write (addr, value, 0);
 }
@@ -378,6 +393,8 @@ set_mem_half(mem_addr addr, reg_word value)
     mem().stack_seg_h [(addr - mem().stack_bot) >> 1] = (short) value;
   else if ((addr >= K_DATA_BOT) && (addr < mem().k_data_top) && !(addr & 0x1))
     mem().k_data_seg_h [(addr - K_DATA_BOT) >> 1] = (short) value;
+  else if ((addr >= SPECIAL_BOT) && (addr < SPECIAL_TOP) && !(addr & 0x1))
+    mem().special_seg_h [(addr - SPECIAL_BOT) >> 1] = (short) value;
   else
     bad_mem_write (addr, value, 0x1);
 }
@@ -393,6 +410,8 @@ set_mem_word(mem_addr addr, reg_word value)
     mem().stack_seg [(addr - mem().stack_bot) >> 2] = (mem_word) value;
   else if ((addr >= K_DATA_BOT) && (addr < mem().k_data_top) && !(addr & 0x3))
     mem().k_data_seg [(addr - K_DATA_BOT) >> 2] = (mem_word) value;
+  else if ((addr >= SPECIAL_BOT) && (addr < SPECIAL_TOP) && !(addr & 0x3))
+    mem().special_seg [(addr - SPECIAL_BOT) >> 2] = (mem_word) value;
   else
     bad_mem_write (addr, value, 0x3);
 }
