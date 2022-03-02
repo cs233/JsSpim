@@ -4,6 +4,8 @@ TODO list:
         * deleted text_prof (only needed for a command line option we don't need to support)
         * ignored mem_dump_prof
     2 interrupts
+        * added interrupt defines to image.h
+        * these are used in spimbot code (maybe move them to mmio.h later?)
     3 last_exception / last_real_except
     4 trans_buffer (?)
     5 RUN_SPIM && RUN_PROGRAM (incl steps game loop) (incl setting PC)
@@ -30,7 +32,7 @@ Files ./spim/CPU/display-utils.cpp and ./spim-qtspimbot/CPU/display-utils.cpp di
     * no major differences todo
 
 Files ./spim/CPU/image.h and ./spim-qtspimbot/CPU/image.h differ
-    * new to spim-new
+    * (new file)
 
 Files ./spim/CPU/inst.cpp and ./spim-qtspimbot/CPU/inst.cpp differ
 Files ./spim/CPU/inst.h and ./spim-qtspimbot/CPU/inst.h differ
@@ -49,7 +51,7 @@ Files ./spim/CPU/parser.y and ./spim-qtspimbot/CPU/parser.y differ
     * no major differences todo
 
 Files ./spim/CPU/reg.h and ./spim-qtspimbot/CPU/reg.h differ
-    * qtspimbot: INTERRUPTS_ON, IN_INTERRUPT_HANDLER
+    * (done)
 
 Files ./spim/CPU/run.cpp and ./spim-qtspimbot/CPU/run.cpp differ
 Files ./spim/CPU/run.h and ./spim-qtspimbot/CPU/run.h differ

@@ -24,4 +24,7 @@ const reg_image_t &regview(int ctx);
 #define DATA_PC (reg().in_kernel ? reg().next_k_data_pc : reg().next_data_pc)
 #define INST_PC (reg().in_kernel ? reg().next_k_text_pc : reg().next_text_pc)
 
+#define INTERRUPTS_ON(REGIMAGE) (CP0_Status(REGIMAGE) & CP0_Status_IE)
+#define IN_INTERRUPT_HANDLER(REGIMAGE) (CP0_Status(REGIMAGE) & CP0_Status_EXL)
+
 #endif
