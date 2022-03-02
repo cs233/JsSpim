@@ -65,14 +65,16 @@ void init() {
   error("Based on <a href='http://spimsimulator.sourceforge.net/'>SPIM</a> %s "
         "by <a href='https://people.epfl.ch/james.larus'>James Larus</a>.\n",
         SPIM_VERSION);
+  
+  ctx_switch(0);
         
   for (int i = 0; i < NUM_CONTEXTS; ++i) {
     initialize_world(i, DEFAULT_EXCEPTION_HANDLER, false);
     initialize_run_stack(0, nullptr);
     read_assembly_file("./input.s");
+    ctx_increment();
   }
 
-  ctx_switch(0);
   reg().PC = starting_address();
 }
 

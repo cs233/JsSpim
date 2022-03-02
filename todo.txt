@@ -1,0 +1,91 @@
+TODO list:
+    1 special segment / text_prof
+    2 interrupts
+    3 last_exception / last_real_except
+    4 trans_buffer (?)
+    5 RUN_SPIM && RUN_PROGRAM (incl steps game loop) (incl setting PC)
+
+    >> run lots of tests
+
+    6 breakpoint (per context?)
+
+    >> run breakpoint tests
+
+    7 MMIO functions
+    8 other spimbot hooks
+    9 misc (#fixme)
+
+    >> run lots of tests
+    >> merge into new spimbot
+
+
+Files ./spim/CPU/data.cpp and ./spim-qtspimbot/CPU/data.cpp differ
+Files ./spim/CPU/data.h and ./spim-qtspimbot/CPU/data.h differ
+    * no major differences todo
+
+Files ./spim/CPU/display-utils.cpp and ./spim-qtspimbot/CPU/display-utils.cpp differ
+    * no major differences todo
+
+Files ./spim/CPU/image.h and ./spim-qtspimbot/CPU/image.h differ
+    * new to spim-new
+
+Files ./spim/CPU/inst.cpp and ./spim-qtspimbot/CPU/inst.cpp differ
+Files ./spim/CPU/inst.h and ./spim-qtspimbot/CPU/inst.h differ
+    * qtspimbot: set_breakpoint
+    * qtspimbot: inst_encode takes correct_branches argument #fixme
+    * qtspimbot: LAST_REAL_EXCEPT
+    * qtspimbot: robots[context].done = true if (not interrupt && tournament) on RAISE_EXCEPTION
+    * qtspimbot: inst_is_breakpoint uses different logic
+
+Files ./spim/CPU/mem.cpp and ./spim-qtspimbot/CPU/mem.cpp differ
+Files ./spim/CPU/mem.h and ./spim-qtspimbot/CPU/mem.h differ
+    * qtspimbot: mem_dump_profile
+    * spim-new:  read/write MMIO functions
+    * spim-new:  static int trans_buffer;
+    * qtspimbot: set_mem_word SPECIAL SEGMENT
+    * qtspimbot: set_mem_half SPECIAL SEGMENT
+    * qtspimbot: set_mem_byte SPECIAL SEGMENT
+    * qtspimbot: read_mem_word SPECIAL SEGMENT
+    * qtspimbot: read_mem_half SPECIAL SEGMENT
+    * qtspimbot: read_mem_byte SPECIAL SEGMENT
+    * qtspimbot: read_mem_inst text_prof
+    * qtspimbot: make_memory SPECIAL SEGMENT, text_prof         
+    * qtspimbot: extern prof_file_name                          
+
+Files ./spim/CPU/parser.y and ./spim-qtspimbot/CPU/parser.y differ
+    * no major differences todo
+
+Files ./spim/CPU/reg.h and ./spim-qtspimbot/CPU/reg.h differ
+    * qtspimbot: INTERRUPTS_ON, IN_INTERRUPT_HANDLER
+
+Files ./spim/CPU/run.cpp and ./spim-qtspimbot/CPU/run.cpp differ
+Files ./spim/CPU/run.h and ./spim-qtspimbot/CPU/run.h differ
+    * spim-new: initial-PC and steps
+    * spim-new: RUN_SPIM sets PC
+    * qtspimbot: last_exception_addr in RAISE_EXCEPTION
+    * qtspimbot: check LAST_REAL_EXCEPT at the end of run_spim (?)
+    * RUN_SPIM
+
+Files ./spim/CPU/spim-utils.cpp and ./spim-qtspimbot/CPU/spim-utils.cpp differ
+Files ./spim/CPU/spim-utils.h and ./spim-qtspimbot/CPU/spim-utils.h differ
+    * spim-new: steps in run_program signature
+    * spim-new: add_breakpoint calls set_breakpoint
+    * qtspimbot: free_labels in initialize_world signature #fixme
+    * qtspimbot: set_mem_inst (addr, b->inst); commented out in delete_breakpoint
+    * RUN_PROGRAM 
+    * todo: contextual breakpoints?
+
+Files ./spim/CPU/spim.h and ./spim-qtspimbot/CPU/spim.h differ
+    * qtspimbot: map_click spimbot flag
+
+Files ./spim/CPU/sym-tbl.cpp and ./spim-qtspimbot/CPU/sym-tbl.cpp differ
+Files ./spim/CPU/sym-tbl.h and ./spim-qtspimbot/CPU/sym-tbl.h differ
+    * qtspimbot: free_labels flag in initialize_symbol_table #fixme
+
+Files ./spim/CPU/syscall.cpp and ./spim-qtspimbot/CPU/syscall.cpp differ
+Files ./spim/CPU/syscall.h and ./spim-qtspimbot/CPU/syscall.h differ
+    * qtspimbot: robots[context].done = true if (not interrupt && tournament) on HANDLE_EXCEPTION
+    * qtspimbot: spimbot flags in DO_SYSCALL
+    * qtspimbot: last_exception_addr
+
+Files ./spim/spim.cpp and ./spim-qtspimbot/spim.cpp differ
