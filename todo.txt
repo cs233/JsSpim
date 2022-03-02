@@ -1,5 +1,8 @@
 TODO list:
     1 special segment / text_prof
+        * added special segment
+        * deleted text_prof (only needed for a command line option we don't need to support)
+        * ignored mem_dump_prof
     2 interrupts
     3 last_exception / last_real_except
     4 trans_buffer (?)
@@ -39,18 +42,8 @@ Files ./spim/CPU/inst.h and ./spim-qtspimbot/CPU/inst.h differ
 
 Files ./spim/CPU/mem.cpp and ./spim-qtspimbot/CPU/mem.cpp differ
 Files ./spim/CPU/mem.h and ./spim-qtspimbot/CPU/mem.h differ
-    * qtspimbot: mem_dump_profile
     * spim-new:  read/write MMIO functions
     * spim-new:  static int trans_buffer;
-    * qtspimbot: set_mem_word SPECIAL SEGMENT
-    * qtspimbot: set_mem_half SPECIAL SEGMENT
-    * qtspimbot: set_mem_byte SPECIAL SEGMENT
-    * qtspimbot: read_mem_word SPECIAL SEGMENT
-    * qtspimbot: read_mem_half SPECIAL SEGMENT
-    * qtspimbot: read_mem_byte SPECIAL SEGMENT
-    * qtspimbot: read_mem_inst text_prof
-    * qtspimbot: make_memory SPECIAL SEGMENT, text_prof         
-    * qtspimbot: extern prof_file_name                          
 
 Files ./spim/CPU/parser.y and ./spim-qtspimbot/CPU/parser.y differ
     * no major differences todo
