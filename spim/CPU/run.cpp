@@ -1600,6 +1600,8 @@ run_spim (mem_addr initial_PC, int steps_to_run, bool display)
 
 	  if (reg().exception_occurred)
 	    {
+		  if ((reg().CP0_Cause >> 2) > LAST_REAL_EXCEPT)
+            reg().CP0_EPC = reg().PC - BYTES_PER_WORD;
 	      handle_exception ();
 	    }
 	}			/* End: for (step = 0; ... */
@@ -1705,6 +1707,8 @@ raise_exception (int excode)
     {
       /* Ignore interrupt exception when interrupts disabled.  */
       reg().exception_occurred = 1;
+	  last_exception_addr = reg().PC;
+
       if (running_in_delay_slot)
 	{
 	  /* In delay slot */

@@ -215,6 +215,8 @@ typedef struct inst_s
 #define ExcCode_MCheck	24	/* Machine check (not implemented) */
 #define ExcCode_CacheErr 30	/* Cache error (not impelemented) */
 
+#define LAST_REAL_EXCEPT ExcCode_CacheErr
+
 
 
 /* Fields in binary representation of instructions: */

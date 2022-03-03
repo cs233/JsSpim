@@ -101,6 +101,10 @@ void windowsParameterHandlingControl(int flag )
 }
 #endif
 
+/* The address of the last exception. Different from EPC
+ * if one exception occurs inside another or an interrupt. */
+mem_addr last_exception_addr;
+
 
 /* Decides which syscall to execute or simulate.  Returns zero upon
    exit syscall and non-zero to continue execution. */
@@ -268,7 +272,7 @@ void
 handle_exception ()
 {
   if (!quiet && CP0_ExCode(reg()) != ExcCode_Int)
-    error ("Exception occurred at PC=0x%08x\n", reg().CP0_EPC);
+    error ("Exception occurred at PC=0x%08x\n", last_exception_addr);
 
   reg().exception_occurred = 0;
   reg().PC = EXCEPTION_ADDR;
