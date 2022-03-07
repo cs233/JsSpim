@@ -29,13 +29,17 @@
    LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY
    OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 */
+#include "spim.h"
 
+#ifdef WASM
 #include "emscripten/bind.h"
 #include "emscripten/val.h"
+#endif
 
 #include <unistd.h>
 #include <stdio.h>
 #include <stdarg.h>
+#include <string>
 
 #include "CPU/spim.h"
 #include "CPU/string-stream.h"
@@ -48,7 +52,9 @@
 #include "CPU/data.h"
 #include "CPU/version.h"
 
+#ifdef WASM
 using namespace emscripten;
+#endif
 
 bool bare_machine;        /* => simulate bare machine */
 bool delayed_branches;        /* => simulate delayed branches */
@@ -79,8 +85,8 @@ void init() {
 }
 
 
-/*int step(int step_size, bool cont_bkpt) {
-  mem_addr addr = PC == 0 ? starting_address() : PC;
+int step(int step_size, bool cont_bkpt) {
+  mem_addr addr = reg().PC == 0 ? starting_address() : reg().PC;
   if (step_size == 0) step_size = DEFAULT_RUN_STEPS;
 
   bool continuable, bp_encountered;
@@ -93,14 +99,14 @@ void init() {
   }
 
   if (bp_encountered) {
-    error("Breakpoint encountered at 0x%08x\n", PC);
+    error("Breakpoint encountered at 0x%08x\n", reg().PC);
     return -1;
   }
 
   return 1;
-}*/
+}
 
-
+#ifdef WASM
 std::string getUserText(int ctx) {
   ss_clear(&ss);
   format_insts(&ss, TEXT_BOT, memview(ctx).text_top);
@@ -136,7 +142,7 @@ val getSpecialRegVals(int ctx) {
 }
 
 EMSCRIPTEN_BINDINGS(init) { function("init", &init); }
-//EMSCRIPTEN_BINDINGS(step) { function("step", &step); }
+EMSCRIPTEN_BINDINGS(step) { function("step", &step); }
 EMSCRIPTEN_BINDINGS(getUserText) { function("getUserText", &getUserText); }
 EMSCRIPTEN_BINDINGS(getKernelText) { function("getKernelText", &getKernelText); }
 EMSCRIPTEN_BINDINGS(getStack) { function("getStack", &getStack); }
@@ -148,6 +154,7 @@ EMSCRIPTEN_BINDINGS(getDoubleRegVals) { function("getDoubleRegVals", &getDoubleR
 EMSCRIPTEN_BINDINGS(getSpecialRegVals) { function("getSpecialRegVals", &getSpecialRegVals); }
 //EMSCRIPTEN_BINDINGS(delete_breakpoint) { function("deleteBreakpoint", &delete_breakpoint); }
 //EMSCRIPTEN_BINDINGS(add_breakpoint) { function("addBreakpoint", &add_breakpoint); }
+#endif
 
 /* Print an error message. */
 
