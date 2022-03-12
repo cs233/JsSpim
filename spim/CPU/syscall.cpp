@@ -48,6 +48,8 @@
 #include "string-stream.h"
 #include "inst.h"
 #include "image.h"
+#include "mem.h"
+#include "reg.h"
 #include "sym-tbl.h"
 #include "syscall.h"
 

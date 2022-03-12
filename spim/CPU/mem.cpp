@@ -30,12 +30,13 @@
    OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 */
 
-
 #include "spim.h"
 #include "string-stream.h"
 #include "spim-utils.h"
 #include "inst.h"
 #include "image.h"
+#include "reg.h"
+#include "mem.h"
 
 
 

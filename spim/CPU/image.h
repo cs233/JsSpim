@@ -3,8 +3,8 @@
 
 #include <unordered_map>
 
-#include "mem.h"
-#include "reg.h"
+#include "mem_image.h"
+#include "reg_image.h"
 
 #define NUM_CONTEXTS 2
 

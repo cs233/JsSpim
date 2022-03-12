@@ -36,6 +36,8 @@
 #include "spim-utils.h"
 #include "inst.h"
 #include "image.h"
+#include "mem.h"
+#include "reg.h"
 #include "data.h"
 #include "parser.h"
 #include "sym-tbl.h"

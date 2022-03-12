@@ -56,6 +56,8 @@
 #include "spim-utils.h"
 #include "inst.h"
 #include "image.h"
+#include "mem.h"
+#include "reg.h"
 #include "sym-tbl.h"
 #include "parser_yacc.h"
 #include "syscall.h"

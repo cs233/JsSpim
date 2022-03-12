@@ -43,6 +43,8 @@
 #include "inst.h"
 #include "data.h"
 #include "image.h"
+#include "mem.h"
+#include "reg.h"
 #include "scanner.h"
 #include "parser.h"
 #include "parser_yacc.h"
