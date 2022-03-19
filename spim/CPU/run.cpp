@@ -123,7 +123,7 @@ static int running_in_delay_slot = 0;
 		  if (delayed_branches)				\
 		    {						\
 		      running_in_delay_slot = 1;		\
-		      run_spim (reg().PC + BYTES_PER_WORD, 1, display);\
+		      spim_step (display);\
 		      running_in_delay_slot = 0;		\
 		    }						\
 		    /* -4 since PC is bumped after this inst */	\
@@ -174,29 +174,19 @@ static int running_in_delay_slot = 0;
 
 
 /* Run the program stored in memory, starting at address PC for
-   STEPS_TO_RUN instruction executions.  If flag DISPLAY is true, print
+   1 instruction. If flag DISPLAY is true, print
    each instruction before it executes. Return true if program's
    execution can continue. */
 
 bool
-run_spim (mem_addr initial_PC, int steps_to_run, bool display)
+spim_step (bool display)
 {
   instruction *inst;
   static reg_word *delayed_load_addr1 = NULL, delayed_load_value1;
   static reg_word *delayed_load_addr2 = NULL, delayed_load_value2;
-  int step, step_size, next_step;
 
-  reg().PC = initial_PC;
-  if (!bare_machine && mapped_io)
-    next_step = IO_INTERVAL;
-  else
-    next_step = steps_to_run;	/* Run to completion */
-
-  for (step_size = MIN (next_step, steps_to_run);
-       steps_to_run > 0;
-       steps_to_run -= step_size, step_size = MIN (next_step, steps_to_run))
-    {
-      if (!bare_machine && mapped_io)
+  //FIXME: cycle
+  if (!bare_machine && mapped_io /*&& !(cycle % IO_INTERVAL)*/) {
 	/* Every IO_INTERVAL steps, check if memory-mapped IO registers
 	   have changed. */
 	check_memory_mapped_IO ();
@@ -214,40 +204,33 @@ run_spim (mem_addr initial_PC, int steps_to_run, bool display)
 	     return to. */
 	  handle_exception ();
 	}
+  }
 
-      force_break = false;
-      for (step = 0; step < step_size; step += 1)
+	reg().R[0] = 0;		/* Maintain invariant value */
+
+	reg().exception_occurred = 0;
+	inst = read_mem_inst (reg().PC);
+	if (reg().exception_occurred) /* In reading instruction */
 	{
-	  if (force_break)
-	    {
-              return true;
-	    }
+		reg().exception_occurred = 0;
+		handle_exception ();
+		return true;
+	}
+	else if (inst == NULL)
+	{
+		run_error ("Attempt to execute non-instruction at 0x%08x\n", reg().PC);
+		return false;
+	}
+	else if (EXPR (inst) != NULL
+		&& EXPR (inst)->symbol != NULL
+		&& EXPR (inst)->symbol->addr == 0)
+	{
+			run_error ("Instruction references undefined symbol at 0x%08x\n  %s", reg().PC, inst_to_string(reg().PC));
+		return false;
+	}
 
-	  reg().R[0] = 0;		/* Maintain invariant value */
-
-	  reg().exception_occurred = 0;
-	  inst = read_mem_inst (reg().PC);
-	  if (reg().exception_occurred) /* In reading instruction */
-	    {
-	      reg().exception_occurred = 0;
-	      handle_exception ();
-	      continue;
-	    }
-	  else if (inst == NULL)
-	    {
-	      run_error ("Attempt to execute non-instruction at 0x%08x\n", reg().PC);
-	      return false;
-	    }
-	  else if (EXPR (inst) != NULL
-		   && EXPR (inst)->symbol != NULL
-		   && EXPR (inst)->symbol->addr == 0)
-	    {
-              run_error ("Instruction references undefined symbol at 0x%08x\n  %s", reg().PC, inst_to_string(reg().PC));
-	      return false;
-	    }
-
-	  if (display)
-	    print_inst (reg().PC);
+	if (display)
+		print_inst (reg().PC);
 
 #ifdef TEST_ASM
 	  test_assembly (inst);
@@ -1604,10 +1587,7 @@ run_spim (mem_addr initial_PC, int steps_to_run, bool display)
             reg().CP0_EPC = reg().PC - BYTES_PER_WORD;
 	      handle_exception ();
 	    }
-	}			/* End: for (step = 0; ... */
-    }				/* End: for ( ; steps_to_run > 0 ... */
 
-  /* Executed enought steps, return, but are able to continue. */
   return true;
 }
 

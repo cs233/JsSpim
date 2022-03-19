@@ -340,30 +340,28 @@ copy_int_to_stack (int n)
   return ((mem_addr) reg().R[REG_SP] + BYTES_PER_WORD); 
 }
 
-
-/* Run the program, starting at PC, for STEPS instructions. Display each
+/* Run the program, starting at PC, for 1 instruction. Display each
    instruction before executing if DISPLAY is true.  If CONT_BKPT is
    true, then step through a breakpoint. CONTINUABLE is true if
    execution can continue. Return true if breakpoint is encountered. */
 
 bool
-run_program (mem_addr pc, int steps, bool display, bool cont_bkpt, bool* continuable)
+step_program (bool display, bool cont_bkpt, bool* continuable)
 {
-  if (cont_bkpt && inst_is_breakpoint (pc))
-    {
-      mem_addr addr = reg().PC == 0 ? pc : reg().PC;
+  bool result = false;
 
-      delete_breakpoint (addr);
-      exception_occurred = 0;
-      *continuable = run_spim (addr, 1, display);
-      add_breakpoint (addr);
-      steps -= 1;
-      pc = reg().PC;
-    }
+  if (cont_bkpt && inst_is_breakpoint (reg().PC)) {
+    mem_addr addr = reg().PC;
+    delete_breakpoint(addr);
+    reg().exception_occurred = false;
+    *continuable = spim_step(display);
+    add_breakpoint(addr);
+  } else {
+    reg().exception_occurred = false;
+    *continuable = spim_step(display);
+  }
 
-  exception_occurred = 0;
-  *continuable = run_spim (pc, steps, display);
-  if (exception_occurred && CP0_ExCode(reg()) == ExcCode_Bp)
+  if (reg().exception_occurred && CP0_ExCode(reg()) == ExcCode_Bp)
   {
       /* Turn off EXL bit, so subsequent interrupts set EPC since the break is
       handled by SPIM code, not MIPS code. */
@@ -372,6 +370,41 @@ run_program (mem_addr pc, int steps, bool display, bool cont_bkpt, bool* continu
   }
   else
     return false;
+}
+
+
+bool run_spim_program(int steps, bool display, bool cont_bkpt, bool* continuable) {
+
+  for (int i = 0; i < steps; ++i, ctx_switch(0)) {
+    for (size_t j = 0; j < NUM_CONTEXTS; ctx_increment()) {
+      bool result = step_program(display, cont_bkpt, continuable);
+    }
+  }
+}
+
+bool
+run_spimbot_program (int steps, bool display, bool cont_bkpt, bool* continuable) {
+  /*if (map_click && !spimbot_tournament) {
+    return true;
+  }*/
+
+  for (int i = 0; i < steps; ++i, ctx_switch(0)) {
+    for (size_t j = 0; j < NUM_CONTEXTS; ctx_increment()) {
+      bool result = step_program(display, cont_bkpt, continuable);
+    }
+
+    int spimbot_break = 0;//world_update();
+    if (spimbot_break >= 0) {
+      if (spimbot_break == 0) {
+        *continuable = false;
+        return false;
+      }
+      else if (spimbot_break == 1) {
+        return true;
+      }
+    }
+  }
+
 }
 
 

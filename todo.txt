@@ -9,11 +9,11 @@ TODO list:
     3 LAST_REAL_EXCEPT / last_exception_addr
         * ported both with no changes
         * not too sure what LAST_REAL_EXCEPT is doing if I'm being honest but just seems to set EPC even if the exception is unrecognized 
-    4 trans_buffer (?)
-    5 RUN_SPIM && RUN_PROGRAM (incl steps game loop) (incl setting PC)
+    4 RUN_SPIM && RUN_PROGRAM (incl steps game loop) (incl setting PC)
 
     >> run lots of tests
 
+    5 trans_buffer (?)
     6 breakpoint (per context?)
 
     >> run breakpoint tests
@@ -56,17 +56,13 @@ Files ./spim/CPU/reg.h and ./spim-qtspimbot/CPU/reg.h differ
 
 Files ./spim/CPU/run.cpp and ./spim-qtspimbot/CPU/run.cpp differ
 Files ./spim/CPU/run.h and ./spim-qtspimbot/CPU/run.h differ
-    * spim-new: initial-PC and steps
-    * spim-new: RUN_SPIM sets PC
-    * RUN_SPIM
+    * spim-new: spimbot.cycle needs to be implemented #fixme
 
 Files ./spim/CPU/spim-utils.cpp and ./spim-qtspimbot/CPU/spim-utils.cpp differ
 Files ./spim/CPU/spim-utils.h and ./spim-qtspimbot/CPU/spim-utils.h differ
-    * spim-new: steps in run_program signature
     * spim-new: add_breakpoint calls set_breakpoint
     * qtspimbot: free_labels in initialize_world signature #fixme
     * qtspimbot: set_mem_inst (addr, b->inst); commented out in delete_breakpoint
-    * RUN_PROGRAM 
     * todo: contextual breakpoints?
 
 Files ./spim/CPU/spim.h and ./spim-qtspimbot/CPU/spim.h differ

@@ -86,11 +86,10 @@ void init() {
 
 
 int step(int step_size, bool cont_bkpt) {
-  mem_addr addr = reg().PC == 0 ? starting_address() : reg().PC;
   if (step_size == 0) step_size = DEFAULT_RUN_STEPS;
 
   bool continuable, bp_encountered;
-  bp_encountered = run_program(addr, step_size, false, cont_bkpt, &continuable);
+  bp_encountered = run_spim_program(step_size, false, cont_bkpt, &continuable);
 
   if (!continuable) { // finished
     printf("\n"); // to flush output

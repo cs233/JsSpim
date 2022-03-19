@@ -33,4 +33,4 @@
 
 /* Exported functions: */
 
-bool run_spim (mem_addr initial_PC, int steps, bool display);
+bool spim_step (bool display);
