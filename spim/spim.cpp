@@ -78,10 +78,9 @@ void init() {
     initialize_world(i, DEFAULT_EXCEPTION_HANDLER, false);
     initialize_run_stack(0, nullptr);
     read_assembly_file("./input.s");
+    reg().PC = starting_address();
     ctx_increment();
   }
-
-  reg().PC = starting_address();
 }
 
 
@@ -160,6 +159,7 @@ EMSCRIPTEN_BINDINGS(getSpecialRegVals) { function("getSpecialRegVals", &getSpeci
 void error(char *fmt, ...) {
   va_list args;
   va_start(args, fmt);
+  fprintf(stdout, "(%u)\t", ctx_current());
   vfprintf(stderr, fmt, args);
   va_end(args);
 }
@@ -170,6 +170,7 @@ void fatal_error(char *fmt, ...) {
   va_list args;
   va_start(args, fmt);
   fmt = va_arg(args, char *);
+  fprintf(stdout, "(%u)\t", ctx_current());
   vfprintf(stderr, fmt, args);
   exit(-1);
 }
@@ -179,6 +180,7 @@ void fatal_error(char *fmt, ...) {
 void run_error(char *fmt, ...) {
   va_list args;
   va_start(args, fmt);
+  fprintf(stdout, "(%u)\t", ctx_current());
   vfprintf(stderr, fmt, args);
   va_end(args);
 }
@@ -188,6 +190,7 @@ void run_error(char *fmt, ...) {
 void write_output(port fp, char *fmt, ...) {
   va_list args;
   va_start(args, fmt);
+  fprintf(stdout, "(%u)\t", ctx_current());
   vfprintf(stdout, fmt, args);
   fflush(stdout);
   va_end(args);

@@ -374,15 +374,17 @@ step_program (bool display, bool cont_bkpt, bool* continuable)
 
 
 bool run_spim_program(int steps, bool display, bool cont_bkpt, bool* continuable) {
+  int pgrm_done;
 
   for (int i = 0; i < steps; ++i, ctx_switch(0)) {
+    pgrm_done = 0;
+
     for (size_t j = 0; j < NUM_CONTEXTS; ++j, ctx_increment()) {
-      bool result = step_program(display, cont_bkpt, continuable);
-      if (!result) return false;
+      pgrm_done += !step_program(display, cont_bkpt, continuable);
     }
   }
 
-  return true;
+  return (pgrm_done != NUM_CONTEXTS);
 }
 
 bool
