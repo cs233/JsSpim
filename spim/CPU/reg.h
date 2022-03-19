@@ -198,16 +198,13 @@ inline reg_word CP0_ExCode(reg_image_t &REG)	{ return ((REG.CP0_Cause & CP0_Caus
 #define FPR_W(REGIMG, REGNO)	REGIMG.FWR[REGNO]
 
 
-inline void SET_FPR_S(reg_image_t &REGIMG, size_t REGNO, reg_word VALUE)	
-	{REGIMG.FGR[REGNO] = (float) (VALUE);}
+#define SET_FPR_S(REGIMG, REGNO, VALUE)	{REGIMG.FGR[REGNO] = (float) (VALUE);}
 
-inline void SET_FPR_D(reg_image_t &REGIMG, size_t REGNO, reg_word VALUE) 
-	{if ((REGNO) & 0x1) \
+#define SET_FPR_D(REGIMG, REGNO, VALUE) {if ((REGNO) & 0x1) \
 		run_error ("Odd FP double register number\n"); \
 		else REGIMG.FPR[(REGNO) / 2] = (double) (VALUE);}
 
-inline void SET_FPR_W(reg_image_t &REGIMG, size_t REGNO, reg_word VALUE) 
-	{REGIMG.FWR[REGNO] = (int32) (VALUE);}
+#define SET_FPR_W(REGIMG, REGNO, VALUE) {REGIMG.FWR[REGNO] = (int32) (VALUE);}
 
 
 /* Floating point control registers: */
