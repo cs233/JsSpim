@@ -10,6 +10,8 @@ TODO list:
         * ported both with no changes
         * not too sure what LAST_REAL_EXCEPT is doing if I'm being honest but just seems to set EPC even if the exception is unrecognized 
     4 RUN_SPIM && RUN_PROGRAM (incl steps game loop) (incl setting PC)
+        * changed run_spim -> step_spim to be more clear (run.cpp)
+        * changed run_program -> run_spim_program, run_spimbot_program (spim-utils.cpp)
 
     >> run lots of tests
 

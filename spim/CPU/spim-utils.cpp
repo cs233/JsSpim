@@ -376,10 +376,13 @@ step_program (bool display, bool cont_bkpt, bool* continuable)
 bool run_spim_program(int steps, bool display, bool cont_bkpt, bool* continuable) {
 
   for (int i = 0; i < steps; ++i, ctx_switch(0)) {
-    for (size_t j = 0; j < NUM_CONTEXTS; ctx_increment()) {
+    for (size_t j = 0; j < NUM_CONTEXTS; ++j, ctx_increment()) {
       bool result = step_program(display, cont_bkpt, continuable);
+      if (!result) return false;
     }
   }
+
+  return true;
 }
 
 bool
@@ -389,7 +392,7 @@ run_spimbot_program (int steps, bool display, bool cont_bkpt, bool* continuable)
   }*/
 
   for (int i = 0; i < steps; ++i, ctx_switch(0)) {
-    for (size_t j = 0; j < NUM_CONTEXTS; ctx_increment()) {
+    for (size_t j = 0; j < NUM_CONTEXTS; ++j, ctx_increment()) {
       bool result = step_program(display, cont_bkpt, continuable);
     }
 
