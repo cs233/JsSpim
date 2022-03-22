@@ -109,25 +109,6 @@ typedef struct memimage {
 #define SPECIAL_BOT		((mem_addr) 0xfffe0000)
 #define SPECIAL_TOP		((mem_addr) 0xffff0000)
 
-/* Read from console: */
-#define RECV_CTRL_ADDR		((mem_addr) 0xffff0000)
-#define RECV_BUFFER_ADDR	((mem_addr) 0xffff0004)
-
-#define RECV_READY		0x1
-#define RECV_INT_ENABLE		0x2
-
-#define RECV_INT_LEVEL		3 /* HW Interrupt 1 */
-
-
-/* Write to console: */
-#define TRANS_CTRL_ADDR		((mem_addr) 0xffff0008)
-#define TRANS_BUFFER_ADDR	((mem_addr) 0xffff000c)
-
-#define TRANS_READY		0x1
-#define TRANS_INT_ENABLE	0x2
-
-#define TRANS_INT_LEVEL		2 /* HW Interrupt 0 */
-
 
 
 

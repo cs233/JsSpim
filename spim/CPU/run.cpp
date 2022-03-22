@@ -185,30 +185,8 @@ spim_step (bool display)
   static reg_word *delayed_load_addr1 = NULL, delayed_load_value1;
   static reg_word *delayed_load_addr2 = NULL, delayed_load_value2;
 
-  //FIXME: cycle
-  if (!bare_machine && mapped_io /*&& !(cycle % IO_INTERVAL)*/) {
-	/* Every IO_INTERVAL steps, check if memory-mapped IO registers
-	   have changed. */
-	check_memory_mapped_IO ();
-      /* else run inner loop for all steps */
-
-      if ((reg().CP0_Status & CP0_Status_IE)
-	  && !(reg().CP0_Status & CP0_Status_EXL)
-	  && ((reg().CP0_Cause & CP0_Cause_IP) & (reg().CP0_Status & CP0_Status_IM)))
-	{
-	  /* There is an interrupt to process if IE bit set, EXL bit not
-	     set, and non-masked IP bit set */
-	  raise_exception (ExcCode_Int);
-	  /* Handle interrupt now, before instruction executes, so that
-	     EPC points to unexecuted instructions, which is the one to
-	     return to. */
-	  handle_exception ();
-	}
-  }
-
 	reg().R[0] = 0;		/* Maintain invariant value */
 
-	reg().exception_occurred = 0;
 	inst = read_mem_inst (reg().PC);
 	if (reg().exception_occurred) /* In reading instruction */
 	{

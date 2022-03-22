@@ -18,6 +18,8 @@ TODO list:
         * all pass with 4 contexts (!)
 
     5 trans_buffer (?)
+        * to make things simple, deleted all references to this by clearing all built-in mmio functions
+        * spim-new is now equal to qtspimbot in this regard
     6 breakpoint (per context?)
 
     >> run breakpoint tests
@@ -49,8 +51,7 @@ Files ./spim/CPU/inst.h and ./spim-qtspimbot/CPU/inst.h differ
 
 Files ./spim/CPU/mem.cpp and ./spim-qtspimbot/CPU/mem.cpp differ
 Files ./spim/CPU/mem.h and ./spim-qtspimbot/CPU/mem.h differ
-    * spim-new:  read/write MMIO functions
-    * spim-new:  static int trans_buffer;
+    * spim-new todo:  empty mmio functions - fill in with spimbot mmio slot
 
 Files ./spim/CPU/parser.y and ./spim-qtspimbot/CPU/parser.y differ
     * no major differences todo
@@ -60,7 +61,7 @@ Files ./spim/CPU/reg.h and ./spim-qtspimbot/CPU/reg.h differ
 
 Files ./spim/CPU/run.cpp and ./spim-qtspimbot/CPU/run.cpp differ
 Files ./spim/CPU/run.h and ./spim-qtspimbot/CPU/run.h differ
-    * spim-new: spimbot.cycle needs to be implemented #fixme
+    * (done)
 
 Files ./spim/CPU/spim-utils.cpp and ./spim-qtspimbot/CPU/spim-utils.cpp differ
 Files ./spim/CPU/spim-utils.h and ./spim-qtspimbot/CPU/spim-utils.h differ

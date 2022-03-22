@@ -574,16 +574,6 @@ bad_mem_write (mem_addr addr, mem_word value, int mask)
 
 
 
-/* Memory-mapped IO routines. */
-
-static int recv_control = 0;	/* No input */
-static int recv_buffer;
-static int recv_buffer_full_timer = 0;
-
-static int trans_control = TRANS_READY;	/* Ready to write */
-static int trans_buffer;
-static int trans_buffer_full_timer = 0;
-
 
 /* Check if input is available and output is possible.  If so, update the
    memory-mapped control registers and buffers. */
@@ -591,41 +581,6 @@ static int trans_buffer_full_timer = 0;
 void
 check_memory_mapped_IO ()
 {
-  if (recv_buffer_full_timer > 0)
-    {
-      /* Do not check for more input until this interval expires. */
-      recv_buffer_full_timer -= 1;
-    }
-  else if (console_input_available ())
-    {
-      /* Read new char into the buffer and raise an interrupt, if interrupts
-	 are enabled for device. */
-      /* assert(recv_buffer_full_timer == 0); */
-      recv_buffer = get_console_char ();
-      recv_control |= RECV_READY;
-      recv_buffer_full_timer = RECV_INTERVAL;
-      if (recv_control & RECV_INT_ENABLE)
-	{
-	  RAISE_INTERRUPT (reg(), RECV_INT_LEVEL);
-	}
-    }
-
-  if (trans_buffer_full_timer > 0)
-    {
-      /* Do not allow output until this interval expires. */
-      trans_buffer_full_timer -= 1;
-    }
-  else if (!(trans_control & TRANS_READY))
-    {
-      /* Done writing: empty the buffer and raise an interrupt, if interrupts
-	 are enabled for device. */
-      /* assert(trans_buffer_full_timer == 0); */
-      trans_control |= TRANS_READY;
-      if (trans_control & TRANS_INT_ENABLE)
-	{
-	  RAISE_INTERRUPT (reg(), TRANS_INT_LEVEL);
-	}
-    }
 }
 
 
@@ -634,69 +589,10 @@ check_memory_mapped_IO ()
 static void
 write_memory_mapped_IO (mem_addr addr, mem_word value)
 {
-  switch (addr)
-    {
-    case TRANS_CTRL_ADDR:
-      /* Program can only set the interrupt enable, not ready, bit. */
-      if ((value & TRANS_INT_ENABLE) != 0)
-	{
-	  /* Enable interrupts: */
-	  trans_control |= TRANS_INT_ENABLE;
-	  if (trans_control & TRANS_READY)
-	    {
-	      /* Raise interrupt on enabling a ready transmitter */
-	      RAISE_INTERRUPT (reg(), TRANS_INT_LEVEL);
-	    }
-	}
-      else
-	{
-	  /* Disable interrupts: */
-	  trans_control &= ~TRANS_INT_ENABLE;
-	  CLEAR_INTERRUPT (reg(), TRANS_INT_LEVEL); /* Clear IP bit in Cause */
-	}
-      break;
-
-    case TRANS_BUFFER_ADDR:
-      /* Ignore write if device is not ready. */
-      if ((trans_control & TRANS_READY) != 0)
-	{
-	  /* Write char: */
-	  trans_buffer = value & 0xff;
-	  put_console_char ((char)trans_buffer);
-	  /* Device is busy for a while: */
-	  trans_control &= ~TRANS_READY;
-	  trans_buffer_full_timer = TRANS_LATENCY;
-          CLEAR_INTERRUPT (reg(), TRANS_INT_LEVEL); /* Clear IP bit in Cause */
-	}
-      break;
-
-    case RECV_CTRL_ADDR:
-      /* Program can only set the interrupt enable, not ready, bit. */
-      if ((value & RECV_INT_ENABLE) != 0)
-	{
-	  /* Enable interrupts: */
-	  recv_control |= RECV_INT_ENABLE;
-	  if (recv_control & RECV_READY)
-	    {
-	      /* Raise interrupt on enabling a ready receiver */
-	      RAISE_INTERRUPT (reg(), RECV_INT_LEVEL);
-	    }
-	}
-      else
-	{
-	  /* Disable interrupts: */
-	  recv_control &= ~RECV_INT_ENABLE;
-	  CLEAR_INTERRUPT (reg(), RECV_INT_LEVEL); /* Clear IP bit in Cause */
-	}
-      break;
-
-    case RECV_BUFFER_ADDR:
-      /* Nop: program can't change buffer. */
-      break;
-
+  switch (addr) {
     default:
       run_error ("Write to unused memory-mapped IO address (0x%x)\n", addr);
-    }
+  }
 }
 
 
@@ -705,27 +601,12 @@ write_memory_mapped_IO (mem_addr addr, mem_word value)
 static mem_word
 read_memory_mapped_IO (mem_addr addr)
 {
-  switch (addr)
-    {
-    case TRANS_CTRL_ADDR:
-      return (trans_control);
-
-    case TRANS_BUFFER_ADDR:
-      return (trans_buffer & 0xff);
-
-    case RECV_CTRL_ADDR:
-      return (recv_control);
-
-    case RECV_BUFFER_ADDR:
-      recv_control &= ~RECV_READY; /* Buffer now empty */
-      recv_buffer_full_timer = 0;
-      CLEAR_INTERRUPT (reg(), RECV_INT_LEVEL); /* Clear IP bit in Cause */
-      return (recv_buffer & 0xff);
-
+  switch (addr) {
     default:
       run_error ("Read from unused memory-mapped IO address (0x%x)\n", addr);
-      return (0);
-    }
+    
+    return (0);
+  }
 }
 
 
