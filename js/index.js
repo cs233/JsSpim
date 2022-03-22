@@ -9,10 +9,14 @@ const fileList = [
     'timer_interrupt.s'
 ];
 fileList.forEach(filename => {
-    const option = document.createElement("option");
-    option.text = filename;
-    option.value = `Tests/${filename}`;
-    Elements.fileSelector.add(option);
+    const option0 = document.createElement("option");
+    option0.text = filename;
+    option0.value = `Tests/${filename}`;
+    Elements.fileSelector0.add(option0);
+    const option1 = document.createElement("option");
+    option1.text = filename;
+    option1.value = `Tests/${filename}`;
+    Elements.fileSelector1.add(option1);
 });
 
 var Module = {
@@ -27,10 +31,10 @@ var Module = {
     }
 };
 
-async function main(fileInput = `Tests/${fileList[0]}`) {
+async function main(fileInput = `Tests/${fileList[0]}`, context = 0) {
     let data = await loadData(fileInput);
 
-    const stream = FS.open('input.s', 'w+');
+    const stream = FS.open('input_'+context+'.s', 'w+');
     FS.write(stream, new Uint8Array(data), 0, data.byteLength, 0);
     FS.close(stream);
 

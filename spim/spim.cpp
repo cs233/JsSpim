@@ -77,7 +77,9 @@ void init() {
   for (int i = 0; i < NUM_CONTEXTS; ++i) {
     initialize_world(i, DEFAULT_EXCEPTION_HANDLER, false);
     initialize_run_stack(0, nullptr);
-    read_assembly_file("./input.s");
+    char file_name[64];
+    sprintf(file_name, "./input_%d.s", i);
+    read_assembly_file(file_name);
     reg().PC = starting_address();
     ctx_increment();
   }

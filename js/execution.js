@@ -59,6 +59,8 @@ class Execution {
     }
 
     static play() {
+        // probably best to use requestAnimationFrame since we would be executing 8192 cycles per frame which is the ideal
+        // every time we step, we should be drawing anyways. This is just dictating how much we step by.
         if (!Execution.playing) return;
         if (Execution.speed === Execution.maxSpeed) {
             Execution.draw_cycle = 8192;
@@ -68,7 +70,7 @@ class Execution {
             setTimeout(Execution.play, 0);
         } else {
             Execution.step();
-            setTimeout(Execution.play, Execution.maxSpeed - Execution.speed);
+            setTimeout(Execution.play, (Execution.maxSpeed - Execution.speed) / Execution.maxSpeed * 50);
         }
     }
 

@@ -37,7 +37,10 @@
             assembly file</a>: &nbsp
         </div>
         <div>
-            <select id="file-selector" onchange="main(this.value)" class="form-control form-control"></select>
+            <select id="file-selector0" onchange="main(this.value, 0)" class="form-control form-control"></select>
+        </div>
+        <div>
+            <select id="file-selector1" onchange="main(this.value, 1)" class="form-control form-control"></select>
         </div>
         <div>&nbsp or &nbsp</div>
         <div>
@@ -207,7 +210,8 @@
     const Elements = Object.freeze({
         output: document.getElementById('output-content'),
         log: document.getElementById('log-content'),
-        fileSelector: document.getElementById('file-selector'),
+        fileSelector0: document.getElementById('file-selector0'),
+        fileSelector1: document.getElementById('file-selector1'),
         playButton: document.getElementById('play-button'),
         resetButton: document.getElementById('reset-button'),
         stepButton: document.getElementById('step-button'),
