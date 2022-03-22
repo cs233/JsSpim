@@ -1,6 +1,8 @@
 #ifndef MEM_IMAGE_H
 #define MEM_IMAGE_H
 
+#include "inst.h"
+
 /* Type of contents of a memory word. */
 
 typedef int32 /*@alt unsigned int @*/ mem_word;
