@@ -54,24 +54,18 @@ class Execution {
         } else {
             Execution.playing = true;
             Elements.playButton.innerHTML = "Pause";
-            Execution.play();
+            window.requestAnimationFrame(Execution.play);
         }
     }
 
-    static play() {
+    static play(timestamp) {
         // probably best to use requestAnimationFrame since we would be executing 8192 cycles per frame which is the ideal
         // every time we step, we should be drawing anyways. This is just dictating how much we step by.
         if (!Execution.playing) return;
-        if (Execution.speed === Execution.maxSpeed) {
-            Execution.draw_cycle = 8192;
-            Execution.step(Execution.draw_cycle); // This number refers to the number of cycles to elapse before the program draws to the screen
-            // Execution.cycles++;
-            // console.log("Passed " + (Execution.cycles * Execution.draw_cycle));
-            setTimeout(Execution.play, 0);
-        } else {
-            Execution.step();
-            setTimeout(Execution.play, (Execution.maxSpeed - Execution.speed) / Execution.maxSpeed * 50);
-        }
+        Execution.draw_cycle = Math.floor(322.502 * Math.exp(Execution.speed / 30.538) - 332.237); // [1, 8192] range given a domain of [1, 100]
+
+        Execution.step(Execution.draw_cycle); // This number refers to the number of cycles to elapse before the program draws to the screen
+        window.requestAnimationFrame(Execution.play);
     }
 
     static finish() {
