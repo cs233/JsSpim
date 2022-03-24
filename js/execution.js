@@ -7,6 +7,7 @@ class Execution {
         Execution.playing = false;
         Execution.previousDrawTimes = [];
         Execution.skipBreakpoint = false;
+        Execution.cyclesAt60Hz = 8192;
         // Execution.cycles = 0;
 
         Elements.stepButton.disabled = false;
@@ -95,6 +96,16 @@ class Execution {
 
         Execution.step(Execution.draw_cycle); // This number refers to the number of cycles to elapse before the program draws to the screen
         window.requestAnimationFrame(Execution.play);
+    }
+
+    static getDrawCycleStep(speed, refreshRateScale) {
+        const slope = 0.4675;
+        const x_pt = 30.545;
+        const y_pt = 12.281;
+        var a = (slope * x_pt * (Execution.cyclesAt60Hz / (2 * refreshRateScale) - 1) - y_pt) / (slope * (Execution.cyclesAt60Hz / (2 * refreshRateScale) - 1));
+        var c = (4096 / refreshRateScale - 1) / (Math.exp(80 / a) - Math.exp(1 / a));
+        var b = 1 - c * Math.exp(1 / a);
+        return c * Math.exp(speed / a) + b;
     }
 
     static getMedianRefreshRate() {
