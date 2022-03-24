@@ -7,7 +7,9 @@ class Execution {
         Execution.playing = false;
         Execution.previousDrawTimes = [];
         Execution.skipBreakpoint = false;
-        Execution.cyclesAt60Hz = 8192;
+        Execution.maxCyclesAt60Hz = 8192;
+        Execution.minCyclesAt60Hz = 1 / 60;
+        Execution.cycleSkipCount = 0;
         // Execution.cycles = 0;
 
         Elements.stepButton.disabled = false;
@@ -92,20 +94,32 @@ class Execution {
         Execution.updateDrawTme(timestamp);
 
         var refreshRateScale = 1 / 60 * 1000 / (Execution.getMedianRefreshRate());
-        Execution.draw_cycle = Math.floor((322.502 * Math.exp(Execution.speed / 30.538) - 332.237) / refreshRateScale); // [1, 8192 / refreshRateScale] range given a domain of [1, 100]
+        Execution.draw_cycle = Execution.getDrawCycleStep(Execution.speed, refreshRateScale);
 
-        Execution.step(Execution.draw_cycle); // This number refers to the number of cycles to elapse before the program draws to the screen
+        if (Execution.draw_cycle < 1) {
+            Execution.cycleSkipCount++;
+            if (Execution.cycleSkipCount * Execution.draw_cycle >= 1) {
+                Execution.cycleSkipCount = 0;
+                Execution.step();
+            }
+        } else {
+            Execution.step(Math.floor(Execution.draw_cycle)); // This number refers to the number of cycles to elapse before the program draws to the screen
+        }
         window.requestAnimationFrame(Execution.play);
     }
 
     static getDrawCycleStep(speed, refreshRateScale) {
-        const slope = 0.4675;
-        const x_pt = 30.545;
-        const y_pt = 12.281;
-        var a = (slope * x_pt * (Execution.cyclesAt60Hz / (2 * refreshRateScale) - 1) - y_pt) / (slope * (Execution.cyclesAt60Hz / (2 * refreshRateScale) - 1));
-        var c = (4096 / refreshRateScale - 1) / (Math.exp(80 / a) - Math.exp(1 / a));
-        var b = 1 - c * Math.exp(1 / a);
-        return c * Math.exp(speed / a) + b;
+        // [1 / (30 * refreshRateScale), 8192 / refreshRateScale] range given a domain speed of [1, 100]
+        if (speed >= 20) {
+            // Exponential after speed of 20
+            const a = 32.8123;
+            var c = ((Execution.maxCyclesAt60Hz - 1) / refreshRateScale) / (Math.exp(100 / a) - Math.exp(20 / a));
+            var b = 1 / refreshRateScale - c * Math.exp(20 / a);
+            return c * Math.exp(speed / a) + b;
+        } else {
+            // Linear below 20
+            return (29 * speed - 10) / (570 * refreshRateScale);
+        }
     }
 
     static getMedianRefreshRate() {
