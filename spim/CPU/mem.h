@@ -49,6 +49,7 @@ typedef int32 /*@alt unsigned int @*/ mem_word;
 typedef struct memimage {
 	/* The text segment. */
 	instruction **text_seg;
+	unsigned *text_prof;
 	int text_modified;		/* => text segment was written */
 	mem_addr text_top;
 
@@ -73,6 +74,7 @@ typedef struct memimage {
 
 	/* The kernel text segment. */
 	instruction **k_text_seg;
+	unsigned *k_text_prof;
 	mem_addr k_text_top;
 
 	/* The kernel data segment. */
@@ -80,6 +82,8 @@ typedef struct memimage {
 	short *k_data_seg_h;
 	BYTE_TYPE *k_data_seg_b;
 	mem_addr k_data_top;
+
+	char* prof_file_name;
 
 } mem_image_t;
 

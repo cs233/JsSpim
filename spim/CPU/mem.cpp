@@ -97,14 +97,17 @@ make_memory (int text_size, int data_size, int data_limit,
     data_size = 65536;
   data_size = ROUND_UP(data_size, BYTES_PER_WORD); /* Keep word aligned */
 
-  if (mem().text_seg == NULL)
+  if (mem().text_seg == NULL) {
     mem().text_seg = (instruction **) xmalloc (BYTES_TO_INST(text_size));
-  else
+    mem().text_prof = (unsigned *) xmalloc(text_size);
+  } else
     {
       free_instructions (mem().text_seg, (mem().text_top - TEXT_BOT) / BYTES_PER_WORD);
       mem().text_seg = (instruction **) realloc (mem().text_seg, BYTES_TO_INST(text_size));
+      mem().text_prof = (unsigned *)realloc(mem().text_prof,text_size);
     }
   memclr (mem().text_seg, BYTES_TO_INST(text_size));
+  memclr(mem().text_prof,text_size);
   mem().text_top = TEXT_BOT + text_size;
 
   data_size = ROUND_UP(data_size, BYTES_PER_WORD); /* Keep word aligned */
@@ -136,16 +139,19 @@ make_memory (int text_size, int data_size, int data_limit,
   }
   memclr (mem().special_seg, (SPECIAL_TOP - SPECIAL_BOT));
 
-  if (mem().k_text_seg == NULL)
+  if (mem().k_text_seg == NULL) {
     mem().k_text_seg = (instruction **) xmalloc (BYTES_TO_INST(k_text_size));
-  else
+    mem().k_text_prof = (unsigned *) xmalloc(k_text_size);
+  } else
     {
       free_instructions (mem().k_text_seg,
 			 (mem().k_text_top - K_TEXT_BOT) / BYTES_PER_WORD);
       mem().k_text_seg = (instruction **) realloc(mem().k_text_seg,
 					    BYTES_TO_INST(k_text_size));
+      mem().k_text_prof = (unsigned *) realloc(mem().k_text_prof, k_text_size);
     }
   memclr (mem().k_text_seg, BYTES_TO_INST(k_text_size));
+  memclr (mem().k_text_prof, k_text_size);
   mem().k_text_top = K_TEXT_BOT + k_text_size;
 
   k_data_size = ROUND_UP(k_data_size, BYTES_PER_WORD); /* Keep word aligned */
@@ -161,6 +167,60 @@ make_memory (int text_size, int data_size, int data_limit,
 
   mem().text_modified = true;
   mem().data_modified = true;
+}
+
+
+void mem_dump_profile() {
+  mem_image_t &mem_image = mem();
+
+  str_stream ss;
+  ss_init(&ss);
+  FILE *file = NULL;
+
+  // TODO: need to standardize this for multiple contexts
+  if ((mem_image.prof_file_name == NULL) || (mem_image.prof_file_name[0] == 0))  {
+    return;
+  }
+  file = fopen(mem_image.prof_file_name, "w");
+  if (file == NULL) {
+    printf("failed to open profile file: %s\n", mem_image.prof_file_name);
+    return;
+  }
+
+  int text_size = (mem_image.text_top - TEXT_BOT)/4;
+  for (int i = 0 ; i < text_size ; ++ i) {
+    instruction *inst = mem_image.text_seg[i];
+    if (inst == NULL) {
+      continue;
+    }
+    unsigned prof_count = mem_image.text_prof[i];
+    mem_addr addr = TEXT_BOT + (i << 2);
+    fprintf(file, "%9d ", prof_count - 1);
+    format_an_inst(&ss, inst, addr);
+    //print_inst_internal (&buf[10], sizeof(buf)-12, inst, addr);
+    fprintf(file, "%s", ss_to_string(&ss));
+    ss_clear(&ss);
+    fflush(file);
+  }
+
+  fprintf(file, "\n\nkernel text segment\n\n");
+
+  int k_text_size = (mem_image.k_text_top - K_TEXT_BOT)/4;
+  for (int i = 0 ; i < k_text_size ; ++ i) {
+    instruction *inst = mem_image.k_text_seg[i];
+    if (inst == NULL) {
+      continue;
+    }
+    unsigned prof_count = mem_image.k_text_prof[i];
+    mem_addr addr = K_TEXT_BOT + (i << 2);
+    fprintf(file, "%9d ", prof_count - 1);
+    format_an_inst(&ss, inst, addr);
+    //print_inst_internal (&buf[10], sizeof(buf)-12, inst, addr);
+    fprintf(file, "%s", ss_to_string(&ss));
+    ss_clear(&ss);
+  }
+
+  fclose(file);
 }
 
 
@@ -296,12 +356,15 @@ mem_reference(mem_addr addr)
 instruction*
 read_mem_inst(mem_addr addr)
 {
-  if ((addr >= TEXT_BOT) && (addr < mem().text_top) && !(addr & 0x3))
+  if ((addr >= TEXT_BOT) && (addr < mem().text_top) && !(addr & 0x3)) {
+    ++ mem().text_prof[(addr - TEXT_BOT) >> 2];
     return mem().text_seg [(addr - TEXT_BOT) >> 2];
-  else if ((addr >= K_TEXT_BOT) && (addr < mem().k_text_top) && !(addr & 0x3))
+  } else if ((addr >= K_TEXT_BOT) && (addr < mem().k_text_top) && !(addr & 0x3)) {
+    ++ mem().k_text_prof[(addr - K_TEXT_BOT) >> 2];
     return mem().k_text_seg [(addr - K_TEXT_BOT) >> 2];
-  else
+  } else {
     return bad_text_read (addr);
+  }
 }
 
 
