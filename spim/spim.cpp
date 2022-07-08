@@ -46,6 +46,7 @@
 #include "CPU/spim-utils.h"
 #include "CPU/inst.h"
 #include "CPU/image.h"
+#include "CPU/mem.h"
 #include "CPU/parser.h"
 #include "CPU/sym-tbl.h"
 #include "CPU/scanner.h"
