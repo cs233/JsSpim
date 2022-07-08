@@ -676,10 +676,10 @@ format_an_inst (str_stream *ss, instruction *inst, mem_addr addr)
 
   if (inst_is_breakpoint (addr))
     {
-      delete_breakpoint (addr);
+      delete_breakpoint (addr, ctx_current());
       ss_printf (ss, "*");
       format_an_inst (ss, read_mem_inst (addr), addr);
-      add_breakpoint (addr);
+      add_breakpoint (addr, ctx_current());
       return;
     }
 

@@ -63,8 +63,8 @@ extern bkpt *bkpts;
 
 /* Exported functions: */
 
-void add_breakpoint (mem_addr addr);
-void delete_breakpoint (mem_addr addr);
+bool add_breakpoint (mem_addr addr, int context);
+bool delete_breakpoint (mem_addr addr, int context);
 void format_data_segs (str_stream *ss);
 void format_insts (str_stream *ss, mem_addr from, mem_addr to);
 void format_mem (str_stream *ss, mem_addr from, mem_addr to);
@@ -73,7 +73,7 @@ void initialize_registers ();
 void initialize_stack (const char *command_line);
 void initialize_run_stack (int argc, char **argv);
 void initialize_world (size_t ctx, char *exception_file_name, bool print_message);
-void list_breakpoints ();
+void list_breakpoints (int context);
 name_val_val *map_int_to_name_val_val (name_val_val tbl[], int tbl_len, int num);
 name_val_val *map_string_to_name_val_val (name_val_val tbl[], int tbl_len, char *id);
 bool read_assembly_file (char *fpath);

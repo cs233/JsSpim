@@ -39,3 +39,7 @@ const mem_image_t &memview(int ctx) {
 const reg_image_t &regview(int ctx) { 
     return images[ctx].reg;
 }
+
+std::unordered_map<mem_addr, breakpoint> &breakpoints() {
+    return images[curr_ctx].breakpoints;
+}

@@ -6,10 +6,11 @@ class InstructionUtils {
         Elements.userTextContent.innerHTML = '';
         Elements.kernelTextContent.innerHTML = '';
 
-        const userText = Module.getUserText(0).split("\n").slice(0, -1).map(e => new Instruction(e));
+        const ctx = 0;
+        const userText = Module.getUserText(ctx).split("\n").slice(0, -1).map(e => new Instruction(e, ctx));
         userText.forEach(e => Elements.userTextContent.appendChild(e.element));
 
-        const kernelText = Module.getKernelText(0).split("\n").slice(0, -1).map(e => new Instruction(e));
+        const kernelText = Module.getKernelText(ctx).split("\n").slice(0, -1).map(e => new Instruction(e, ctx));
         kernelText.forEach(e => Elements.kernelTextContent.appendChild(e.element));
 
         InstructionUtils.instructionList = [...userText, ...kernelText];
@@ -70,8 +71,9 @@ class InstructionUtils {
 }
 
 class Instruction {
-    constructor(text) {
+    constructor(text, ctx) {
         this.text = text;
+        this.ctx = ctx;
 
         this.isBreakpoint = false;
         this.showBinary = false;
@@ -128,10 +130,10 @@ class Instruction {
     toggleBreakpoint() {
         this.isBreakpoint = !this.isBreakpoint;
         if (this.isBreakpoint) {
-            Module.addBreakpoint(this.address);
+            Module.addBreakpoint(this.address, this.ctx);
             this.element.style.fontWeight = "bold";
         } else {
-            Module.deleteBreakpoint(this.address);
+            Module.deleteBreakpoint(this.address, this.ctx);
             this.element.style.fontWeight = null;
         }
     }

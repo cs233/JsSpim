@@ -350,12 +350,12 @@ step_program (bool display, bool cont_bkpt, bool* continuable)
 {
   bool result = false;
 
-  if (cont_bkpt && inst_is_breakpoint (reg().PC)) {
+  if (inst_is_breakpoint (reg().PC)) {
     mem_addr addr = reg().PC;
-    delete_breakpoint(addr);
+    delete_breakpoint(addr, ctx_current());
     reg().exception_occurred = false;
     *continuable = spim_step(display);
-    add_breakpoint(addr);
+    add_breakpoint(addr, ctx_current());
   } else {
     reg().exception_occurred = false;
     *continuable = spim_step(display);
@@ -372,16 +372,45 @@ step_program (bool display, bool cont_bkpt, bool* continuable)
     return false;
 }
 
+#include <iostream>
 
 bool run_spim_program(int steps, bool display, bool cont_bkpt, bool* continuable) {
   int pgrm_done;
 
-  for (int i = 0; i < steps; ++i, ctx_switch(0)) {
+  *continuable = true;
+
+  for (int i = 0; i < steps; ++i) {
+    ctx_switch(0);
     pgrm_done = 0;
 
+    bool bkpt_occurred = false;
+
     for (size_t j = 0; j < NUM_CONTEXTS; ++j, ctx_increment()) {
-      pgrm_done += !step_program(display, cont_bkpt, continuable);
+      if (!cont_bkpt && inst_is_breakpoint(reg().PC)) {
+        bkpt_occurred = true;
+        error("Breakpoint encountered at 0x%08x\n", reg().PC);
+      }
     }
+
+    if (bkpt_occurred) {
+      return true;
+    }
+
+    ctx_switch(0);
+
+    for (size_t j = 0; j < NUM_CONTEXTS; ++j, ctx_increment()) {
+      bool cont; // Determines if the given context program is finished
+      pgrm_done += !step_program(display, cont_bkpt, &cont);
+
+      *continuable &= cont; // If any of the contexts are not continuable, then end the program
+    }
+
+    // End the execution immediately if one context is not continuable
+    if (!*continuable) {
+      return false;
+    }
+
+    cont_bkpt = false; // Don't skip future breakpoints
   }
 
   return (pgrm_done != NUM_CONTEXTS);
@@ -415,83 +444,69 @@ run_spimbot_program (int steps, bool display, bool cont_bkpt, bool* continuable)
 
 /* Set a breakpoint at memory location ADDR. */
 
-void
-add_breakpoint (mem_addr addr)
+bool
+add_breakpoint (mem_addr addr, int context)
 {
-  bkpt *rec = (bkpt *) xmalloc (sizeof (bkpt));
+  ctx_switch(context);
 
-  rec->next = bkpts;
-  rec->addr = addr;
-
-  if ((rec->inst = set_breakpoint (addr)) != NULL)
-    bkpts = rec;
-  else
-    {
-      if (exception_occurred)
-	error ("Cannot put a breakpoint at address 0x%08x\n", addr);
-      else
-	error ("No instruction to breakpoint at address 0x%08x\n", addr);
-      free (rec);
-    }
+  breakpoint new_bkpt{addr: addr, inst: NULL};
+  if ((new_bkpt.inst = set_breakpoint (addr)) != NULL) {
+    breakpoints().insert({addr, new_bkpt});
+    return true;
+  } else {
+    if (exception_occurred)
+	    error ("Cannot put a breakpoint at address 0x%08x\n", addr);
+    else
+	    error ("No instruction to breakpoint at address 0x%08x\n", addr);
+    return false;
+  }
 }
 
 
 /* Delete all breakpoints at memory location ADDR. */
 
-void
-delete_breakpoint (mem_addr addr)
+bool
+delete_breakpoint (mem_addr addr, int context)
 {
-  bkpt *p, *b;
-  int deleted_one = 0;
+  ctx_switch(context);
 
-  for (p = NULL, b = bkpts; b != NULL; )
-    if (b->addr == addr)
-      {
-	bkpt *n;
+  auto res = breakpoints().find(addr);
 
-	set_mem_inst (addr, b->inst);
-	if (p == NULL)
-	  bkpts = b->next;
-	else
-	  p->next = b->next;
-	n = b->next;
-	free (b);
-	b = n;
-	deleted_one = 1;
-      }
-    else
-      p = b, b = b->next;
-  if (!deleted_one)
+  if (res != breakpoints().end()) {
+    breakpoint &b = res->second;
+    set_mem_inst (addr, b.inst);
+    breakpoints().erase(res);
+    return true;
+  } else {
     error ("No breakpoint to delete at 0x%08x\n", addr);
+    return false;
+  }
 }
 
 
 static void
 delete_all_breakpoints ()
 {
-  bkpt *b, *n;
-
-  for (b = bkpts, n = NULL; b != NULL; b = n)
-    {
-      n = b->next;
-      free (b);
-    }
-  bkpts = NULL;
+  for (size_t j = 0; j < NUM_CONTEXTS; ++j, ctx_increment()) {
+    breakpoints().clear();
+  }
 }
 
 
 /* List all breakpoints. */
 
 void
-list_breakpoints ()
+list_breakpoints (int context)
 {
-  bkpt *b;
+  ctx_switch(context);
 
-  if (bkpts)
-    for (b = bkpts;  b != NULL; b = b->next)
-      write_output (message_out, "Breakpoint at 0x%08x\n", b->addr);
-  else
+  if (breakpoints().size() > 0) {
+    for (auto const &b: breakpoints()) { // b is std::pair<mem_addr, breakpoint>
+      write_output (message_out, "Breakpoint at 0x%08x\n", b.first);
+    }
+  } else {
     write_output (message_out, "No breakpoints set\n");
+  }
 }
 
 

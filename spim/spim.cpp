@@ -99,7 +99,6 @@ int step(int step_size, bool cont_bkpt) {
   }
 
   if (bp_encountered) {
-    error("Breakpoint encountered at 0x%08x\n", reg().PC);
     return -1;
   }
 
@@ -152,8 +151,8 @@ EMSCRIPTEN_BINDINGS(getGeneralRegVals) { function("getGeneralRegVals", &getGener
 EMSCRIPTEN_BINDINGS(getFloatRegVals) { function("getFloatRegVals", &getFloatRegVals); }
 EMSCRIPTEN_BINDINGS(getDoubleRegVals) { function("getDoubleRegVals", &getDoubleRegVals); }
 EMSCRIPTEN_BINDINGS(getSpecialRegVals) { function("getSpecialRegVals", &getSpecialRegVals); }
-//EMSCRIPTEN_BINDINGS(delete_breakpoint) { function("deleteBreakpoint", &delete_breakpoint); }
-//EMSCRIPTEN_BINDINGS(add_breakpoint) { function("addBreakpoint", &add_breakpoint); }
+EMSCRIPTEN_BINDINGS(delete_breakpoint) { function("deleteBreakpoint", &delete_breakpoint); }
+EMSCRIPTEN_BINDINGS(add_breakpoint) { function("addBreakpoint", &add_breakpoint); }
 #endif
 
 /* Print an error message. */
@@ -161,8 +160,9 @@ EMSCRIPTEN_BINDINGS(getSpecialRegVals) { function("getSpecialRegVals", &getSpeci
 void error(char *fmt, ...) {
   va_list args;
   va_start(args, fmt);
-  fprintf(stdout, "(%u)\t", ctx_current());
+  fprintf(stderr, "(%u)\t", ctx_current());
   vfprintf(stderr, fmt, args);
+  fflush(stderr);
   va_end(args);
 }
 
@@ -172,8 +172,9 @@ void fatal_error(char *fmt, ...) {
   va_list args;
   va_start(args, fmt);
   fmt = va_arg(args, char *);
-  fprintf(stdout, "(%u)\t", ctx_current());
+  fprintf(stderr, "(%u)\t", ctx_current());
   vfprintf(stderr, fmt, args);
+  fflush(stderr);
   exit(-1);
 }
 
@@ -182,8 +183,9 @@ void fatal_error(char *fmt, ...) {
 void run_error(char *fmt, ...) {
   va_list args;
   va_start(args, fmt);
-  fprintf(stdout, "(%u)\t", ctx_current());
+  fprintf(stderr, "(%u)\t", ctx_current());
   vfprintf(stderr, fmt, args);
+  fflush(stderr);
   va_end(args);
 }
 
