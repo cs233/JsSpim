@@ -31,12 +31,13 @@ var Module = {
     }
 };
 
-async function main(fileInput = `Tests/${fileList[0]}`, context = 0) {
-    let data = await loadData(fileInput);
-
-    const stream = FS.open('input_'+context+'.s', 'w+');
-    FS.write(stream, new Uint8Array(data), 0, data.byteLength, 0);
-    FS.close(stream);
+async function main(fileInput = `Tests/${fileList[0]}`) {
+    for (var ctx = 0; ctx < 2; ctx++) {
+        let data = await loadData(fileInput);
+        const stream = FS.open('input_'+ctx+'.s', 'w+');
+        FS.write(stream, new Uint8Array(data), 0, data.byteLength, 0);
+        FS.close(stream);
+    }
 
     Execution.init();
 }

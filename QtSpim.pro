@@ -51,28 +51,6 @@ CONFIG += c++1z
 CONFIG -= release debug
 QT += widgets gui
 
-contains(QMAKE_CXX, em++) {
-    QMAKE_LFLAGS += --emrun -s FORCE_FILESYSTEM=1\
-                      -lm -O2 --bind\
-                      --preload-file spim/CPU/exceptions.s@/usr/share/spim/exceptions.s\
-                      -s ENVIRONMENT=web \
-                      -s EXTRA_EXPORTED_RUNTIME_METHODS="\"\\\"['ccall', 'cwrap']\\\"\""
-    QMAKE_CXXFLAGS += -pedantic -Wunused -Wno-write-strings -x c++
-
-    MEM_SIZES = TEXT_SIZE=65536 DATA_SIZE=131072 K_TEXT_SIZE=65536
-    DEFINES += WASM $${MEM_SIZES} DEFAULT_EXCEPTION_HANDLER="\"\\\"/usr/share/spim/exceptions.s\\\"\""
-    QMAKE_POST_LINK += sed -i \'\' \'s/throw\"getitimer() is not implemented yet\"//g\' wasm.js; \
-	                      sed -i \'\' \'s/throw\"setitimer() is not implemented yet\"//g\' wasm.js; \
-                        rm -f $${MY_TARGET}.html qtlogo.svg qtloader.js
-    QMAKE_CLEAN += $${MY_TARGET}.wasm $${MY_TARGET}.js $${MY_TARGET}.data
-} else {
-    QMAKE_CLEAN += $${MY_TARGET} $${MY_TARGET}-debug $${MY_TARGET}-tsan
-
-    DEFINES += DEFAULT_EXCEPTION_HANDLER="\"\\\"spim/CPU/exceptions.s\\\"\""
-    SOURCES += main.cpp
-    HEADERS += spim/spim.h
-}
-
 defined(TSAN, "var"):!equals(TSAN, 0) {             # TSAN Settings
     message("Building thread sanitizer Makefile")
     CONFIG += debug sanitizer sanitize_thread
@@ -87,6 +65,29 @@ defined(TSAN, "var"):!equals(TSAN, 0) {             # TSAN Settings
     message("Building release Makefile")
     CONFIG += release
     TARGET = $${MY_TARGET}
+}
+
+contains(QMAKE_CXX, em++) {
+    QMAKE_LFLAGS += --emrun -s FORCE_FILESYSTEM=1\
+                      -lm -O2 --bind\
+                      --preload-file spim/CPU/exceptions.s@/usr/share/spim/exceptions.s\
+                      -s ENVIRONMENT=web \
+                      -s EXTRA_EXPORTED_RUNTIME_METHODS="\"\\\"['ccall', 'cwrap']\\\"\""
+    QMAKE_CXXFLAGS += -pedantic -Wunused -Wno-write-strings -x c++
+
+    MEM_SIZES = TEXT_SIZE=65536 DATA_SIZE=131072 K_TEXT_SIZE=65536
+    DEFINES += WASM $${MEM_SIZES} DEFAULT_EXCEPTION_HANDLER="\"\\\"/usr/share/spim/exceptions.s\\\"\""
+    QMAKE_POST_LINK += sed -i \'\' \'s/throw\"getitimer() is not implemented yet\"//g\' $${TARGET}.js; \
+	                      sed -i \'\' \'s/throw\"setitimer() is not implemented yet\"//g\' $${TARGET}.js; \
+                        mv $${TARGET}.js wasm.js; \
+                        rm -f $${TARGET}.html qtlogo.svg qtloader.js
+    QMAKE_CLEAN += $${MY_TARGET}.wasm $${MY_TARGET}.js $${MY_TARGET}.data $${MY_TARGET}-debug.wasm $${MY_TARGET}-debug.data
+} else {
+    QMAKE_CLEAN += $${MY_TARGET} $${MY_TARGET}-debug $${MY_TARGET}-tsan
+
+    DEFINES += DEFAULT_EXCEPTION_HANDLER="\"\\\"spim/CPU/exceptions.s\\\"\""
+    SOURCES += main.cpp
+    HEADERS += spim/spim.h
 }
 
 SOURCES += spim/spim.cpp\
