@@ -33,8 +33,10 @@
 
 /* Exported functions. */
 
-int do_syscall ();
-void handle_exception ();
+#include "image.h"
+
+int do_syscall (MIPSImage &img);
+void handle_exception (MIPSImage &img);
 
 #define PRINT_INT_SYSCALL	1
 #define PRINT_FLOAT_SYSCALL	2

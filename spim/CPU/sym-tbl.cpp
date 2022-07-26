@@ -47,7 +47,7 @@
 /* Local functions: */
 
 static void get_hash (char *name, int *slot_no, label **entry);
-static void resolve_a_label_sub (label *sym, instruction *inst, mem_addr pc);
+static void resolve_a_label_sub (MIPSImage &img, label *sym, instruction *inst, mem_addr pc);
 
 
 
@@ -153,7 +153,7 @@ label_is_defined (char *name)
    previously been looked-up, the same node is returned this time.  */
 
 label *
-lookup_label (char *name)
+lookup_label (MIPSImage &img, char *name)
 {
   int hi;
   label *entry, *lab;
@@ -164,8 +164,8 @@ lookup_label (char *name)
     return (entry);
 
   /* Not found, create one, add to chain */
-  lab = (label *) xmalloc (sizeof (label));
-  lab->name = str_copy (name);
+  lab = (label *) xmalloc (img, sizeof (label));
+  lab->name = str_copy (img, name);
   lab->addr = 0;
   lab->global_flag = 0;
   lab->const_flag = 0;
@@ -182,15 +182,15 @@ lookup_label (char *name)
    true, resolve all references to it.  Return the label structure. */
 
 label *
-record_label (char *name, mem_addr address, int resolve_uses)
+record_label (MIPSImage &img, char *name, mem_addr address, int resolve_uses)
 {
-  label *l = lookup_label (name);
+  label *l = lookup_label (img, name);
 
   if (!l->gp_flag)
     {
       if (l->addr != 0)
 	{
-	  yyerror ("Label is defined for the second time");
+	  yyerror (img, "Label is defined for the second time");
 	  return (l);
 	}
       l->addr = address;
@@ -198,7 +198,7 @@ record_label (char *name, mem_addr address, int resolve_uses)
 
   if (resolve_uses)
     {
-      resolve_label_uses (l);
+      resolve_label_uses (img ,l);
     }
 
   if (!l->global_flag)
@@ -213,9 +213,9 @@ record_label (char *name, mem_addr address, int resolve_uses)
 /* Make the label named NAME global.  Return its symbol. */
 
 label *
-make_label_global (char *name)
+make_label_global (MIPSImage &img, char *name)
 {
-  label *l = lookup_label (name);
+  label *l = lookup_label (img, name);
 
   l->global_flag = 1;
   return (l);
@@ -225,19 +225,19 @@ make_label_global (char *name)
 /* Record that an INSTRUCTION uses the as-yet undefined SYMBOL. */
 
 void
-record_inst_uses_symbol (instruction *inst, label *sym)
+record_inst_uses_symbol (MIPSImage &img, instruction *inst, label *sym)
 {
-  label_use *u = (label_use *) xmalloc (sizeof (label_use));
+  label_use *u = (label_use *) xmalloc (img, sizeof (label_use));
 
   if (data_dir)			/* Want to free up original instruction */
     {
-      u->inst = copy_inst (inst);
-      u->addr = current_data_pc ();
+      u->inst = copy_inst (img, inst);
+      u->addr = current_data_pc (img);
     }
   else
     {
       u->inst = inst;
-      u->addr = current_text_pc ();
+      u->addr = current_text_pc (img);
     }
   u->next = sym->uses;
   sym->uses = u;
@@ -247,9 +247,9 @@ record_inst_uses_symbol (instruction *inst, label *sym)
 /* Record that a memory LOCATION uses the as-yet undefined SYMBOL. */
 
 void
-record_data_uses_symbol (mem_addr location, label *sym)
+record_data_uses_symbol (MIPSImage &img, mem_addr location, label *sym)
 {
-  label_use *u = (label_use *) xmalloc (sizeof (label_use));
+  label_use *u = (label_use *) xmalloc (img, sizeof (label_use));
 
   u->inst = NULL;
   u->addr = location;
@@ -262,17 +262,17 @@ record_data_uses_symbol (mem_addr location, label *sym)
    instructions and data locations that refer to the label. */
 
 void
-resolve_label_uses (label *sym)
+resolve_label_uses (MIPSImage &img, label *sym)
 {
   label_use *use;
   label_use *next_use;
 
   for (use = sym->uses; use != NULL; use = next_use)
     {
-      resolve_a_label_sub (sym, use->inst, use->addr);
-      if (use->inst != NULL && use->addr >= DATA_BOT && use->addr < mem().stack_bot)
+      resolve_a_label_sub (img, sym, use->inst, use->addr);
+      if (use->inst != NULL && use->addr >= DATA_BOT && use->addr < img.mem_image().stack_bot)
 	{
-	  set_mem_word (use->addr, inst_encode (use->inst));
+	  set_mem_word (img, use->addr, inst_encode (img, use->inst));
 	  free_inst (use->inst);
 	}
       next_use = use->next;
@@ -285,21 +285,22 @@ resolve_label_uses (label *sym)
 /* Resolve the newly-defined label in INSTRUCTION. */
 
 void
-resolve_a_label (label *sym, instruction *inst)
+resolve_a_label (MIPSImage &img, label *sym, instruction *inst)
 {
-  resolve_a_label_sub (sym,
+  resolve_a_label_sub (img,
+           sym,
 		       inst,
-		       (data_dir ? current_data_pc () : current_text_pc ()));
+		       (data_dir ? current_data_pc (img) : current_text_pc (img)));
 }
 
 
 static void
-resolve_a_label_sub (label *sym, instruction *inst, mem_addr pc)
+resolve_a_label_sub (MIPSImage &img, label *sym, instruction *inst, mem_addr pc)
 {
   if (inst == NULL)
     {
       /* Memory data: */
-      set_mem_word (pc, sym->addr);
+      set_mem_word (img, pc, sym->addr);
     }
   else
     {
@@ -318,7 +319,7 @@ resolve_a_label_sub (label *sym, instruction *inst, mem_addr pc)
 	      int val;
 
 	      /* Drop low two bits since instructions are on word boundaries. */
-	      val = SIGN_EX (eval_imm_expr (EXPR (inst)));   /* 16->32 bits */
+	      val = SIGN_EX (eval_imm_expr (img, EXPR (inst)));   /* 16->32 bits */
 	      val = (val >> 2) & 0xffff;	    /* right shift, 32->16 bits */
 
 	      if (delayed_branches)
@@ -329,10 +330,10 @@ resolve_a_label_sub (label *sym, instruction *inst, mem_addr pc)
 	    }
 	  else if (opcode_is_jump (OPCODE (inst)))
 	    {
-	      value = eval_imm_expr (EXPR (inst));
+	      value = eval_imm_expr (img, EXPR (inst));
 		  if ((value & 0xf0000000) != (pc & 0xf0000000))
 		  {
-			  error ("Target of jump differs in high-order 4 bits from instruction pc 0x%x\n", pc);
+			  error (img, "Target of jump differs in high-order 4 bits from instruction pc 0x%x\n", pc);
 		  }
 		  /* Drop high four bits, since they come from the PC and the
 			 low two bits since instructions are on word boundaries. */
@@ -342,7 +343,7 @@ resolve_a_label_sub (label *sym, instruction *inst, mem_addr pc)
 	  else if (opcode_is_load_store (OPCODE (inst)))
 	    {
 	      /* Label's location is an address */
-	      value = eval_imm_expr (EXPR (inst));
+	      value = eval_imm_expr (img, EXPR (inst));
 	      field_mask = 0xffff;
 
 	      if (value & 0x8000)
@@ -350,8 +351,8 @@ resolve_a_label_sub (label *sym, instruction *inst, mem_addr pc)
   		  /* LW/SW sign extends offset. Compensate by adding 1 to high 16 bits. */
 		  instruction* prev_inst;
 		  instruction* prev_prev_inst;
-		  prev_inst = read_mem_inst (pc - BYTES_PER_WORD);
-		  prev_prev_inst = read_mem_inst (pc - 2 * BYTES_PER_WORD);
+		  prev_inst = read_mem_inst (img, pc - BYTES_PER_WORD);
+		  prev_prev_inst = read_mem_inst (img, pc - 2 * BYTES_PER_WORD);
 
 		  if (prev_inst != NULL
 		      && OPCODE (prev_inst) == Y_LUI_OP
@@ -376,24 +377,24 @@ resolve_a_label_sub (label *sym, instruction *inst, mem_addr pc)
 	  else
 	    {
 	      /* Label's location is a value */
-	      value = eval_imm_expr (EXPR (inst));
+	      value = eval_imm_expr (img, EXPR (inst));
 	      field_mask = 0xffff;
 	    }
 
 	  if ((value & ~field_mask) != (int32)0
               && (value & ~field_mask) != (int32)0xffff0000)
 	    {
-	      error ("Immediate value is too large for field: ");
-	      print_inst (pc);
+	      error (img, "Immediate value is too large for field: ");
+	      print_inst (img, pc);
 	    }
 	  if (opcode_is_jump (OPCODE (inst)))
 	    SET_TARGET (inst, value); /* Don't mask so it is sign-extended */
 	  else
 	    SET_IMM (inst, value);	/* Ditto */
-	  SET_ENCODING (inst, inst_encode (inst));
+	  SET_ENCODING (inst, inst_encode (img, inst));
 	}
       else
-	error ("Resolving undefined symbol: %s\n",
+	error (img, "Resolving undefined symbol: %s\n",
 	       (EXPR (inst)->symbol == NULL) ? "" : EXPR (inst)->symbol->name);
     }
 }
@@ -402,7 +403,7 @@ resolve_a_label_sub (label *sym, instruction *inst, mem_addr pc)
 /* Remove all local (non-global) label from the table. */
 
 void
-flush_local_labels (int issue_undef_warnings)
+flush_local_labels (MIPSImage &img, int issue_undef_warnings)
 {
   label *l;
 
@@ -423,7 +424,7 @@ flush_local_labels (int issue_undef_warnings)
 	    else
 	      p->next = lab->next;
 	    if (issue_undef_warnings && entry->addr == 0 && !entry->const_flag)
-	      error ("Warning: local symbol %s was not defined\n",
+	      error (img, "Warning: local symbol %s was not defined\n",
 		     entry->name);
 	    /* Can't free label since IMM_EXPR's still reference it */
 	    break;
@@ -436,9 +437,9 @@ flush_local_labels (int issue_undef_warnings)
 /* Return the address of SYMBOL or 0 if it is undefined. */
 
 mem_addr
-find_symbol_address (char *symbol)
+find_symbol_address (MIPSImage &img, char *symbol)
 {
-  label *l = lookup_label (symbol);
+  label *l = lookup_label (img, symbol);
 
   if (l == NULL || l->addr == 0)
     return 0;
@@ -450,14 +451,14 @@ find_symbol_address (char *symbol)
 /* Print all symbols in the table. */
 
 void
-print_symbols ()
+print_symbols (MIPSImage &img)
 {
   int i;
   label *l;
 
   for (i = 0; i < LABEL_HASH_TABLE_SIZE; i ++)
     for (l = label_hash_table [i]; l != NULL; l = l->next)
-      write_output (message_out, "%s%s at 0x%08x\n",
+      write_output (img, message_out, "%s%s at 0x%08x\n",
 		    l->global_flag ? "g\t" : "\t", l->name, l->addr);
 }
 
@@ -465,7 +466,7 @@ print_symbols ()
 /* Print all undefined symbols in the table. */
 
 void
-print_undefined_symbols ()
+print_undefined_symbols (MIPSImage &img)
 {
   int i;
   label *l;
@@ -473,7 +474,7 @@ print_undefined_symbols ()
   for (i = 0; i < LABEL_HASH_TABLE_SIZE; i ++)
     for (l = label_hash_table [i]; l != NULL; l = l->next)
       if (l->addr == 0)
-	write_output (message_out, "%s\n", l->name);
+	write_output (img, message_out, "%s\n", l->name);
 }
 
 

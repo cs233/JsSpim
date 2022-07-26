@@ -36,6 +36,7 @@
 #include "spim.h"
 #include "string-stream.h"
 #include "spim-utils.h"
+#include "image.h"
 #include "inst.h"
 #include "reg.h"
 #include "sym-tbl.h"
@@ -77,8 +78,8 @@ static int eof_returned = 0;	/* Return EOF token yet? */
 /* Local functions: */
 
 static int check_keyword (char *id, int allow_pseudo_ops);
-static char *copy_str (char *str, int chop);
-static char scan_escape (char **str);
+static char *copy_str (MIPSImage &img, char *str, int chop);
+static char scan_escape (MIPSImage &img, char **str);
 
 
 #undef yywrap
@@ -181,7 +182,7 @@ static char scan_escape (char **str);
 			    }
 
 			  if (only_id && token != 0)
-			    yyerror ("Cannot use opcodes as labels");
+			    yyerror (img, "Cannot use opcodes as labels");
 
 			  if ((l = label_is_defined (yytext)) != NULL
 			      && l->const_flag)
@@ -193,7 +194,7 @@ static char scan_escape (char **str);
 			  else
 			    {
 			      /* Not-yet defined label */
-			      yylval.p = (char*) str_copy (yytext);
+			      yylval.p = (char*) str_copy (img, yytext);
 			      return (Y_ID);
 			    }
 			}
@@ -235,7 +236,7 @@ static char scan_escape (char **str);
 				}
 			      else
 				{
-				  yylval.p = (char*) str_copy (yytext);
+				  yylval.p = (char*) str_copy (img, yytext);
 				  return (Y_ID);
 				}
 			    }
@@ -267,7 +268,7 @@ static char scan_escape (char **str);
 			      current_line_no = line_no;
 			      current_line = yytext;
 			    }
-			  yylval.p = (char*) str_copy (yytext);
+			  yylval.p = (char*) str_copy (img, yytext);
 			  /* For top level */
 			  return (Y_ID);
 			}
@@ -279,7 +280,7 @@ static char scan_escape (char **str);
 			      current_line_no = line_no;
 			      current_line = yytext;
 			    }
-			  yylval.p = (char*) copy_str (yytext + 1, 1);
+			  yylval.p = (char*) copy_str (img, yytext + 1, 1);
 			  return (Y_STR);
 			}
 
@@ -293,7 +294,7 @@ static char scan_escape (char **str);
 			  if (*(yytext + 1) == '\\')
 			    {
 			      char *escape = yytext + 2;
-			      yylval.i = (int) scan_escape (&escape);
+			      yylval.i = (int) scan_escape (img, &escape);
 			    }
 			  else
 			    {
@@ -309,7 +310,7 @@ static char scan_escape (char **str);
 			      current_line_no = line_no;
 			      current_line = yytext;
 			    }
-			  yyerror ("Unknown character");
+			  yyerror (img, "Unknown character");
 			}
 
 
@@ -398,7 +399,7 @@ int yywrap()
 /* A backslash has just been read, return the character designated by *STR.  */
 
 static char
-scan_escape (char **str)
+scan_escape (MIPSImage &img, char **str)
 {
   char first = **str;
   *str += 1;
@@ -423,13 +424,13 @@ scan_escape (char **str)
 	if ('0' <= c1 && c1 <= '9') b = c1 - '0';
 	else if ('A' <= c1 && c1 <= 'F') b = c1 - 'A' + 10;
 	else if ('a' <= c1 && c1 <= 'f') b = c1 - 'a' + 10;
-	else yyerror ("Bad character in \\X construct in string");
+	else yyerror (img, "Bad character in \\X construct in string");
 
 	b <<= 4;
 	if ('0' <= c2 && c2 <= '9') b += c2 - '0';
 	else if ('A' <= c2 && c2 <= 'F') b += c2 - 'A' + 10;
 	else if ('a' <= c2 && c2 <= 'f') b += c2 - 'a' + 10;
-	else yyerror ("Bad character in \\X construct in string");
+	else yyerror (img, "Bad character in \\X construct in string");
 
 	*str += 2;
 	return (char) b;
@@ -439,7 +440,7 @@ scan_escape (char **str)
       {
 	char message[] = "Bad character \\X";
 	message[strlen (message) - 1] = first;
-	yyerror (message);
+	yyerror (img, message);
 	return '\0';
       }
     }
@@ -450,10 +451,10 @@ scan_escape (char **str)
    characters removed. */
 
 static char *
-copy_str (char *str, int chop)
+copy_str (MIPSImage &img, char *str, int chop)
 {
   int new_len = strlen (str) - chop;
-  char *new_str = (char *) xmalloc (new_len + 1), *n;
+  char *new_str = (char *) xmalloc (img, new_len + 1), *n;
 
   for (n = new_str; *str != '\0' && new_len > 0; new_len -= 1)
     if (*str == '\\')
@@ -491,12 +492,12 @@ copy_str (char *str, int chop)
 	    if ('0' <= c2 && c2 <= '7')
 	      b += (c2 - '0') << 3;
 	    else
-	      yyerror ("Bad character in \\ooo construct in string");
+	      yyerror (img, "Bad character in \\ooo construct in string");
 
 	    if ('0' <= c3 && c3 <= '7')
 	      b += c3 - '0';
 	    else
-	      yyerror ("Bad character in \\ooo construct in string");
+	      yyerror (img, "Bad character in \\ooo construct in string");
 
 	    *n ++ = (char) b;
 	    str += 4;
@@ -513,7 +514,7 @@ copy_str (char *str, int chop)
 	    else if ('A' <= c2 && c2 <= 'F')
 	      b = c2 - 'A' + 10;
 	    else
-	      yyerror ("Bad character in \\X construct in string");
+	      yyerror (img, "Bad character in \\X construct in string");
 
 	    b <<= 4;
 	    if ('0' <= c3 && c3 <= '9')
@@ -521,7 +522,7 @@ copy_str (char *str, int chop)
 	    else if ('A' <= c3 && c3 <= 'F')
 	      b += c3 - 'A' + 10;
 	    else
-	      yyerror ("Bad character in \\X construct in string");
+	      yyerror (img, "Bad character in \\X construct in string");
 
 	    *n ++ = (char) b;
 	    str += 4;
@@ -547,7 +548,7 @@ copy_str (char *str, int chop)
    stream to the begining of the next line. */
 
 char*
-erroneous_line ()
+erroneous_line (MIPSImage &img)
 {
   int prefix_length = yytext - current_line;
   int i, c;
@@ -555,23 +556,23 @@ erroneous_line ()
 
   ss_init (&ss);
 
-  if (current_line == NULL) return ss_to_string (&ss);
+  if (current_line == NULL) return ss_to_string (img, &ss);
 
   /* Print part of line that has been consumed. */
-  ss_printf (&ss, "	  ");
+  ss_printf (img, &ss, "	  ");
   if (0 <= prefix_length)
     {
       /* yytext and current_line point to same line */
       c = *(current_line + prefix_length);
       *(current_line + prefix_length) = '\0';
-      ss_printf (&ss, "%s", current_line);
+      ss_printf (img, &ss, "%s", current_line);
       *(current_line + prefix_length) = (char)c;
-      ss_printf (&ss, "%s", yytext);
+      ss_printf (img, &ss, "%s", yytext);
     }
   else
     {
       /* yytext and current_line point to different lines */
-      ss_printf (&ss, "%s", current_line);
+      ss_printf (img, &ss, "%s", current_line);
       prefix_length = strlen(current_line);
     }
 
@@ -584,18 +585,18 @@ erroneous_line ()
       while ((c = input ()) != '\n' && c != EOF && c != 1)
 #endif
       {
-        ss_printf (&ss, "%c", c);
+        ss_printf (img, &ss, "%c", c);
       }
       if (c == '\n') unput ('\n');
       current_line = NULL;
     }
 
   /* Print marker to point at which consumption stopped. */
-  ss_printf (&ss, "\n	  ");
-  for (i = 0; i < prefix_length; i ++) ss_printf (&ss, " ");
-  ss_printf (&ss, "^\n");
+  ss_printf (img, &ss, "\n	  ");
+  for (i = 0; i < prefix_length; i ++) ss_printf (img, &ss, " ");
+  ss_printf (img, &ss, "^\n");
 
-  return ss_to_string (&ss);
+  return ss_to_string (img, &ss);
 }
 
 
@@ -689,7 +690,7 @@ register_name_to_number (char *name)
    line. */
 
 char *
-source_line ()
+source_line (MIPSImage &img)
 {
   if (line_returned)
     return (NULL);
@@ -723,7 +724,7 @@ source_line ()
       c1 = *eol1;
       *eol1 = '\0';
 
-      r = (char *) xmalloc (eol1 - current_line + 11 + file_name_len);
+      r = (char *) xmalloc (img, eol1 - current_line + 11 + file_name_len);
       sprintf (r, "%s:%d: %s", file_name, current_line_no, current_line);
 
       /* Restore end-of-line character and, if necessary, yylex's null byte. */

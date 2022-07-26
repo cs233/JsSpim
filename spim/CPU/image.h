@@ -13,26 +13,29 @@ typedef struct {
   instruction *inst;
 } breakpoint;
 
-typedef struct mipsimage {
+class MIPSImage {
+  private:
     int ctx;
-    mem_image_t mem;
-    reg_image_t reg;
+    mem_image_t mem_img;
+    reg_image_t reg_img;
 
-    std::unordered_map<mem_addr, breakpoint> breakpoints;
-} mips_image_t;
+    std::unordered_map<mem_addr, breakpoint> bkpt_map;
 
-void ctx_switch(int ctx);
-void ctx_init(int ctx);
-void ctx_increment();
-size_t ctx_current();
-mem_image_t &mem();
-reg_image_t &reg();
-const mem_image_t &memview(int ctx);
-const reg_image_t &regview(int ctx);
-std::unordered_map<mem_addr, breakpoint> &breakpoints();
+  public:
+    MIPSImage(int ctx);
 
-#define DATA_PC (reg().in_kernel ? reg().next_k_data_pc : reg().next_data_pc)
-#define INST_PC (reg().in_kernel ? reg().next_k_text_pc : reg().next_text_pc)
+    int get_ctx() const;
+
+    mem_image_t &mem_image();
+    reg_image_t &reg_image();
+    const mem_image_t &memview_image() const;
+    const reg_image_t &regview_image() const;
+    std::unordered_map<mem_addr, breakpoint> &breakpoints();
+
+};
+
+#define DATA_PC(img) (img.reg_image().in_kernel ? img.reg_image().next_k_data_pc : img.reg_image().next_data_pc)
+#define INST_PC(img) (img.reg_image().in_kernel ? img.reg_image().next_k_text_pc : img.reg_image().next_text_pc)
 
 #define INTERRUPTS_ON(REGIMAGE) (CP0_Status(REGIMAGE) & CP0_Status_IE)
 #define IN_INTERRUPT_HANDLER(REGIMAGE) (CP0_Status(REGIMAGE) & CP0_Status_EXL)

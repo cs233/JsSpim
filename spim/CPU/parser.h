@@ -33,12 +33,12 @@
 
 /* Exported functions: */
 
-void fix_current_label_address (mem_addr new_addr);
-int imm_op_to_op (int opcode);
+void fix_current_label_address (MIPSImage &img, mem_addr new_addr);
+int imm_op_to_op (MIPSImage &img, int opcode);
 void initialize_parser (char *file_name);
-int op_to_imm_op (int opcode);
-void yyerror (char *s);
-int yyparse ();
+int op_to_imm_op (MIPSImage &img, int opcode);
+void yyerror (MIPSImage &img, char *s);
+int yyparse (MIPSImage& img);
 
 
 /* Exported Variables: */

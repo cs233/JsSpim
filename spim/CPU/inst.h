@@ -33,21 +33,11 @@
 #ifndef INST_H
 #define INST_H
 
+#include "image.h"
 #include "spim.h"
 #include "string-stream.h"
 
-
-/* Represenation of the expression that produce a value for an instruction's
-   immediate field.  Immediates have the form: label +/- offset. */
-
-typedef struct immexpr
-{
-  int offset;			/* Offset from symbol */
-  struct lab *symbol;		/* Symbolic label */
-  short bits;			/* > 0 => 31..16, < 0 => 15..0 */
-  bool pc_relative;		/* => offset from label in code */
-} imm_expr;
-
+#include "instruction.h"
 
 /* Representation of the expression that produce an address for an
    instruction.  Address have the form: label +/- offset (register). */
@@ -57,45 +47,6 @@ typedef struct addrexpr
   unsigned char reg_no;		/* Register number */
   imm_expr *imm;		/* The immediate part */
 } addr_expr;
-
-
-
-/* Representation of an instruction. Store the instruction fields in an
-   overlapping manner similar to the real encoding (but not identical, to
-   speed decoding in C code, as opposed to hardware).. */
-
-typedef struct inst_s
-{
-  short opcode;
-
-  union
-    {
-      /* R-type or I-type: */
-      struct
-	{
-	  unsigned char rs;
-	  unsigned char rt;
-
-	  union
-	    {
-	      short imm;
-
-	      struct
-		{
-		  unsigned char rd;
-		  unsigned char shamt;
-		} r;
-	    } r_i;
-	} r_i;
-
-      /* J-type: */
-      mem_addr target;
-    } r_t;
-
-  int32 encoding;
-  imm_expr *expr;
-  char *source_line;
-} instruction;
 
 
 #define OPCODE(INST)		(INST)->opcode
@@ -173,9 +124,9 @@ typedef struct inst_s
 #define UIMM_MIN  	(unsigned)0
 #define UIMM_MAX  	((unsigned)((1<<16)-1))
 
-#define RAISE_EXCEPTION(EXCODE, MISC)					\
+#define RAISE_EXCEPTION(img, EXCODE, MISC)					\
 	{								\
-	raise_exception(EXCODE);					\
+	raise_exception(img, EXCODE);					\
 	MISC;								\
 	}								\
 
@@ -238,43 +189,43 @@ typedef struct inst_s
 
 imm_expr *addr_expr_imm (addr_expr *expr);
 int addr_expr_reg (addr_expr *expr);
-imm_expr *const_imm_expr (int32 value);
-imm_expr *copy_imm_expr (imm_expr *old_expr);
-instruction *copy_inst (instruction *inst);
-mem_addr current_text_pc ();
-int32 eval_imm_expr (imm_expr *expr);
-void format_an_inst (str_stream *ss, instruction *inst, mem_addr addr);
+imm_expr *const_imm_expr (MIPSImage &img, int32 value);
+imm_expr *copy_imm_expr (MIPSImage &img, imm_expr *old_expr);
+instruction *copy_inst (MIPSImage &img, instruction *inst);
+mem_addr current_text_pc (MIPSImage &img);
+int32 eval_imm_expr (MIPSImage &img, imm_expr *expr);
+void format_an_inst (MIPSImage &img, str_stream *ss, instruction *inst, mem_addr addr);
 void free_inst (instruction *inst);
-void i_type_inst (int opcode, int rt, int rs, imm_expr *expr);
-void i_type_inst_free (int opcode, int rt, int rs, imm_expr *expr);
-void increment_text_pc (int delta);
-imm_expr *incr_expr_offset (imm_expr *expr, int32 value);
+void i_type_inst (MIPSImage &img, int opcode, int rt, int rs, imm_expr *expr);
+void i_type_inst_free (MIPSImage &img, int opcode, int rt, int rs, imm_expr *expr);
+void increment_text_pc (MIPSImage &img, int delta);
+imm_expr *incr_expr_offset (MIPSImage &img, imm_expr *expr, int32 value);
 void initialize_inst_tables ();
-instruction *inst_decode (int32 value);
-int32 inst_encode (instruction *inst);
-bool inst_is_breakpoint (mem_addr addr);
-void j_type_inst (int opcode, imm_expr *target);
-void k_text_begins_at_point (mem_addr addr);
-imm_expr *lower_bits_of_expr (imm_expr *old_expr);
-addr_expr *make_addr_expr (int offs, char *sym, int reg_no);
-imm_expr *make_imm_expr (int offs, char *sym, bool is_pc_relative);
+instruction *inst_decode (MIPSImage &img, int32 value);
+int32 inst_encode (MIPSImage &img, instruction *inst);
+bool inst_is_breakpoint (MIPSImage &img, mem_addr addr);
+void j_type_inst (MIPSImage &img, int opcode, imm_expr *target);
+void k_text_begins_at_point (MIPSImage &img, mem_addr addr);
+imm_expr *lower_bits_of_expr (MIPSImage &img, imm_expr *old_expr);
+addr_expr *make_addr_expr (MIPSImage &img, int offs, char *sym, int reg_no);
+imm_expr *make_imm_expr (MIPSImage &img, int offs, char *sym, bool is_pc_relative);
 bool opcode_is_branch (int opcode);
 bool opcode_is_nullified_branch (int opcode);
 bool opcode_is_true_branch (int opcode);
 bool opcode_is_jump (int opcode);
 bool opcode_is_load_store (int opcode);
-void print_inst (mem_addr addr);
-char* inst_to_string (mem_addr addr);
-void r_co_type_inst (int opcode, int fd, int fs, int ft);
-void r_cond_type_inst (int opcode, int fs, int ft, int cc);
-void r_sh_type_inst (int opcode, int rd, int rt, int shamt);
-void r_type_inst (int opcode, int rd, int rs, int rt);
-void raise_exception(int excode);
-instruction *set_breakpoint (mem_addr addr);
-void store_instruction (instruction *inst);
-void text_begins_at_point (mem_addr addr);
-imm_expr *upper_bits_of_expr (imm_expr *old_expr);
-void user_kernel_text_segment (bool to_kernel);
+void print_inst (MIPSImage &img, mem_addr addr);
+char* inst_to_string (MIPSImage &img, mem_addr addr);
+void r_co_type_inst (MIPSImage &img, int opcode, int fd, int fs, int ft);
+void r_cond_type_inst (MIPSImage &img, int opcode, int fs, int ft, int cc);
+void r_sh_type_inst (MIPSImage &img, int opcode, int rd, int rt, int shamt);
+void r_type_inst (MIPSImage &img, int opcode, int rd, int rs, int rt);
+void raise_exception(MIPSImage &img, int excode);
+instruction *set_breakpoint (MIPSImage &img, mem_addr addr);
+void store_instruction (MIPSImage &img, instruction *inst);
+void text_begins_at_point (MIPSImage &img, mem_addr addr);
+imm_expr *upper_bits_of_expr (MIPSImage &img, imm_expr *old_expr);
+void user_kernel_text_segment (MIPSImage &img, bool to_kernel);
 bool is_zero_imm (imm_expr *expr);
 
 #endif

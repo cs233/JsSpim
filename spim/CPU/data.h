@@ -35,24 +35,24 @@
 
 /* Exported functions: */
 
-void align_data (int alignment);
-mem_addr current_data_pc ();
-void data_begins_at_point (mem_addr addr);
-void enable_data_alignment ();
-void end_of_assembly_file ();
-void extern_directive (char *name, int size);
-void increment_data_pc (int value);
-void k_data_begins_at_point (mem_addr addr);
-void lcomm_directive (char *name, int size);
-void set_data_alignment (int);
-void set_data_pc (mem_addr addr);
-void set_text_pc (mem_addr addr);
-void store_byte (int value);
-void store_double (double *value);
-void store_float (double *value);
-void store_half (int value);
-void store_string (char *string, int length, bool null_terminate);
-void store_word (int value);
-void user_kernel_data_segment (bool to_kernel);
+void align_data (MIPSImage &img, int alignment); // internal
+mem_addr current_data_pc (MIPSImage &img);
+void data_begins_at_point (MIPSImage &img, mem_addr addr);
+void enable_data_alignment (MIPSImage &img); // internal
+void end_of_assembly_file (MIPSImage &img);
+void extern_directive (MIPSImage &img, char *name, int size); // internal
+void increment_data_pc (MIPSImage &img, int value); // internal
+void k_data_begins_at_point (MIPSImage &img, mem_addr addr);
+void lcomm_directive (MIPSImage &img, char *name, int size); // internal
+void set_data_alignment (MIPSImage &img, int); // internal
+void set_data_pc (MIPSImage &img, mem_addr addr); // internal
+void set_text_pc (MIPSImage &img, mem_addr addr);
+void store_byte (MIPSImage &img, int value); // internal
+void store_double (MIPSImage &img, double *value); // internal
+void store_float (MIPSImage &img, double *value); // internal
+void store_half (MIPSImage &img, int value); // internal
+void store_string (MIPSImage &img, char *string, int length, bool null_terminate); // internal
+void store_word (MIPSImage &img, int value);
+void user_kernel_data_segment (MIPSImage &img, bool to_kernel);
 
 #endif

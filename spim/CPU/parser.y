@@ -32,6 +32,14 @@
 
 %expect 25           /* Supress warning about 25 shift-reduce conflicts */
 
+%code requires {
+	class MIPSImage;
+}
+
+%locations
+
+%param       { MIPSImage& img }
+
 %start LINE
 
 %token Y_EOF
@@ -445,6 +453,7 @@
 #include "inst.h"
 #include "reg.h"
 #include "mem.h"
+#include "image.h"
 #include "sym-tbl.h"
 #include "data.h"
 #include "scanner.h"
@@ -476,31 +485,31 @@ bool parse_error_occurred;      /* => parse resulted in error */
 
 /* Local functions: */
 
-static imm_expr *branch_offset (int n_inst);
+static imm_expr *branch_offset (MIPSImage &img, int n_inst);
 static int cc_to_rt (int cc, int nd, int tf);
-static void check_imm_range (imm_expr*, int32, int32);
-static void check_uimm_range (imm_expr*, uint32, uint32);
-static void clear_labels ();
+static void check_imm_range (MIPSImage &img, imm_expr*, int32, int32);
+static void check_uimm_range (MIPSImage &img, imm_expr*, uint32, uint32);
+static void clear_labels (MIPSImage &img);
 static label_list *cons_label (label *head, label_list *tail);
-static void div_inst (int op, int rd, int rs, int rt, int const_divisor);
-static void mips32_r2_inst ();
-static void mult_inst (int op, int rd, int rs, int rt);
-static void nop_inst ();
-static void set_eq_inst (int op, int rd, int rs, int rt);
-static void set_ge_inst (int op, int rd, int rs, int rt);
-static void set_gt_inst (int op, int rd, int rs, int rt);
-static void set_le_inst (int op, int rd, int rs, int rt);
-static void store_word_data (int value);
-static void trap_inst ();
-static void yywarn (char*);
+static void div_inst (MIPSImage &img, int op, int rd, int rs, int rt, int const_divisor);
+static void mips32_r2_inst (MIPSImage &img);
+static void mult_inst (MIPSImage &img, int op, int rd, int rs, int rt);
+static void nop_inst (MIPSImage &img);
+static void set_eq_inst (MIPSImage &img, int op, int rd, int rs, int rt);
+static void set_ge_inst (MIPSImage &img, int op, int rd, int rs, int rt);
+static void set_gt_inst (MIPSImage &img, int op, int rd, int rs, int rt);
+static void set_le_inst (MIPSImage &img, int op, int rd, int rs, int rt);
+static void store_word_data (MIPSImage &img, int value);
+static void trap_inst (MIPSImage &img);
+static void yywarn (MIPSImage &img, char*);
 
 
 /* Local variables: */
 
 static bool null_term;		/* => string terminate by \0 */
 
-static void (*store_op) (int); /* Function to store items in an EXPR_LST */
-static void (*store_fp_op) (double*); /* Ditto FP_EXPR_LST */
+static void (*store_op) (MIPSImage&, int); /* Function to store items in an EXPR_LST */
+static void (*store_fp_op) (MIPSImage&, double*); /* Ditto FP_EXPR_LST */
 
 static label_list *this_line_labels = NULL; /* List of label for curent line */
 
@@ -523,8 +532,9 @@ LBL_CMD:	OPT_LBL CMD
 
 OPT_LBL: ID ':' {
 		  /* Call outside of cons_label, since an error sets that variable to NULL. */
-		  label* l = record_label ((char*)$1.p,
-					   text_dir ? current_text_pc () : current_data_pc (),
+		  label* l = record_label (img,
+		  			   (char*)$1.p,
+					   text_dir ? current_text_pc (img) : current_data_pc (img),
 					   0);
 		  this_line_labels = cons_label (l, this_line_labels);
 		  free ((char*)$1.p);
@@ -532,24 +542,24 @@ OPT_LBL: ID ':' {
 
 	|	ID '=' EXPR
 		{
-		  label *l = record_label ((char*)$1.p, (mem_addr)$3.i, 1);
+		  label *l = record_label (img, (char*)$1.p, (mem_addr)$3.i, 1);
 		  free ((char*)$1.p);
 
 		  l->const_flag = 1;
-		  clear_labels ();
+		  clear_labels (img);
 		}
 	;
 
 
 CMD:		ASM_CODE
 		{
-		  clear_labels ();
+		  clear_labels (img);
 		}
 		TERM
 
 	|	ASM_DIRECTIVE
 		{
-		  clear_labels ();
+		  clear_labels (img);
 		}
 		TERM
 
@@ -564,7 +574,7 @@ TERM:		Y_NL
 
 	|	Y_EOF
 		{
-		  clear_labels ();
+		  clear_labels (img);
 		  FILE_PARSE_DONE;
 		}
 	;
@@ -573,15 +583,17 @@ TERM:		Y_NL
 
 ASM_CODE:	LOAD_OPS	DEST	ADDRESS
 		{
-		  i_type_inst ($1.i == Y_LD_POP ? Y_LW_OP : $1.i,
+		  i_type_inst (img,
+		  		   $1.i == Y_LD_POP ? Y_LW_OP : $1.i,
 			       $2.i,
 			       addr_expr_reg ((addr_expr *)$3.p),
 			       addr_expr_imm ((addr_expr *)$3.p));
 		  if ($1.i == Y_LD_POP)
-		    i_type_inst_free (Y_LW_OP,
+		    i_type_inst_free (img,
+					  Y_LW_OP,
 				      $2.i + 1,
 				      addr_expr_reg ((addr_expr *)$3.p),
-				      incr_expr_offset (addr_expr_imm ((addr_expr *)$3.p),
+				      incr_expr_offset (img, addr_expr_imm ((addr_expr *)$3.p),
 							4));
 		  free (((addr_expr *)$3.p)->imm);
 		  free ((addr_expr *)$3.p);
@@ -589,7 +601,8 @@ ASM_CODE:	LOAD_OPS	DEST	ADDRESS
 
 	|	LOADC_OPS	COP_REG	ADDRESS
 		{
-		  i_type_inst ($1.i,
+		  i_type_inst (img,
+		  		   $1.i,
 			       $2.i,
 			       addr_expr_reg ((addr_expr *)$3.p),
 			       addr_expr_imm ((addr_expr *)$3.p));
@@ -599,7 +612,8 @@ ASM_CODE:	LOAD_OPS	DEST	ADDRESS
 
 	|	LOADFP_OPS	F_SRC1	ADDRESS
 		{
-		  i_type_inst ($1.i,
+		  i_type_inst (img,
+		  		   $1.i,
 			       $2.i,
 			       addr_expr_reg ((addr_expr *)$3.p),
 			       addr_expr_imm ((addr_expr *)$3.p));
@@ -609,18 +623,18 @@ ASM_CODE:	LOAD_OPS	DEST	ADDRESS
 
 	|	LOADI_OPS	DEST	UIMM16
 		{
-		  i_type_inst_free ($1.i, $2.i, 0, (imm_expr *)$3.p);
+		  i_type_inst_free (img, $1.i, $2.i, 0, (imm_expr *)$3.p);
 		}
 
 
 	|	Y_LA_POP	DEST	ADDRESS
 		{
 		  if (addr_expr_reg ((addr_expr *)$3.p))
-		    i_type_inst (Y_ADDI_OP, $2.i,
+		    i_type_inst (img, Y_ADDI_OP, $2.i,
 				 addr_expr_reg ((addr_expr *)$3.p),
 				 addr_expr_imm ((addr_expr *)$3.p));
 		  else
-		    i_type_inst (Y_ORI_OP, $2.i, 0,
+		    i_type_inst (img, Y_ORI_OP, $2.i, 0,
 				 addr_expr_imm ((addr_expr *)$3.p));
 		  free (((addr_expr *)$3.p)->imm);
 		  free ((addr_expr *)$3.p);
@@ -629,7 +643,7 @@ ASM_CODE:	LOAD_OPS	DEST	ADDRESS
 
 	|	Y_LI_POP	DEST	IMM32
 		{
-		  i_type_inst_free (Y_ORI_OP, $2.i, 0, (imm_expr *)$3.p);
+		  i_type_inst_free (img, Y_ORI_OP, $2.i, 0, (imm_expr *)$3.p);
 		}
 
 
@@ -637,10 +651,10 @@ ASM_CODE:	LOAD_OPS	DEST	ADDRESS
 		{
 		  int *x = (int *) $3.p;
 
-		  i_type_inst (Y_ORI_OP, 1, 0, const_imm_expr (*x));
-		  r_co_type_inst (Y_MTC1_OP, 0, $2.i, 1);
-		  i_type_inst (Y_ORI_OP, 1, 0, const_imm_expr (*(x+1)));
-		  r_co_type_inst (Y_MTC1_OP, 0, $2.i + 1, 1);
+		  i_type_inst (img, Y_ORI_OP, 1, 0, const_imm_expr (img, *x));
+		  r_co_type_inst (img, Y_MTC1_OP, 0, $2.i, 1);
+		  i_type_inst (img, Y_ORI_OP, 1, 0, const_imm_expr (img, *(x+1)));
+		  r_co_type_inst (img, Y_MTC1_OP, 0, $2.i + 1, 1);
 		}
 
 
@@ -649,27 +663,27 @@ ASM_CODE:	LOAD_OPS	DEST	ADDRESS
 		  float x = (float) *((double *) $3.p);
 		  int *y = (int *) &x;
 
-		  i_type_inst (Y_ORI_OP, 1, 0, const_imm_expr (*y));
-		  r_co_type_inst (Y_MTC1_OP, 0, $2.i, 1);
+		  i_type_inst (img, Y_ORI_OP, 1, 0, const_imm_expr (img, *y));
+		  r_co_type_inst (img, Y_MTC1_OP, 0, $2.i, 1);
 		}
 
 
 	|	Y_ULW_POP	DEST	ADDRESS
 		{
 #ifdef SPIM_BIGENDIAN
-		  i_type_inst (Y_LWL_OP, $2.i,
+		  i_type_inst (img,Y_LWL_OP, $2.i,
 			       addr_expr_reg ((addr_expr *)$3.p),
 			       addr_expr_imm ((addr_expr *)$3.p));
-		  i_type_inst_free (Y_LWR_OP, $2.i,
+		  i_type_inst_free (img, Y_LWR_OP, $2.i,
 				    addr_expr_reg ((addr_expr *)$3.p),
-				    incr_expr_offset (addr_expr_imm ((addr_expr *)$3.p),
+				    incr_expr_offset (img, addr_expr_imm ((addr_expr *)$3.p),
 						      3));
 #else
-		  i_type_inst_free (Y_LWL_OP, $2.i,
+		  i_type_inst_free (img, Y_LWL_OP, $2.i,
 				    addr_expr_reg ((addr_expr *)$3.p),
-				    incr_expr_offset (addr_expr_imm ((addr_expr *)$3.p),
+				    incr_expr_offset (img, addr_expr_imm ((addr_expr *)$3.p),
 						      3));
-		  i_type_inst (Y_LWR_OP, $2.i,
+		  i_type_inst (img, Y_LWR_OP, $2.i,
 			       addr_expr_reg ((addr_expr *)$3.p),
 			       addr_expr_imm ((addr_expr *)$3.p));
 #endif
@@ -681,26 +695,28 @@ ASM_CODE:	LOAD_OPS	DEST	ADDRESS
 	|	ULOADH_POPS	DEST	ADDRESS
 		{
 #ifdef SPIM_BIGENDIAN
-		  i_type_inst (($1.i == Y_ULH_POP ? Y_LB_OP : Y_LBU_OP),
+		  i_type_inst (img,
+		  		   ($1.i == Y_ULH_POP ? Y_LB_OP : Y_LBU_OP),
 			       $2.i,
 			       addr_expr_reg ((addr_expr *)$3.p),
 			       addr_expr_imm ((addr_expr *)$3.p));
-		  i_type_inst_free (Y_LBU_OP, 1,
+		  i_type_inst_free (img, Y_LBU_OP, 1,
 				    addr_expr_reg ((addr_expr *)$3.p),
-				    incr_expr_offset (addr_expr_imm ((addr_expr *)$3.p),
+				    incr_expr_offset (img, addr_expr_imm ((addr_expr *)$3.p),
 						      1));
 #else
-		  i_type_inst_free (($1.i == Y_ULH_POP ? Y_LB_OP : Y_LBU_OP),
+		  i_type_inst_free (img,
+		  			($1.i == Y_ULH_POP ? Y_LB_OP : Y_LBU_OP),
 				    $2.i,
 				    addr_expr_reg ((addr_expr *)$3.p),
-				    incr_expr_offset (addr_expr_imm ((addr_expr *)$3.p),
+				    incr_expr_offset (img, addr_expr_imm ((addr_expr *)$3.p),
 						      1));
-		  i_type_inst (Y_LBU_OP, 1,
+		  i_type_inst (img, Y_LBU_OP, 1,
 			       addr_expr_reg ((addr_expr *)$3.p),
 			       addr_expr_imm ((addr_expr *)$3.p));
 #endif
-		  r_sh_type_inst (Y_SLL_OP, $2.i, $2.i, 8);
-		  r_type_inst (Y_OR_OP, $2.i, $2.i, 1);
+		  r_sh_type_inst (img, Y_SLL_OP, $2.i, $2.i, 8);
+		  r_type_inst (img, Y_OR_OP, $2.i, $2.i, 1);
 		  free (((addr_expr *)$3.p)->imm);
 		  free ((addr_expr *)$3.p);
 		}
@@ -708,20 +724,20 @@ ASM_CODE:	LOAD_OPS	DEST	ADDRESS
 
 	|	LOADFP_INDEX_OPS F_DEST	ADDRESS
 		{
-		  mips32_r2_inst ();
+		  mips32_r2_inst (img);
 		}
 
 
 	|	STORE_OPS	SRC1	ADDRESS
 		{
-		  i_type_inst ($1.i == Y_SD_POP ? Y_SW_OP : $1.i,
+		  i_type_inst (img, $1.i == Y_SD_POP ? Y_SW_OP : $1.i,
 			       $2.i,
 			       addr_expr_reg ((addr_expr *)$3.p),
 			       addr_expr_imm ((addr_expr *)$3.p));
 		  if ($1.i == Y_SD_POP)
-		    i_type_inst_free (Y_SW_OP, $2.i + 1,
+		    i_type_inst_free (img, Y_SW_OP, $2.i + 1,
 				      addr_expr_reg ((addr_expr *)$3.p),
-				      incr_expr_offset (addr_expr_imm ((addr_expr *)$3.p),
+				      incr_expr_offset (img, addr_expr_imm ((addr_expr *)$3.p),
 							4));
 		  free (((addr_expr *)$3.p)->imm);
 		  free ((addr_expr *)$3.p);
@@ -730,7 +746,8 @@ ASM_CODE:	LOAD_OPS	DEST	ADDRESS
 
 	|	STOREC_OPS	COP_REG	ADDRESS
 		{
-		  i_type_inst ($1.i,
+		  i_type_inst (img,
+		  		   $1.i,
 			       $2.i,
 			       addr_expr_reg ((addr_expr *)$3.p),
 			       addr_expr_imm ((addr_expr *)$3.p));
@@ -742,19 +759,21 @@ ASM_CODE:	LOAD_OPS	DEST	ADDRESS
 	|	Y_USW_POP	SRC1	ADDRESS
 		{
 #ifdef SPIM_BIGENDIAN
-		  i_type_inst (Y_SWL_OP, $2.i,
+		  i_type_inst (img,
+		  		   Y_SWL_OP, $2.i,
 			       addr_expr_reg ((addr_expr *)$3.p),
 			       addr_expr_imm ((addr_expr *)$3.p));
-		  i_type_inst_free (Y_SWR_OP, $2.i,
+		  i_type_inst_free (img, Y_SWR_OP, $2.i,
 				    addr_expr_reg ((addr_expr *)$3.p),
-				    incr_expr_offset (addr_expr_imm ((addr_expr *)$3.p),
+				    incr_expr_offset (img, addr_expr_imm ((addr_expr *)$3.p),
 						      3));
 #else
-		  i_type_inst_free (Y_SWL_OP, $2.i,
+		  i_type_inst_free (img, Y_SWL_OP, $2.i,
 				    addr_expr_reg ((addr_expr *)$3.p),
-				    incr_expr_offset (addr_expr_imm ((addr_expr *)$3.p),
+				    incr_expr_offset (img, addr_expr_imm ((addr_expr *)$3.p),
 						      3));
-		  i_type_inst (Y_SWR_OP, $2.i,
+		  i_type_inst (img,
+		  		   Y_SWR_OP, $2.i,
 			       addr_expr_reg ((addr_expr *)$3.p),
 			       addr_expr_imm ((addr_expr *)$3.p));
 #endif
@@ -765,23 +784,24 @@ ASM_CODE:	LOAD_OPS	DEST	ADDRESS
 
 	|	Y_USH_POP	SRC1	ADDRESS
 		{
-		  i_type_inst (Y_SB_OP, $2.i,
+		  i_type_inst (img,
+		  		   Y_SB_OP, $2.i,
 			       addr_expr_reg ((addr_expr *)$3.p),
 			       addr_expr_imm ((addr_expr *)$3.p));
 
 		  /* ROL SRC, SRC, 8 */
-		  r_sh_type_inst (Y_SLL_OP, 1, $2.i, 24);
-		  r_sh_type_inst (Y_SRL_OP, $2.i, $2.i, 8);
-		  r_type_inst (Y_OR_OP, $2.i, $2.i, 1);
+		  r_sh_type_inst (img, Y_SLL_OP, 1, $2.i, 24);
+		  r_sh_type_inst (img, Y_SRL_OP, $2.i, $2.i, 8);
+		  r_type_inst (img, Y_OR_OP, $2.i, $2.i, 1);
 
-		  i_type_inst_free (Y_SB_OP, $2.i,
+		  i_type_inst_free (img, Y_SB_OP, $2.i,
 				    addr_expr_reg ((addr_expr *)$3.p),
-				    incr_expr_offset (addr_expr_imm ((addr_expr *)$3.p),
+				    incr_expr_offset (img, addr_expr_imm ((addr_expr *)$3.p),
 						      1));
 		  /* ROR SRC, SRC, 8 */
-		  r_sh_type_inst (Y_SRL_OP, 1, $2.i, 24);
-		  r_sh_type_inst (Y_SLL_OP, $2.i, $2.i, 8);
-		  r_type_inst (Y_OR_OP, $2.i, $2.i, 1);
+		  r_sh_type_inst (img, Y_SRL_OP, 1, $2.i, 24);
+		  r_sh_type_inst (img, Y_SLL_OP, $2.i, $2.i, 8);
+		  r_type_inst (img, Y_OR_OP, $2.i, $2.i, 1);
 
 		  free (((addr_expr *)$3.p)->imm);
 		  free ((addr_expr *)$3.p);
@@ -790,7 +810,8 @@ ASM_CODE:	LOAD_OPS	DEST	ADDRESS
 
 	|	STOREFP_OPS	F_SRC1	ADDRESS
 		{
-		  i_type_inst ($1.i,
+		  i_type_inst (img,
+		  		   $1.i,
 			       $2.i,
 			       addr_expr_reg ((addr_expr *)$3.p),
 			       addr_expr_imm ((addr_expr *)$3.p));
@@ -801,219 +822,220 @@ ASM_CODE:	LOAD_OPS	DEST	ADDRESS
 
 	|	STOREFP_INDEX_OPS F_DEST	ADDRESS
 		{
-		  mips32_r2_inst ();
+		  mips32_r2_inst (img);
 		}
 
 
 	|	SYS_OPS
 		{
-		  r_type_inst ($1.i, 0, 0, 0);
+		  r_type_inst (img, $1.i, 0, 0, 0);
 		}
 
 
 	|	PREFETCH_OPS	ADDRESS
 		{
-		  mips32_r2_inst ();
+		  mips32_r2_inst (img);
 		}
 
 
 	|	CACHE_OPS	Y_INT	ADDRESS
 		{
-		  i_type_inst_free ($1.i, $2.i, 0, (imm_expr *)$3.p);
+		  i_type_inst_free (img, $1.i, $2.i, 0, (imm_expr *)$3.p);
 		}
 
 
 	|	TLB_OPS
 		{
-		  r_type_inst ($1.i, 0, 0, 0);
+		  r_type_inst (img, $1.i, 0, 0, 0);
 		}
 
 
 	|	Y_SYNC_OP
 		{
-		  r_type_inst ($1.i, 0, 0, 0);
+		  r_type_inst (img, $1.i, 0, 0, 0);
 		}
 
 	|	Y_SYNC_OP	Y_INT
 		{
-		  r_type_inst ($1.i, $2.i, 0, 0);
+		  r_type_inst (img, $1.i, $2.i, 0, 0);
 		}
 
 
 	|	Y_BREAK_OP	Y_INT
 		{
 		  if ($2.i == 1)
-		    yyerror ("Breakpoint 1 is reserved for debugger");
-		  r_type_inst ($1.i, $2.i, 0, 0);
+		    yyerror (img, "Breakpoint 1 is reserved for debugger");
+		  r_type_inst (img, $1.i, $2.i, 0, 0);
 		}
 
 
 	|	Y_NOP_POP
 		{
-		  nop_inst ();
+		  nop_inst (img);
 		}
 
 
 	|	Y_SSNOP_OP
 		{
-		  r_sh_type_inst (Y_SLL_OP, 0, 0, 1); /* SLL r0 r0 1 */
+		  r_sh_type_inst (img, Y_SLL_OP, 0, 0, 1); /* SLL r0 r0 1 */
 		}
 
 
 	|	Y_ABS_POP	DEST	SRC1
 		{
 		  if ($2.i != $3.i)
-		    r_type_inst (Y_ADDU_OP, $2.i, 0, $3.i);
+		    r_type_inst (img, Y_ADDU_OP, $2.i, 0, $3.i);
 
-		  i_type_inst_free (Y_BGEZ_OP, 0, $3.i, branch_offset (2));
-		  r_type_inst (Y_SUB_OP, $2.i, 0, $3.i);
+		  i_type_inst_free (img, Y_BGEZ_OP, 0, $3.i, branch_offset (img, 2));
+		  r_type_inst (img, Y_SUB_OP, $2.i, 0, $3.i);
 		}
 
 
 	|	Y_NEG_POP	DEST	SRC1
 		{
-		  r_type_inst (Y_SUB_OP, $2.i, 0, $3.i);
+		  r_type_inst (img, Y_SUB_OP, $2.i, 0, $3.i);
 		}
 
 
 	|	Y_NEGU_POP	DEST	SRC1
 		{
-		  r_type_inst (Y_SUBU_OP, $2.i, 0, $3.i);
+		  r_type_inst (img, Y_SUBU_OP, $2.i, 0, $3.i);
 		}
 
 
 	|	Y_NOT_POP	DEST	SRC1
 		{
-		  r_type_inst (Y_NOR_OP, $2.i, $3.i, 0);
+		  r_type_inst (img, Y_NOR_OP, $2.i, $3.i, 0);
 		}
 
 
 	|	Y_MOVE_POP	DEST	SRC1
 		{
-		  r_type_inst (Y_ADDU_OP, $2.i, 0, $3.i);
+		  r_type_inst (img, Y_ADDU_OP, $2.i, 0, $3.i);
 		}
 
 
 	|	NULLARY_OPS
 		{
-		  r_type_inst ($1.i, 0, 0, 0);
+		  r_type_inst (img, $1.i, 0, 0, 0);
 		}
 
 
 	|	NULLARY_OPS_REV2
 		{
-		  mips32_r2_inst ();
+		  mips32_r2_inst (img);
 		}
 
 
 	|	COUNT_LEADING_OPS DEST	SRC1
 		{
 		  /* RT must be equal to RD */
-		  r_type_inst ($1.i, $2.i, $3.i, $2.i);
+		  r_type_inst (img, $1.i, $2.i, $3.i, $2.i);
 		}
 
 
 	|	UNARY_OPS_REV2	DEST
 		{
-		  mips32_r2_inst ();
+		  mips32_r2_inst (img);
 		}
 
 
 	|	BINARYI_OPS	DEST	SRC1	SRC2
 		{
-		  r_type_inst ($1.i, $2.i, $3.i, $4.i);
+		  r_type_inst (img, $1.i, $2.i, $3.i, $4.i);
 		}
 
 	|	BINARYI_OPS	DEST	SRC1	IMM32
 		{
-		  i_type_inst_free (op_to_imm_op ($1.i), $2.i, $3.i,
+		  i_type_inst_free (img, op_to_imm_op (img, $1.i), $2.i, $3.i,
 				    (imm_expr *)$4.p);
 		}
 
 	|	BINARYI_OPS	DEST	IMM32
 		{
-		  i_type_inst_free (op_to_imm_op ($1.i), $2.i, $2.i,
+		  i_type_inst_free (img, op_to_imm_op (img, $1.i), $2.i, $2.i,
 				    (imm_expr *)$3.p);
 		}
 
 
 	|	BINARYIR_OPS	DEST	SRC1	SRC2
 		{
-		  r_type_inst ($1.i, $2.i, $4.i, $3.i);
+		  r_type_inst (img, $1.i, $2.i, $4.i, $3.i);
 		}
 
 	|	BINARYIR_OPS	DEST	SRC1	Y_INT
 		{
-		  r_sh_type_inst (op_to_imm_op ($1.i), $2.i, $3.i, $4.i);
+		  r_sh_type_inst (img, op_to_imm_op (img, $1.i), $2.i, $3.i, $4.i);
 		}
 
 	|	BINARYIR_OPS	DEST	Y_INT
 		{
-		  r_sh_type_inst (op_to_imm_op ($1.i), $2.i, $2.i, $3.i);
+		  r_sh_type_inst (img, op_to_imm_op (img, $1.i), $2.i, $2.i, $3.i);
 		}
 
 
 	|	BINARY_ARITHI_OPS DEST	SRC1	IMM16
 		{
-		  i_type_inst_free ($1.i, $2.i, $3.i, (imm_expr *)$4.p);
+		  i_type_inst_free (img, $1.i, $2.i, $3.i, (imm_expr *)$4.p);
 		}
 
 	|	BINARY_ARITHI_OPS DEST	IMM16
 		{
-		  i_type_inst_free ($1.i, $2.i, $2.i, (imm_expr *)$3.p);
+		  i_type_inst_free (img, $1.i, $2.i, $2.i, (imm_expr *)$3.p);
 		}
 
 
 	|	BINARY_LOGICALI_OPS DEST	SRC1	UIMM16
 		{
-		  i_type_inst_free ($1.i, $2.i, $3.i, (imm_expr *)$4.p);
+		  i_type_inst_free (img, $1.i, $2.i, $3.i, (imm_expr *)$4.p);
 		}
 
 	|	BINARY_LOGICALI_OPS DEST	UIMM16
 		{
-		  i_type_inst_free ($1.i, $2.i, $2.i, (imm_expr *)$3.p);
+		  i_type_inst_free (img, $1.i, $2.i, $2.i, (imm_expr *)$3.p);
 		}
 
 
 	|	SHIFT_OPS	DEST	SRC1	Y_INT
 		{
 		  if (($4.i < 0) || (31 < $4.i))
-		    yywarn ("Shift distance can only be in the range 0..31");
-		  r_sh_type_inst ($1.i, $2.i, $3.i, $4.i);
+		    yywarn (img, "Shift distance can only be in the range 0..31");
+		  r_sh_type_inst (img, $1.i, $2.i, $3.i, $4.i);
 		}
 
 	|	SHIFT_OPS	DEST	SRC1	SRC2
 		{
-		  r_type_inst (imm_op_to_op ($1.i), $2.i, $4.i, $3.i);
+		  r_type_inst (img, imm_op_to_op (img, $1.i), $2.i, $4.i, $3.i);
 		}
 
 
 	|	SHIFT_OPS_REV2	DEST	SRC1	Y_INT
 		{
-		  mips32_r2_inst ();
+		  mips32_r2_inst (img);
 		}
 
 	|	SHIFTV_OPS_REV2	DEST	SRC1	SRC2
 		{
-		  mips32_r2_inst ();
+		  mips32_r2_inst (img);
 		}
 
 
 	|	BINARY_OPS	DEST	SRC1	SRC2
 		{
-		  r_type_inst ($1.i, $2.i, $3.i, $4.i);
+		  r_type_inst (img, $1.i, $2.i, $3.i, $4.i);
 		}
 
 	|	BINARY_OPS	DEST	SRC1	IMM32
 		{
 		  if (bare_machine && !accept_pseudo_insts)
-		    yyerror ("Immediate form not allowed in bare machine");
+		    yyerror (img, "Immediate form not allowed in bare machine");
 		  else
 		    {
 		      if (!is_zero_imm ((imm_expr *)$4.p))
 			/* Use $at */
-			i_type_inst (Y_ORI_OP, 1, 0, (imm_expr *)$4.p);
-		      r_type_inst ($1.i,
+			i_type_inst (img, Y_ORI_OP, 1, 0, (imm_expr *)$4.p);
+		      r_type_inst (img,
+			  	   $1.i,
 				   $2.i,
 				   $3.i,
 				   (is_zero_imm ((imm_expr *)$4.p) ? 0 : 1));
@@ -1023,15 +1045,16 @@ ASM_CODE:	LOAD_OPS	DEST	ADDRESS
 
 	|	BINARY_OPS	DEST	IMM32
 		{
-		  check_uimm_range ((imm_expr *)$3.p, UIMM_MIN, UIMM_MAX);
+		  check_uimm_range (img, (imm_expr *)$3.p, UIMM_MIN, UIMM_MAX);
 		  if (bare_machine && !accept_pseudo_insts)
-		    yyerror ("Immediate form not allowed in bare machine");
+		    yyerror (img, "Immediate form not allowed in bare machine");
 		  else
 		    {
 		      if (!is_zero_imm ((imm_expr *)$3.p))
 			/* Use $at */
-			i_type_inst (Y_ORI_OP, 1, 0, (imm_expr *)$3.p);
-		      r_type_inst ($1.i,
+			i_type_inst (img, Y_ORI_OP, 1, 0, (imm_expr *)$3.p);
+		      r_type_inst (img,
+				   $1.i,
 				   $2.i,
 				   $2.i,
 				   (is_zero_imm ((imm_expr *)$3.p) ? 0 : 1));
@@ -1042,44 +1065,44 @@ ASM_CODE:	LOAD_OPS	DEST	ADDRESS
 
 	|	BINARY_OPS_REV2	DEST	SRC1
 		{
-		  mips32_r2_inst ();
+		  mips32_r2_inst (img);
 		}
 
 
 	|	SUB_OPS		DEST	SRC1	SRC2
 		{
-		  r_type_inst ($1.i, $2.i, $3.i, $4.i);
+		  r_type_inst (img, $1.i, $2.i, $3.i, $4.i);
 		}
 
 	|	SUB_OPS		DEST	SRC1	IMM32
 		{
-		  int val = eval_imm_expr ((imm_expr *)$4.p);
+		  int val = eval_imm_expr (img, (imm_expr *)$4.p);
 
 		  if (bare_machine && !accept_pseudo_insts)
-		    yyerror ("Immediate form not allowed in bare machine");
+		    yyerror (img, "Immediate form not allowed in bare machine");
 		  else
-		    i_type_inst ($1.i == Y_SUB_OP ? Y_ADDI_OP
+		    i_type_inst (img, $1.i == Y_SUB_OP ? Y_ADDI_OP
 				 : $1.i == Y_SUBU_OP ? Y_ADDIU_OP
-				 : (fatal_error ("Bad SUB_OP\n"), 0),
+				 : (fatal_error (img, "Bad SUB_OP\n"), 0),
 				 $2.i,
 				 $3.i,
-				 make_imm_expr (-val, NULL, false));
+				 make_imm_expr (img, -val, NULL, false));
 		  free ((imm_expr *)$4.p);
 		}
 
 	|	SUB_OPS		DEST	IMM32
 		{
-		  int val = eval_imm_expr ((imm_expr *)$3.p);
+		  int val = eval_imm_expr (img, (imm_expr *)$3.p);
 
 		  if (bare_machine && !accept_pseudo_insts)
-		    yyerror ("Immediate form not allowed in bare machine");
+		    yyerror (img, "Immediate form not allowed in bare machine");
 		  else
-		    i_type_inst ($1.i == Y_SUB_OP ? Y_ADDI_OP
+		    i_type_inst (img, $1.i == Y_SUB_OP ? Y_ADDI_OP
 				 : $1.i == Y_SUBU_OP ? Y_ADDIU_OP
-				 : (fatal_error ("Bad SUB_OP\n"), 0),
+				 : (fatal_error (img, "Bad SUB_OP\n"), 0),
 				 $2.i,
 				 $2.i,
-				 make_imm_expr (-val, NULL, false));
+				 make_imm_expr (img, -val, NULL, false));
 		  free ((imm_expr *)$3.p);
 		}
 
@@ -1088,128 +1111,128 @@ ASM_CODE:	LOAD_OPS	DEST	ADDRESS
 		{
 		  /* The hardware divide operation (ignore 1st arg) */
 		  if ($1.i != Y_DIV_OP && $1.i != Y_DIVU_OP)
-		    yyerror ("REM requires 3 arguments");
+		    yyerror (img, "REM requires 3 arguments");
 		  else
-		    r_type_inst ($1.i, 0, $2.i, $3.i);
+		    r_type_inst (img, $1.i, 0, $2.i, $3.i);
 		}
 
 	|	DIV_POPS	DEST	SRC1	SRC2
 		{
 		  /* Pseudo divide operations */
-		  div_inst ($1.i, $2.i, $3.i, $4.i, 0);
+		  div_inst (img, $1.i, $2.i, $3.i, $4.i, 0);
 		}
 
 	|	DIV_POPS	DEST	SRC1	IMM32
 		{
 		  if (is_zero_imm ((imm_expr *)$4.p))
-		    yyerror ("Divide by zero");
+		    yyerror (img, "Divide by zero");
 		  else
 		    {
 		      /* Use $at */
-		      i_type_inst_free (Y_ORI_OP, 1, 0, (imm_expr *)$4.p);
-		      div_inst ($1.i, $2.i, $3.i, 1, 1);
+		      i_type_inst_free (img, Y_ORI_OP, 1, 0, (imm_expr *)$4.p);
+		      div_inst (img, $1.i, $2.i, $3.i, 1, 1);
 		    }
 		}
 
 
 	|	MUL_POPS	DEST	SRC1	SRC2
 		{
-		  mult_inst ($1.i, $2.i, $3.i, $4.i);
+		  mult_inst (img, $1.i, $2.i, $3.i, $4.i);
 		}
 
 	|	MUL_POPS	DEST	SRC1	IMM32
 		{
 		  if (is_zero_imm ((imm_expr *)$4.p))
 		    /* Optimize: n * 0 == 0 */
-		    i_type_inst_free (Y_ORI_OP, $2.i, 0, (imm_expr *)$4.p);
+		    i_type_inst_free (img, Y_ORI_OP, $2.i, 0, (imm_expr *)$4.p);
 		  else
 		    {
 		      /* Use $at */
-		      i_type_inst_free (Y_ORI_OP, 1, 0, (imm_expr *)$4.p);
-		      mult_inst ($1.i, $2.i, $3.i, 1);
+		      i_type_inst_free (img, Y_ORI_OP, 1, 0, (imm_expr *)$4.p);
+		      mult_inst (img, $1.i, $2.i, $3.i, 1);
 		    }
 		}
 
 
 	|	MULT_OPS	SRC1	SRC2
 		{
-		  r_type_inst ($1.i, 0, $2.i, $3.i);
+		  r_type_inst (img, $1.i, 0, $2.i, $3.i);
 		}
 
 
 	|	MULT_OPS3	DEST	SRC1	SRC2
 		{
-		  r_type_inst ($1.i, $2.i, $3.i, $4.i);
+		  r_type_inst (img, $1.i, $2.i, $3.i, $4.i);
 		}
 
 	|	MULT_OPS3	DEST	SRC1	IMM32
 		{
 		  /* Special case, for backward compatibility with pseudo-op
 		     MULT instruction */
-		  i_type_inst_free (Y_ORI_OP, 1, 0, (imm_expr *)$4.p); /* Use $at */
-		  r_type_inst ($1.i, $2.i, $3.i, 1);
+		  i_type_inst_free (img, Y_ORI_OP, 1, 0, (imm_expr *)$4.p); /* Use $at */
+		  r_type_inst (img, $1.i, $2.i, $3.i, 1);
 		}
 
 
 	|	Y_ROR_POP	DEST	SRC1	SRC2
 		{
-		  r_type_inst (Y_SUBU_OP, 1, 0, $4.i);
-		  r_type_inst (Y_SLLV_OP, 1, 1, $3.i);
-		  r_type_inst (Y_SRLV_OP, $2.i, $4.i, $3.i);
-		  r_type_inst (Y_OR_OP, $2.i, $2.i, 1);
+		  r_type_inst (img, Y_SUBU_OP, 1, 0, $4.i);
+		  r_type_inst (img, Y_SLLV_OP, 1, 1, $3.i);
+		  r_type_inst (img, Y_SRLV_OP, $2.i, $4.i, $3.i);
+		  r_type_inst (img, Y_OR_OP, $2.i, $2.i, 1);
 		}
 
 
 	|	Y_ROL_POP	DEST	SRC1	SRC2
 		{
-		  r_type_inst (Y_SUBU_OP, 1, 0, $4.i);
-		  r_type_inst (Y_SRLV_OP, 1, 1, $3.i);
-		  r_type_inst (Y_SLLV_OP, $2.i, $4.i, $3.i);
-		  r_type_inst (Y_OR_OP, $2.i, $2.i, 1);
+		  r_type_inst (img, Y_SUBU_OP, 1, 0, $4.i);
+		  r_type_inst (img, Y_SRLV_OP, 1, 1, $3.i);
+		  r_type_inst (img, Y_SLLV_OP, $2.i, $4.i, $3.i);
+		  r_type_inst (img, Y_OR_OP, $2.i, $2.i, 1);
 		}
 
 
 	|	Y_ROR_POP	DEST	SRC1	IMM32
 		{
-		  long dist = eval_imm_expr ((imm_expr *)$4.p);
+		  long dist = eval_imm_expr (img, (imm_expr *)$4.p);
 
-		  check_imm_range ((imm_expr *)$4.p, 0, 31);
-		  r_sh_type_inst (Y_SLL_OP, 1, $3.i, -dist);
-		  r_sh_type_inst (Y_SRL_OP, $2.i, $3.i, dist);
-		  r_type_inst (Y_OR_OP, $2.i, $2.i, 1);
+		  check_imm_range (img, (imm_expr *)$4.p, 0, 31);
+		  r_sh_type_inst (img, Y_SLL_OP, 1, $3.i, -dist);
+		  r_sh_type_inst (img, Y_SRL_OP, $2.i, $3.i, dist);
+		  r_type_inst (img, Y_OR_OP, $2.i, $2.i, 1);
 		  free ((imm_expr *)$4.p);
 		}
 
 
 	|	Y_ROL_POP	DEST	SRC1	IMM32
 		{
-		  long dist = eval_imm_expr ((imm_expr *)$4.p);
+		  long dist = eval_imm_expr (img, (imm_expr *)$4.p);
 
-		  check_imm_range ((imm_expr *)$4.p, 0, 31);
-		  r_sh_type_inst (Y_SRL_OP, 1, $3.i, -dist);
-		  r_sh_type_inst (Y_SLL_OP, $2.i, $3.i, dist);
-		  r_type_inst (Y_OR_OP, $2.i, $2.i, 1);
+		  check_imm_range (img, (imm_expr *)$4.p, 0, 31);
+		  r_sh_type_inst (img, Y_SRL_OP, 1, $3.i, -dist);
+		  r_sh_type_inst (img, Y_SLL_OP, $2.i, $3.i, dist);
+		  r_type_inst (img, Y_OR_OP, $2.i, $2.i, 1);
 		  free ((imm_expr *)$4.p);
 		}
 
 
 	|	BF_OPS_REV2	F_DEST	F_SRC2	Y_INT	Y_INT
 		{
-		  mips32_r2_inst ();
+		  mips32_r2_inst (img);
 		}
 
 
 	|	SET_LE_POPS	DEST	SRC1	SRC2
 		{
-		  set_le_inst ($1.i, $2.i, $3.i, $4.i);
+		  set_le_inst (img, $1.i, $2.i, $3.i, $4.i);
 		}
 
 	|	SET_LE_POPS	DEST	SRC1	IMM32
 		{
 		  if (!is_zero_imm ((imm_expr *)$4.p))
 		    /* Use $at */
-		    i_type_inst (Y_ORI_OP, 1, 0, (imm_expr *)$4.p);
-		  set_le_inst ($1.i, $2.i, $3.i,
+		    i_type_inst (img, Y_ORI_OP, 1, 0, (imm_expr *)$4.p);
+		  set_le_inst (img, $1.i, $2.i, $3.i,
 			       (is_zero_imm ((imm_expr *)$4.p) ? 0 : 1));
 		  free ((imm_expr *)$4.p);
 		}
@@ -1217,15 +1240,15 @@ ASM_CODE:	LOAD_OPS	DEST	ADDRESS
 
 	|	SET_GT_POPS	DEST	SRC1	SRC2
 		{
-		  set_gt_inst ($1.i, $2.i, $3.i, $4.i);
+		  set_gt_inst (img, $1.i, $2.i, $3.i, $4.i);
 		}
 
 	|	SET_GT_POPS	DEST	SRC1	IMM32
 		{
 		  if (!is_zero_imm ((imm_expr *)$4.p))
 		    /* Use $at */
-		    i_type_inst (Y_ORI_OP, 1, 0, (imm_expr *)$4.p);
-		  set_gt_inst ($1.i, $2.i, $3.i,
+		    i_type_inst (img, Y_ORI_OP, 1, 0, (imm_expr *)$4.p);
+		  set_gt_inst (img, $1.i, $2.i, $3.i,
 			       (is_zero_imm ((imm_expr *)$4.p) ? 0 : 1));
 		  free ((imm_expr *)$4.p);
 		}
@@ -1234,15 +1257,15 @@ ASM_CODE:	LOAD_OPS	DEST	ADDRESS
 
 	|	SET_GE_POPS	DEST	SRC1	SRC2
 		{
-		  set_ge_inst ($1.i, $2.i, $3.i, $4.i);
+		  set_ge_inst (img, $1.i, $2.i, $3.i, $4.i);
 		}
 
 	|	SET_GE_POPS	DEST	SRC1	IMM32
 		{
 		  if (!is_zero_imm ((imm_expr *)$4.p))
 		    /* Use $at */
-		    i_type_inst (Y_ORI_OP, 1, 0, (imm_expr *)$4.p);
-		  set_ge_inst ($1.i, $2.i, $3.i,
+		    i_type_inst (img, Y_ORI_OP, 1, 0, (imm_expr *)$4.p);
+		  set_ge_inst (img, $1.i, $2.i, $3.i,
 			       (is_zero_imm ((imm_expr *)$4.p) ? 0 : 1));
 		  free ((imm_expr *)$4.p);
 		}
@@ -1250,15 +1273,15 @@ ASM_CODE:	LOAD_OPS	DEST	ADDRESS
 
 	|	SET_EQ_POPS	DEST	SRC1	SRC2
 		{
-		  set_eq_inst ($1.i, $2.i, $3.i, $4.i);
+		  set_eq_inst (img, $1.i, $2.i, $3.i, $4.i);
 		}
 
 	|	SET_EQ_POPS	DEST	SRC1	IMM32
 		{
 		  if (!is_zero_imm ((imm_expr *)$4.p))
 		    /* Use $at */
-		    i_type_inst (Y_ORI_OP, 1, 0, (imm_expr *)$4.p);
-		  set_eq_inst ($1.i, $2.i, $3.i,
+		    i_type_inst (img, Y_ORI_OP, 1, 0, (imm_expr *)$4.p);
+		  set_eq_inst (img, $1.i, $2.i, $3.i,
 			       (is_zero_imm ((imm_expr *)$4.p) ? 0 : 1));
 		  free ((imm_expr *)$4.p);
 		}
@@ -1269,7 +1292,8 @@ ASM_CODE:	LOAD_OPS	DEST	ADDRESS
 		  /* RS and RT fields contain information on test */
                   int nd = opcode_is_nullified_branch ($1.i) ? 1 : 0;
                   int tf = opcode_is_true_branch ($1.i) ? 1 : 0;
-		  i_type_inst_free ($1.i,
+		  i_type_inst_free (img,
+		  			$1.i,
 				    cc_to_rt (0, nd, tf),
 				    BIN_RS ($1.i),
 				    (imm_expr *)$2.p);
@@ -1280,7 +1304,8 @@ ASM_CODE:	LOAD_OPS	DEST	ADDRESS
 		  /* RS and RT fields contain information on test */
                   int nd = opcode_is_nullified_branch ($1.i) ? 1 : 0;
                   int tf = opcode_is_true_branch ($1.i) ? 1 : 0;
-		  i_type_inst_free ($1.i,
+		  i_type_inst_free (img,
+		  			$1.i,
 				    cc_to_rt ($2.i, nd, tf),
 				    BIN_RS ($1.i),
 				    (imm_expr *)$3.p);
@@ -1289,37 +1314,37 @@ ASM_CODE:	LOAD_OPS	DEST	ADDRESS
 
 	|	UNARY_BR_OPS	SRC1	LABEL
 		{
-		  i_type_inst_free ($1.i, 0, $2.i, (imm_expr *)$3.p);
+		  i_type_inst_free (img, $1.i, 0, $2.i, (imm_expr *)$3.p);
 		}
 
 
 	|	UNARY_BR_POPS	SRC1	LABEL
 		{
-		  i_type_inst_free ($1.i == Y_BEQZ_POP ? Y_BEQ_OP : Y_BNE_OP,
+		  i_type_inst_free (img, $1.i == Y_BEQZ_POP ? Y_BEQ_OP : Y_BNE_OP,
 			       0, $2.i, (imm_expr *)$3.p);
 		}
 
 
 	|	BINARY_BR_OPS	SRC1	SRC2	LABEL
 		{
-		  i_type_inst_free ($1.i, $3.i, $2.i, (imm_expr *)$4.p);
+		  i_type_inst_free (img, $1.i, $3.i, $2.i, (imm_expr *)$4.p);
 		}
 
 	|	BINARY_BR_OPS	SRC1	BR_IMM32	LABEL
 		{
 		  if (bare_machine && !accept_pseudo_insts)
-		    yyerror ("Immediate form not allowed in bare machine");
+		    yyerror (img, "Immediate form not allowed in bare machine");
 		  else
 		    {
 		      if (is_zero_imm ((imm_expr *)$3.p))
-			i_type_inst ($1.i, $2.i,
+			i_type_inst (img,$1.i, $2.i,
 				     (is_zero_imm ((imm_expr *)$3.p) ? 0 : 1),
 				     (imm_expr *)$4.p);
 		      else
 			{
 			  /* Use $at */
-			  i_type_inst (Y_ORI_OP, 1, 0, (imm_expr *)$3.p);
-			  i_type_inst ($1.i, $2.i,
+			  i_type_inst (img, Y_ORI_OP, 1, 0, (imm_expr *)$3.p);
+			  i_type_inst (img, $1.i, $2.i,
 				       (is_zero_imm ((imm_expr *)$3.p) ? 0 : 1),
 				       (imm_expr *)$4.p);
 			}
@@ -1331,9 +1356,9 @@ ASM_CODE:	LOAD_OPS	DEST	ADDRESS
 
 	|	BR_GT_POPS	SRC1	SRC2	LABEL
 		{
-		  r_type_inst ($1.i == Y_BGT_POP ? Y_SLT_OP : Y_SLTU_OP,
+		  r_type_inst (img, $1.i == Y_BGT_POP ? Y_SLT_OP : Y_SLTU_OP,
 			       1, $3.i, $2.i); /* Use $at */
-		  i_type_inst_free (Y_BNE_OP, 0, 1, (imm_expr *)$4.p);
+		  i_type_inst_free (img, Y_BNE_OP, 0, 1, (imm_expr *)$4.p);
 		}
 
 	|	BR_GT_POPS	SRC1	BR_IMM32	LABEL
@@ -1341,18 +1366,18 @@ ASM_CODE:	LOAD_OPS	DEST	ADDRESS
 		  if ($1.i == Y_BGT_POP)
 		    {
 		      /* Use $at */
-		      i_type_inst_free (Y_SLTI_OP, 1, $2.i,
-					incr_expr_offset ((imm_expr *)$3.p, 1));
-		      i_type_inst (Y_BEQ_OP, 0, 1, (imm_expr *)$4.p);
+		      i_type_inst_free (img, Y_SLTI_OP, 1, $2.i,
+					incr_expr_offset (img, (imm_expr *)$3.p, 1));
+		      i_type_inst (img, Y_BEQ_OP, 0, 1, (imm_expr *)$4.p);
 		    }
 		  else
 		    {
 		      /* Use $at */
 		      /* Can't add 1 to immediate since 0xffffffff+1 = 0 < 1 */
-		      i_type_inst (Y_ORI_OP, 1, 0, (imm_expr *)$3.p);
-		      i_type_inst_free (Y_BEQ_OP, $2.i, 1, branch_offset (3));
-		      r_type_inst (Y_SLTU_OP, 1, $2.i, 1);
-		      i_type_inst (Y_BEQ_OP, 0, 1, (imm_expr *)$4.p);
+		      i_type_inst (img, Y_ORI_OP, 1, 0, (imm_expr *)$3.p);
+		      i_type_inst_free (img, Y_BEQ_OP, $2.i, 1, branch_offset (img, 3));
+		      r_type_inst (img, Y_SLTU_OP, 1, $2.i, 1);
+		      i_type_inst (img, Y_BEQ_OP, 0, 1, (imm_expr *)$4.p);
 		    }
 		  free ((imm_expr *)$3.p);
 		  free ((imm_expr *)$4.p);
@@ -1361,41 +1386,41 @@ ASM_CODE:	LOAD_OPS	DEST	ADDRESS
 
 	|	BR_GE_POPS	SRC1	SRC2	LABEL
 		{
-		  r_type_inst ($1.i == Y_BGE_POP ? Y_SLT_OP : Y_SLTU_OP,
+		  r_type_inst (img, $1.i == Y_BGE_POP ? Y_SLT_OP : Y_SLTU_OP,
 			       1, $2.i, $3.i); /* Use $at */
-		  i_type_inst_free (Y_BEQ_OP, 0, 1, (imm_expr *)$4.p);
+		  i_type_inst_free (img, Y_BEQ_OP, 0, 1, (imm_expr *)$4.p);
 		}
 
 	|	BR_GE_POPS	SRC1	BR_IMM32	LABEL
 		{
-		  i_type_inst ($1.i == Y_BGE_POP ? Y_SLTI_OP : Y_SLTIU_OP,
+		  i_type_inst (img, $1.i == Y_BGE_POP ? Y_SLTI_OP : Y_SLTIU_OP,
 			       1, $2.i, (imm_expr *)$3.p); /* Use $at */
-		  i_type_inst_free (Y_BEQ_OP, 0, 1, (imm_expr *)$4.p);
+		  i_type_inst_free (img, Y_BEQ_OP, 0, 1, (imm_expr *)$4.p);
 		  free ((imm_expr *)$3.p);
 		}
 
 
 	|	BR_LT_POPS	SRC1	SRC2	LABEL
 		{
-		  r_type_inst ($1.i == Y_BLT_POP ? Y_SLT_OP : Y_SLTU_OP,
+		  r_type_inst (img, $1.i == Y_BLT_POP ? Y_SLT_OP : Y_SLTU_OP,
 			       1, $2.i, $3.i); /* Use $at */
-		  i_type_inst_free (Y_BNE_OP, 0, 1, (imm_expr *)$4.p);
+		  i_type_inst_free (img, Y_BNE_OP, 0, 1, (imm_expr *)$4.p);
 		}
 
 	|	BR_LT_POPS	SRC1	BR_IMM32	LABEL
 		{
-		  i_type_inst ($1.i == Y_BLT_POP ? Y_SLTI_OP : Y_SLTIU_OP,
+		  i_type_inst (img, $1.i == Y_BLT_POP ? Y_SLTI_OP : Y_SLTIU_OP,
 			       1, $2.i, (imm_expr *)$3.p); /* Use $at */
-		  i_type_inst_free (Y_BNE_OP, 0, 1, (imm_expr *)$4.p);
+		  i_type_inst_free (img, Y_BNE_OP, 0, 1, (imm_expr *)$4.p);
 		  free ((imm_expr *)$3.p);
 		}
 
 
 	|	BR_LE_POPS	SRC1	SRC2	LABEL
 		{
-		  r_type_inst ($1.i == Y_BLE_POP ? Y_SLT_OP : Y_SLTU_OP,
+		  r_type_inst (img, $1.i == Y_BLE_POP ? Y_SLT_OP : Y_SLTU_OP,
 			       1, $3.i, $2.i); /* Use $at */
-		  i_type_inst_free (Y_BEQ_OP, 0, 1, (imm_expr *)$4.p);
+		  i_type_inst_free (img, Y_BEQ_OP, 0, 1, (imm_expr *)$4.p);
 		}
 
 	|	BR_LE_POPS	SRC1	BR_IMM32	LABEL
@@ -1403,18 +1428,18 @@ ASM_CODE:	LOAD_OPS	DEST	ADDRESS
 		  if ($1.i == Y_BLE_POP)
 		    {
 		      /* Use $at */
-		      i_type_inst_free (Y_SLTI_OP, 1, $2.i,
-					incr_expr_offset ((imm_expr *)$3.p, 1));
-		      i_type_inst (Y_BNE_OP, 0, 1, (imm_expr *)$4.p);
+		      i_type_inst_free (img, Y_SLTI_OP, 1, $2.i,
+					incr_expr_offset (img, (imm_expr *)$3.p, 1));
+		      i_type_inst (img, Y_BNE_OP, 0, 1, (imm_expr *)$4.p);
 		    }
 		  else
 		    {
 		      /* Use $at */
 		      /* Can't add 1 to immediate since 0xffffffff+1 = 0 < 1 */
-		      i_type_inst (Y_ORI_OP, 1, 0, (imm_expr *)$3.p);
-		      i_type_inst (Y_BEQ_OP, $2.i, 1, (imm_expr *)$4.p);
-		      r_type_inst (Y_SLTU_OP, 1, $2.i, 1);
-		      i_type_inst (Y_BNE_OP, 0, 1, (imm_expr *)$4.p);
+		      i_type_inst (img, Y_ORI_OP, 1, 0, (imm_expr *)$3.p);
+		      i_type_inst (img, Y_BEQ_OP, $2.i, 1, (imm_expr *)$4.p);
+		      r_type_inst (img, Y_SLTU_OP, 1, $2.i, 1);
+		      i_type_inst (img, Y_BNE_OP, 0, 1, (imm_expr *)$4.p);
 		    }
 		  free ((imm_expr *)$3.p);
 		  free ((imm_expr *)$4.p);
@@ -1424,69 +1449,70 @@ ASM_CODE:	LOAD_OPS	DEST	ADDRESS
 	|	J_OPS		LABEL
 		{
 		  if (($1.i == Y_J_OP) || ($1.i == Y_JR_OP))
-		    j_type_inst (Y_J_OP, (imm_expr *)$2.p);
+		    j_type_inst (img, Y_J_OP, (imm_expr *)$2.p);
 		  else if (($1.i == Y_JAL_OP) || ($1.i == Y_JALR_OP))
-		    j_type_inst (Y_JAL_OP, (imm_expr *)$2.p);
+		    j_type_inst (img, Y_JAL_OP, (imm_expr *)$2.p);
 		  free ((imm_expr *)$2.p);
 		}
 
 	|	J_OPS		SRC1
 		{
 		  if (($1.i == Y_J_OP) || ($1.i == Y_JR_OP))
-		    r_type_inst (Y_JR_OP, 0, $2.i, 0);
+		    r_type_inst (img, Y_JR_OP, 0, $2.i, 0);
 		  else if (($1.i == Y_JAL_OP) || ($1.i == Y_JALR_OP))
-		    r_type_inst (Y_JALR_OP, 31, $2.i, 0);
+		    r_type_inst (img, Y_JALR_OP, 31, $2.i, 0);
 		}
 
 	|	J_OPS		DEST	SRC1
 		{
 		  if (($1.i == Y_J_OP) || ($1.i == Y_JR_OP))
-		    r_type_inst (Y_JR_OP, 0, $3.i, 0);
+		    r_type_inst (img, Y_JR_OP, 0, $3.i, 0);
 		  else if (($1.i == Y_JAL_OP) || ($1.i == Y_JALR_OP))
-		    r_type_inst (Y_JALR_OP, $2.i, $3.i, 0);
+		    r_type_inst (img, Y_JALR_OP, $2.i, $3.i, 0);
 		}
 
 
 	|	B_OPS		LABEL
 		{
-		  i_type_inst_free (($1.i == Y_BAL_POP ? Y_BGEZAL_OP : Y_BGEZ_OP),
+		  i_type_inst_free (img, ($1.i == Y_BAL_POP ? Y_BGEZAL_OP : Y_BGEZ_OP),
 				    0, 0, (imm_expr *)$2.p);
 		}
 
 
 	|	BINARYI_TRAP_OPS	SRC1	IMM16
 		{
-		  i_type_inst_free ($1.i, 0, $2.i, (imm_expr *)$3.p);
+		  i_type_inst_free (img, $1.i, 0, $2.i, (imm_expr *)$3.p);
 		}
 
 
 	|	BINARY_TRAP_OPS	SRC1	SRC2
 		{
-		  r_type_inst ($1.i, 0, $2.i, $3.i);
+		  r_type_inst (img, $1.i, 0, $2.i, $3.i);
 		}
 
 
 	|	FP_MOVE_OPS	F_DEST	F_SRC1
 		{
-		  r_co_type_inst ($1.i, $2.i, $3.i, 0);
+		  r_co_type_inst (img, $1.i, $2.i, $3.i, 0);
 		}
 
 
 	|	FP_MOVE_OPS_REV2 F_DEST	F_SRC1
 		{
-		  mips32_r2_inst ();
+		  mips32_r2_inst (img);
 		}
 
 
 	|	MOVEC_OPS	DEST	SRC1	REG
 		{
-		  r_type_inst ($1.i, $2.i, $3.i, $4.i);
+		  r_type_inst (img, $1.i, $2.i, $3.i, $4.i);
 		}
 
 
 	|	MOVECC_OPS	DEST	SRC1	Y_INT
 		{
-                    r_type_inst ($1.i,
+                    r_type_inst (img,
+								 $1.i,
                                  $2.i,
                                  $3.i,
                                  (($4.i & 0x7) << 2));
@@ -1495,43 +1521,43 @@ ASM_CODE:	LOAD_OPS	DEST	ADDRESS
 
 	|	FP_MOVEC_OPS	F_DEST	F_SRC1	REG
 		{
-		  r_co_type_inst ($1.i, $2.i, $3.i, $4.i);
+		  r_co_type_inst (img, $1.i, $2.i, $3.i, $4.i);
 		}
 
 
 	|	FP_MOVEC_OPS_REV2 F_DEST	F_SRC1	REG
 		{
-		  mips32_r2_inst ();
+		  mips32_r2_inst (img);
 		}
 
 
 	|	FP_MOVECC_OPS	F_DEST	F_SRC1
 		{
-		  r_co_type_inst ($1.i, $2.i, $3.i, cc_to_rt (0, 0, 0));
+		  r_co_type_inst (img, $1.i, $2.i, $3.i, cc_to_rt (0, 0, 0));
 		}
 
 
 	|	FP_MOVECC_OPS	F_DEST	F_SRC1	CC_REG
 		{
-		  r_co_type_inst ($1.i, $2.i, $3.i, cc_to_rt ($4.i, 0, 0));
+		  r_co_type_inst (img, $1.i, $2.i, $3.i, cc_to_rt ($4.i, 0, 0));
 		}
 
 
 	|	FP_MOVECC_OPS_REV2 F_DEST	F_SRC1	CC_REG
 		{
-		  mips32_r2_inst ();
+		  mips32_r2_inst (img);
 		}
 
 
 	|	MOVE_FROM_HILO_OPS REG
 		{
-		  r_type_inst ($1.i, $2.i, 0, 0);
+		  r_type_inst (img, $1.i, $2.i, 0, 0);
 		}
 
 
 	|	MOVE_TO_HILO_OPS REG
 		{
-		  r_type_inst ($1.i, 0, $2.i, 0);
+		  r_type_inst (img, $1.i, 0, $2.i, 0);
 		}
 
 
@@ -1540,82 +1566,82 @@ ASM_CODE:	LOAD_OPS	DEST	ADDRESS
 		{
 		  if ($1.i == Y_MFC1_D_POP)
 		    {
-		      r_co_type_inst (Y_MFC1_OP, 0, $3.i, $2.i);
-		      r_co_type_inst (Y_MFC1_OP, 0, $3.i + 1, $2.i + 1);
+		      r_co_type_inst (img, Y_MFC1_OP, 0, $3.i, $2.i);
+		      r_co_type_inst (img, Y_MFC1_OP, 0, $3.i + 1, $2.i + 1);
 		    }
 		  else if ($1.i == Y_MTC1_D_POP)
 		    {
-		      r_co_type_inst (Y_MTC1_OP, 0, $3.i, $2.i);
-		      r_co_type_inst (Y_MTC1_OP, 0, $3.i + 1, $2.i + 1);
+		      r_co_type_inst (img, Y_MTC1_OP, 0, $3.i, $2.i);
+		      r_co_type_inst (img, Y_MTC1_OP, 0, $3.i + 1, $2.i + 1);
 		    }
 		  else
-		    r_co_type_inst ($1.i, 0, $3.i, $2.i);
+		    r_co_type_inst (img, $1.i, 0, $3.i, $2.i);
 		}
 
 
 	|	MOVE_COP_OPS_REV2 REG	COP_REG
 		{
-		  mips32_r2_inst ();
+		  mips32_r2_inst (img);
 		}
 
 
 	|	CTL_COP_OPS	REG	COP_REG
 		{
-		  r_co_type_inst ($1.i, 0, $3.i, $2.i);
+		  r_co_type_inst (img, $1.i, 0, $3.i, $2.i);
 		}
 
 
 	|	FP_UNARY_OPS	F_DEST	F_SRC2
 		{
-		  r_co_type_inst ($1.i, $2.i, $3.i, 0);
+		  r_co_type_inst (img, $1.i, $2.i, $3.i, 0);
 		}
 
 
 	|	FP_UNARY_OPS_REV2 F_DEST	F_SRC2
 		{
-		  mips32_r2_inst ();
+		  mips32_r2_inst (img);
 		}
 
 
 	|	FP_BINARY_OPS	F_DEST	F_SRC1	F_SRC2
 		{
-		  r_co_type_inst ($1.i, $2.i, $3.i, $4.i);
+		  r_co_type_inst (img, $1.i, $2.i, $3.i, $4.i);
 		}
 
 
 	|	FP_BINARY_OPS_REV2 F_DEST	F_SRC1	F_SRC2
 		{
-		  mips32_r2_inst ();
+		  mips32_r2_inst (img);
 		}
 
 
 	|	FP_TERNARY_OPS_REV2 F_DEST	F_SRC1	F_SRC2	FP_REGISTER
 		{
-		  mips32_r2_inst ();
+		  mips32_r2_inst (img);
 		}
 
 
 	|	FP_CMP_OPS	F_SRC1	F_SRC2
 		{
-		  r_cond_type_inst ($1.i, $2.i, $3.i, 0);
+		  r_cond_type_inst (img, $1.i, $2.i, $3.i, 0);
 		}
 
 
 	|	FP_CMP_OPS	CC_REG	F_SRC1	F_SRC2
 		{
-		  r_cond_type_inst ($1.i, $3.i, $4.i, $2.i);
+		  r_cond_type_inst (img, $1.i, $3.i, $4.i, $2.i);
 		}
 
 
 	|	FP_CMP_OPS_REV2	F_SRC1	F_SRC2
 		{
-		  mips32_r2_inst ();
+		  mips32_r2_inst (img);
 		}
 
 
 	|	Y_COP2_OP	IMM32
 		{
-		  i_type_inst_free ($1.i, 0, 0, (imm_expr *)$2.p);
+		  i_type_inst_free (img, $1.i, 0, 0, (imm_expr *)$2.p);
 		}
 	;
 
@@ -1682,7 +1708,7 @@ STOREFP_INDEX_OPS:	Y_SDXC1_OP
 SYS_OPS:	Y_RFE_OP
 		{
 #ifdef MIPS1
-			yywarn ("RFE should only be used when SPIM is compiled as a MIPS-I processor");
+			yywarn (img, "RFE should only be used when SPIM is compiled as a MIPS-I processor");
 #endif
 		}
 	|	Y_SYSCALL_OP
@@ -1705,7 +1731,7 @@ TLB_OPS:	Y_TLBP_OP
 NULLARY_OPS:	Y_ERET_OP
 		{
 #ifdef MIPS1
-			yywarn ("ERET should only be used when SPIM is compiled as a MIPS32 processor");
+			yywarn (img, "ERET should only be used when SPIM is compiled as a MIPS32 processor");
 #endif
 		}
 	;
@@ -1869,10 +1895,10 @@ BR_LE_POPS:	Y_BLE_POP
 
 J_OPS:	Y_J_OP
 	|	Y_JR_OP
-	|	Y_JR_HB_OP { yywarn ("Warning:IPS32 Rev 2 '.HB' extension is not implemented and is ignored"); }
+	|	Y_JR_HB_OP { yywarn (img, "Warning:IPS32 Rev 2 '.HB' extension is not implemented and is ignored"); }
 	|	Y_JAL_OP
 	|	Y_JALR_OP
-	|	Y_JALR_HB_OP { yywarn ("Warning:IPS32 Rev 2 '.HB' extension is not implemented and is ignored"); }
+	|	Y_JALR_HB_OP { yywarn (img, "Warning:IPS32 Rev 2 '.HB' extension is not implemented and is ignored"); }
 	;
 
 B_OPS:	Y_B_POP
@@ -2105,19 +2131,19 @@ ASM_DIRECTIVE:	Y_ALIAS_DIR	Y_REG	Y_REG
 
 	|	Y_ALIGN_DIR	EXPR
 		{
-		  align_data ($2.i);
+		  align_data (img, $2.i);
 		}
 
 	|	Y_ASCII_DIR {null_term = false;}	STR_LST
 		{
 		  if (text_dir)
-		    yyerror ("Can't put data in text segment");
+		    yyerror (img, "Can't put data in text segment");
 		}
 
 	|	Y_ASCIIZ_DIR {null_term = true;}	STR_LST
 		{
 		  if (text_dir)
-		    yyerror ("Can't put data in text segment");
+		    yyerror (img, "Can't put data in text segment");
 		}
 
 
@@ -2131,62 +2157,62 @@ ASM_DIRECTIVE:	Y_ALIAS_DIR	Y_REG	Y_REG
 		EXPR_LST
 		{
 		  if (text_dir)
-		    yyerror ("Can't put data in text segment");
+		    yyerror (img, "Can't put data in text segment");
 		}
 
 
 	|	Y_COMM_DIR	ID	EXPR
 		{
-		  align_data (2);
-		  if (lookup_label ((char*)$2.p)->addr == 0)
+		  align_data (img, 2);
+		  if (lookup_label (img, (char*)$2.p)->addr == 0)
 		  {
-		    (void)record_label ((char*)$2.p, current_data_pc (), 1);
+		    (void)record_label (img, (char*)$2.p, current_data_pc (img), 1);
 		    free ((char*)$2.p);
 		  }
-		  increment_data_pc ($3.i);
+		  increment_data_pc (img, $3.i);
 		}
 
 
 	|	Y_DATA_DIR
-		{user_kernel_data_segment (false);
+		{user_kernel_data_segment (img, false);
 		  data_dir = true; text_dir = false;
-		  enable_data_alignment ();
+		  enable_data_alignment (img);
 		}
 
 	|	Y_DATA_DIR	Y_INT
 		{
-		  user_kernel_data_segment (false);
+		  user_kernel_data_segment (img, false);
 		  data_dir = true; text_dir = false;
-		  enable_data_alignment ();
-		  set_data_pc ($2.i);
+		  enable_data_alignment (img);
+		  set_data_pc (img, $2.i);
 		}
 
 
 	|	Y_K_DATA_DIR
 		{
-                    user_kernel_data_segment (true);
+                    user_kernel_data_segment (img, true);
 		  data_dir = true; text_dir = false;
-		  enable_data_alignment ();
+		  enable_data_alignment (img);
 		}
 
 	|	Y_K_DATA_DIR	Y_INT
 		{
-                    user_kernel_data_segment (true);
+                    user_kernel_data_segment (img, true);
 		  data_dir = true; text_dir = false;
-		  enable_data_alignment ();
-		  set_data_pc ($2.i);
+		  enable_data_alignment (img);
+		  set_data_pc (img, $2.i);
 		}
 
 
 	|	Y_DOUBLE_DIR
 		{
 		  store_fp_op = store_double;
-		  if (data_dir) set_data_alignment (3);
+		  if (data_dir) set_data_alignment (img, 3);
 		}
 		FP_EXPR_LST
 		{
 		  if (text_dir)
-		    yyerror ("Can't put data in text segment");
+		    yyerror (img, "Can't put data in text segment");
 		}
 
 
@@ -2203,13 +2229,13 @@ ASM_DIRECTIVE:	Y_ALIAS_DIR	Y_REG	Y_REG
 
 	|	Y_EXTERN_DIR	ID	EXPR
 		{
-		  extern_directive ((char*)$2.p, $3.i);
+		  extern_directive (img, (char*)$2.p, $3.i);
 		}
 
 
 	|	Y_ERR_DIR
 		{
-		  fatal_error ("File contains an .err directive\n");
+		  fatal_error (img, "File contains an .err directive\n");
 		}
 
 
@@ -2219,12 +2245,12 @@ ASM_DIRECTIVE:	Y_ALIAS_DIR	Y_REG	Y_REG
 	|	Y_FLOAT_DIR
 		{
 		  store_fp_op = store_float;
-		  if (data_dir) set_data_alignment (2);
+		  if (data_dir) set_data_alignment (img, 2);
 		}
 		FP_EXPR_LST
 		{
 		  if (text_dir)
-		    yyerror ("Can't put data in text segment");
+		    yyerror (img, "Can't put data in text segment");
 		}
 
 
@@ -2235,7 +2261,7 @@ ASM_DIRECTIVE:	Y_ALIAS_DIR	Y_REG	Y_REG
 
 	|	Y_GLOBAL_DIR	ID
 		{
-		  (void)make_label_global ((char*)$2.p);
+		  (void)make_label_global (img, (char*)$2.p);
 		  free ((char*)$2.p);
 		}
 
@@ -2243,19 +2269,20 @@ ASM_DIRECTIVE:	Y_ALIAS_DIR	Y_REG	Y_REG
 	|	Y_HALF_DIR
 		{
 		  store_op = store_half;
-		  if (data_dir) set_data_alignment (1);
+		  if (data_dir) set_data_alignment (img, 1);
 		}
 		EXPR_LST
 		{
 		  if (text_dir)
-		    yyerror ("Can't put data in text segment");
+		    yyerror (img, "Can't put data in text segment");
 		}
 
 
 	|	Y_LABEL_DIR	ID
 		{
-		  (void)record_label ((char*)$2.p,
-				      text_dir ? current_text_pc () : current_data_pc (),
+		  (void)record_label (img,
+		  			  (char*)$2.p,
+				      text_dir ? current_text_pc (img) : current_data_pc (img),
 				      1);
 		  free ((char*)$2.p);
 		}
@@ -2263,7 +2290,7 @@ ASM_DIRECTIVE:	Y_ALIAS_DIR	Y_REG	Y_REG
 
 	|	Y_LCOMM_DIR	ID	EXPR
 		{
-		  lcomm_directive ((char*)$2.p, $3.i);
+		  lcomm_directive (img, (char*)$2.p, $3.i);
 		}
 
 
@@ -2281,39 +2308,39 @@ ASM_DIRECTIVE:	Y_ALIAS_DIR	Y_REG	Y_REG
 
 	|	Y_REPEAT_DIR	EXPR
 		{
-		  yyerror ("Warning: repeat directive ignored");
+		  yyerror (img, "Warning: repeat directive ignored");
 		}
 
 
 	|	Y_RDATA_DIR
 		{
-		  user_kernel_data_segment (false);
+		  user_kernel_data_segment (img, false);
 		  data_dir = true; text_dir = false;
-		  enable_data_alignment ();
+		  enable_data_alignment (img);
 		}
 
 	|	Y_RDATA_DIR	Y_INT
 		{
-		  user_kernel_data_segment (false);
+		  user_kernel_data_segment (img, false);
 		  data_dir = true; text_dir = false;
-		  enable_data_alignment ();
-		  set_data_pc ($2.i);
+		  enable_data_alignment (img);
+		  set_data_pc (img, $2.i);
 		}
 
 
 	|	Y_SDATA_DIR
 		{
-		  user_kernel_data_segment (false);
+		  user_kernel_data_segment (img, false);
 		  data_dir = true; text_dir = false;
-		  enable_data_alignment ();
+		  enable_data_alignment (img);
 		}
 
 	|	Y_SDATA_DIR	Y_INT
 		{
-		  user_kernel_data_segment (false);
+		  user_kernel_data_segment (img, false);
 		  data_dir = true; text_dir = false;
-		  enable_data_alignment ();
-		  set_data_pc ($2.i);
+		  enable_data_alignment (img);
+		  set_data_pc (img, $2.i);
 		}
 
 
@@ -2329,47 +2356,47 @@ ASM_DIRECTIVE:	Y_ALIAS_DIR	Y_REG	Y_REG
 	|	Y_SPACE_DIR	EXPR
 		{
 		  if (data_dir)
-		    increment_data_pc ($2.i);
+		    increment_data_pc (img, $2.i);
 		  else if (text_dir)
-		    increment_text_pc ($2.i);
+		    increment_text_pc (img, $2.i);
 		}
 
 
 	|	Y_STRUCT_DIR	EXPR
 		{
-		  yyerror ("Warning: struct directive ignored");
+		  yyerror (img, "Warning: struct directive ignored");
 		}
 
 
 	|	Y_TEXT_DIR
 		{
-		  user_kernel_text_segment (false);
+		  user_kernel_text_segment (img, false);
 		  data_dir = false; text_dir = true;
-		  enable_data_alignment ();
+		  enable_data_alignment (img);
 		}
 
 	|	Y_TEXT_DIR	Y_INT
 		{
-		  user_kernel_text_segment (false);
+		  user_kernel_text_segment (img, false);
 		  data_dir = false; text_dir = true;
-		  enable_data_alignment ();
-		  set_text_pc ($2.i);
+		  enable_data_alignment (img);
+		  set_text_pc (img, $2.i);
 		}
 
 
 	|	Y_K_TEXT_DIR
 		{
-		  user_kernel_text_segment (true);
+		  user_kernel_text_segment (img, true);
 		  data_dir = false; text_dir = true;
-		  enable_data_alignment ();
+		  enable_data_alignment (img);
 		}
 
 	|	Y_K_TEXT_DIR	Y_INT
 		{
-		  user_kernel_text_segment (true);
+		  user_kernel_text_segment (img, true);
 		  data_dir = false; text_dir = true;
-		  enable_data_alignment ();
-		  set_text_pc ($2.i);
+		  enable_data_alignment (img);
+		  set_text_pc (img, $2.i);
 		}
 
 
@@ -2381,7 +2408,7 @@ ASM_DIRECTIVE:	Y_ALIAS_DIR	Y_REG	Y_REG
 	|	Y_WORD_DIR
 		{
 		  store_op = store_word_data;
-		  if (data_dir) set_data_alignment (2);
+		  if (data_dir) set_data_alignment (img, 2);
 		}
 		EXPR_LST
 
@@ -2393,57 +2420,57 @@ ADDRESS:	{only_id = 1;} ADDR {only_id = 0; $$ = $2;}
 
 ADDR:		'(' REGISTER ')'
 		{
-		  $$.p = make_addr_expr (0, NULL, $2.i);
+		  $$.p = make_addr_expr (img, 0, NULL, $2.i);
 		}
 
 	|	ABS_ADDR
 		{
-		  $$.p = make_addr_expr ($1.i, NULL, 0);
+		  $$.p = make_addr_expr (img, $1.i, NULL, 0);
 		}
 
 	|	ABS_ADDR '(' REGISTER ')'
 		{
-		  $$.p = make_addr_expr ($1.i, NULL, $3.i);
+		  $$.p = make_addr_expr (img, $1.i, NULL, $3.i);
 		}
 
 	|	Y_ID
 		{
-		  $$.p = make_addr_expr (0, (char*)$1.p, 0);
+		  $$.p = make_addr_expr (img, 0, (char*)$1.p, 0);
 		  free ((char*)$1.p);
 		}
 
 	|	Y_ID '(' REGISTER ')'
 		{
-		  $$.p = make_addr_expr (0, (char*)$1.p, $3.i);
+		  $$.p = make_addr_expr (img, 0, (char*)$1.p, $3.i);
 		  free ((char*)$1.p);
 		}
 
 	|	Y_ID '+' ABS_ADDR
 		{
-		  $$.p = make_addr_expr ($3.i, (char*)$1.p, 0);
+		  $$.p = make_addr_expr (img, $3.i, (char*)$1.p, 0);
 		  free ((char*)$1.p);
 		}
 
 	|	ABS_ADDR '+' ID
 		{
-		  $$.p = make_addr_expr ($1.i, (char*)$3.p, 0);
+		  $$.p = make_addr_expr (img, $1.i, (char*)$3.p, 0);
 		}
 
 	|	Y_ID '-' ABS_ADDR
 		{
-		  $$.p = make_addr_expr (- $3.i, (char*)$1.p, 0);
+		  $$.p = make_addr_expr (img, - $3.i, (char*)$1.p, 0);
 		  free ((char*)$1.p);
 		}
 
 	|	Y_ID '+' ABS_ADDR '(' REGISTER ')'
 		{
-		  $$.p = make_addr_expr ($3.i, (char*)$1.p, $5.i);
+		  $$.p = make_addr_expr (img, $3.i, (char*)$1.p, $5.i);
 		  free ((char*)$1.p);
 		}
 
 	|	Y_ID '-' ABS_ADDR '(' REGISTER ')'
 		{
-		  $$.p = make_addr_expr (- $3.i, (char*)$1.p, $5.i);
+		  $$.p = make_addr_expr (img, - $3.i, (char*)$1.p, $5.i);
 		  free ((char*)$1.p);
 		}
 	;
@@ -2453,41 +2480,41 @@ BR_IMM32:	{only_id = 1;} IMM32 {only_id = 0; $$ = $2;}
 
 IMM16:	IMM32
 		{
-                  check_imm_range ((imm_expr*)$1.p, IMM_MIN, IMM_MAX);
+                  check_imm_range (img, (imm_expr*)$1.p, IMM_MIN, IMM_MAX);
 		  $$ = $1;
 		}
 
 UIMM16:	IMM32
 		{
-                  check_uimm_range ((imm_expr*)$1.p, UIMM_MIN, UIMM_MAX);
+                  check_uimm_range (img, (imm_expr*)$1.p, UIMM_MIN, UIMM_MAX);
 		  $$ = $1;
 		}
 
 
 IMM32:		ABS_ADDR
 		{
-		  $$.p = make_imm_expr ($1.i, NULL, false);
+		  $$.p = make_imm_expr (img, $1.i, NULL, false);
 		}
 
 	|	'(' ABS_ADDR ')' '>' '>' Y_INT
 		{
-		  $$.p = make_imm_expr ($2.i >> $6.i, NULL, false);
+		  $$.p = make_imm_expr (img, $2.i >> $6.i, NULL, false);
 		}
 
 	|	ID
 		{
-		  $$.p = make_imm_expr (0, (char*)$1.p, false);
+		  $$.p = make_imm_expr (img, 0, (char*)$1.p, false);
 		}
 
 	|	Y_ID '+' ABS_ADDR
 		{
-		  $$.p = make_imm_expr ($3.i, (char*)$1.p, false);
+		  $$.p = make_imm_expr (img, $3.i, (char*)$1.p, false);
 		  free ((char*)$1.p);
 		}
 
 	|	Y_ID '-' ABS_ADDR
 		{
-		  $$.p = make_imm_expr (- $3.i, (char*)$1.p, false);
+		  $$.p = make_imm_expr (img, - $3.i, (char*)$1.p, false);
 		  free ((char*)$1.p);
 		}
 	;
@@ -2503,7 +2530,7 @@ ABS_ADDR:	Y_INT
 		  /* This is actually: Y_INT '-' Y_INT, since the binary
 		     subtract operator gets scanned as a unary negation
 		     operator. */
-		  if ($2.i >= 0) yyerror ("Syntax error");
+		  if ($2.i >= 0) yyerror (img, "Syntax error");
 		  $$.i = $1.i - -$2.i;
 		}
 	;
@@ -2519,9 +2546,9 @@ REG:		REGISTER ;
 REGISTER:	Y_REG
 		{
 		  if ($1.i < 0 || $1.i > 31)
-		    yyerror ("Register number out of range");
+		    yyerror (img, "Register number out of range");
 		  if ($1.i == 1 && !bare_machine && !noat_flag)
-		    yyerror ("Register 1 is reserved for assembler");
+		    yyerror (img, "Register 1 is reserved for assembler");
 		  $$ = $1;
 		}
 
@@ -2534,7 +2561,7 @@ F_SRC2:		FP_REGISTER ;
 FP_REGISTER:	Y_FP_REG
 		{
 		  if ($1.i < 0 || $1.i > 31)
-		    yyerror ("FP register number out of range");
+		    yyerror (img, "FP register number out of range");
 		  $$ = $1;
 		}
 
@@ -2542,7 +2569,7 @@ FP_REGISTER:	Y_FP_REG
 CC_REG:	       Y_INT
 		{
 		  if ($1.i < 0 || $1.i > 7)
-		    yyerror ("CC register number out of range");
+		    yyerror (img, "CC register number out of range");
 		  $$ = $1;
 		}
 
@@ -2556,7 +2583,7 @@ COP_REG:	Y_REG
 
 LABEL:		ID
 		{
-		  $$.p = make_imm_expr (-(int)current_text_pc (), (char*)$1.p, true);
+		  $$.p = make_imm_expr (img, -(int)current_text_pc (img), (char*)$1.p, true);
 		}
 
 
@@ -2567,7 +2594,7 @@ STR_LST:	STR_LST STR
 
 STR:		Y_STR
 		{
-		  store_string ((char*)$1.p, strlen((char*)$1.p), null_term);
+		  store_string (img, (char*)$1.p, strlen((char*)$1.p), null_term);
 		  free ((char*)$1.p);
 		}
 	|	Y_STR ':' Y_INT
@@ -2575,7 +2602,7 @@ STR:		Y_STR
 		  int i;
 
 		  for (i = 0; i < $3.i; i ++)
-		    store_string ((char*)$1.p, strlen((char*)$1.p), null_term);
+		    store_string (img, (char*)$1.p, strlen((char*)$1.p), null_term);
 		  free ((char*)$1.p);
 		}
 	;
@@ -2610,10 +2637,10 @@ FACTOR:         Y_INT
 
 	|	ID
 		{
-		  label *l = lookup_label ((char*)$1.p);
+		  label *l = lookup_label (img, (char*)$1.p);
   		  if (l->addr == 0)
                     {
-                      record_data_uses_symbol (current_data_pc (), l);
+                      record_data_uses_symbol (img, current_data_pc (img), l);
                       $$.p = NULL;
                     }
                   else
@@ -2623,29 +2650,29 @@ FACTOR:         Y_INT
 
 EXPR_LST:	EXPR_LST	EXPRESSION
 		{
-		  store_op ($2.i);
+		  store_op (img, $2.i);
 		}
 	|	EXPRESSION
 		{
-		  store_op ($1.i);
+		  store_op (img, $1.i);
 		}
 	|	EXPRESSION ':' EXPR
 		{
 		  int i;
 
 		  for (i = 0; i < $3.i; i ++)
-		    store_op ($1.i);
+		    store_op (img, $1.i);
 		}
 	;
 
 
 FP_EXPR_LST:	FP_EXPR_LST Y_FP
 		{
-		  store_fp_op ((double*)$2.p);
+		  store_fp_op (img, (double*)$2.p);
 		}
 	|	Y_FP
 		{
-		  store_fp_op ((double*)$1.p);
+		  store_fp_op (img, (double*)$1.p);
 		}
 	;
 
@@ -2665,7 +2692,7 @@ ID:		{only_id = 1;} Y_ID {only_id = 0; $$ = $2;}
 /* Maintain and update the address of labels for the current line. */
 
 void
-fix_current_label_address (mem_addr new_addr)
+fix_current_label_address (MIPSImage &img, mem_addr new_addr)
 {
   label_list *l;
 
@@ -2673,7 +2700,7 @@ fix_current_label_address (mem_addr new_addr)
     {
       l->head->addr = new_addr;
     }
-  clear_labels ();
+  clear_labels (img);
 }
 
 
@@ -2689,13 +2716,13 @@ cons_label (label *head, label_list *tail)
 
 
 static void
-clear_labels ()
+clear_labels (MIPSImage &img)
 {
   label_list *n;
 
   for ( ; this_line_labels != NULL; this_line_labels = n)
     {
-      resolve_label_uses (this_line_labels->head);
+      resolve_label_uses (img, this_line_labels->head);
       n = this_line_labels->tail;
       free (this_line_labels);
     }
@@ -2706,7 +2733,7 @@ clear_labels ()
 /* Operations on op codes. */
 
 int
-op_to_imm_op (int opcode)
+op_to_imm_op (MIPSImage &img, int opcode)
 {
   switch (opcode)
     {
@@ -2720,13 +2747,13 @@ op_to_imm_op (int opcode)
     case Y_SLLV_OP: return (Y_SLL_OP);
     case Y_SRAV_OP: return (Y_SRA_OP);
     case Y_SRLV_OP: return (Y_SRL_OP);
-    default: fatal_error ("Can't convert op to immediate op\n"); return (0);
+    default: fatal_error (img, "Can't convert op to immediate op\n"); return (0);
     }
 }
 
 
 int
-imm_op_to_op (int opcode)
+imm_op_to_op (MIPSImage &img, int opcode)
 {
   switch (opcode)
     {
@@ -2742,139 +2769,139 @@ imm_op_to_op (int opcode)
     case Y_SLL_OP: return (Y_SLLV_OP);
     case Y_SRA_OP: return (Y_SRAV_OP);
     case Y_SRL_OP: return (Y_SRLV_OP);
-    default: fatal_error ("Can't convert immediate op to op\n"); return (0);
+    default: fatal_error (img, "Can't convert immediate op to op\n"); return (0);
     }
 }
 
 
 static void
-nop_inst ()
+nop_inst (MIPSImage &img)
 {
-  r_type_inst (Y_SLL_OP, 0, 0, 0); /* = 0 */
+  r_type_inst (img, Y_SLL_OP, 0, 0, 0); /* = 0 */
 }
 
 
 static void
-trap_inst ()
+trap_inst (MIPSImage &img)
 {
-  r_type_inst (Y_BREAK_OP, 0, 0, 0);
+  r_type_inst (img, Y_BREAK_OP, 0, 0, 0);
 }
 
 
 static imm_expr *
-branch_offset (int n_inst)
+branch_offset (MIPSImage &img, int n_inst)
 {
-  return (const_imm_expr (n_inst << 2)); /* Later shifted right 2 places */
+  return (const_imm_expr (img, n_inst << 2)); /* Later shifted right 2 places */
 }
 
 
 static void
-div_inst (int op, int rd, int rs, int rt, int const_divisor)
+div_inst (MIPSImage &img, int op, int rd, int rs, int rt, int const_divisor)
 {
   if (rd != 0 && !const_divisor)
     {
-      i_type_inst_free (Y_BNE_OP, 0, rt, branch_offset (2));
-      trap_inst ();
+      i_type_inst_free (img, Y_BNE_OP, 0, rt, branch_offset (img, 2));
+      trap_inst (img);
     }
 
   if (op == Y_DIV_OP || op == Y_REM_POP)
-    r_type_inst (Y_DIV_OP, 0, rs, rt);
+    r_type_inst (img, Y_DIV_OP, 0, rs, rt);
   else
-    r_type_inst (Y_DIVU_OP, 0, rs, rt);
+    r_type_inst (img, Y_DIVU_OP, 0, rs, rt);
 
   if (rd != 0)
     {
       if (op == Y_DIV_OP || op == Y_DIVU_OP)
 	/* Quotient */
-	r_type_inst (Y_MFLO_OP, rd, 0, 0);
+	r_type_inst (img, Y_MFLO_OP, rd, 0, 0);
       else
 	/* Remainder */
-	r_type_inst (Y_MFHI_OP, rd, 0, 0);
+	r_type_inst (img, Y_MFHI_OP, rd, 0, 0);
     }
 }
 
 
 static void
-mult_inst (int op, int rd, int rs, int rt)
+mult_inst (MIPSImage &img, int op, int rd, int rs, int rt)
 {
   if (op == Y_MULOU_POP)
-    r_type_inst (Y_MULTU_OP, 0, rs, rt);
+    r_type_inst (img, Y_MULTU_OP, 0, rs, rt);
   else
-    r_type_inst (Y_MULT_OP, 0, rs, rt);
+    r_type_inst (img, Y_MULT_OP, 0, rs, rt);
   if (op == Y_MULOU_POP && rd != 0)
     {
-      r_type_inst (Y_MFHI_OP, 1, 0, 0);	/* Use $at */
-      i_type_inst_free (Y_BEQ_OP, 0, 1, branch_offset (2));
-      trap_inst ();
+      r_type_inst (img, Y_MFHI_OP, 1, 0, 0);	/* Use $at */
+      i_type_inst_free (img, Y_BEQ_OP, 0, 1, branch_offset (img, 2));
+      trap_inst (img);
     }
   else if (op == Y_MULO_POP && rd != 0)
     {
-      r_type_inst (Y_MFHI_OP, 1, 0, 0); /* use $at */
-      r_type_inst (Y_MFLO_OP, rd, 0, 0);
-      r_sh_type_inst (Y_SRA_OP, rd, rd, 31);
-      i_type_inst_free (Y_BEQ_OP, rd, 1, branch_offset (2));
-      trap_inst ();
+      r_type_inst (img, Y_MFHI_OP, 1, 0, 0); /* use $at */
+      r_type_inst (img, Y_MFLO_OP, rd, 0, 0);
+      r_sh_type_inst (img, Y_SRA_OP, rd, rd, 31);
+      i_type_inst_free (img, Y_BEQ_OP, rd, 1, branch_offset (img, 2));
+      trap_inst (img);
     }
   if (rd != 0)
-    r_type_inst (Y_MFLO_OP, rd, 0, 0);
+    r_type_inst (img, Y_MFLO_OP, rd, 0, 0);
 }
 
 
 static void
-set_le_inst (int op, int rd, int rs, int rt)
+set_le_inst (MIPSImage &img, int op, int rd, int rs, int rt)
 {
-  i_type_inst_free (Y_BNE_OP, rs, rt, branch_offset (3));
-  i_type_inst_free (Y_ORI_OP, rd, 0, const_imm_expr (1));
-  i_type_inst_free (Y_BEQ_OP, 0, 0, branch_offset (2));
-  r_type_inst ((op == Y_SLE_POP ? Y_SLT_OP : Y_SLTU_OP), rd, rs, rt);
+  i_type_inst_free (img, Y_BNE_OP, rs, rt, branch_offset (img, 3));
+  i_type_inst_free (img, Y_ORI_OP, rd, 0, const_imm_expr (img, 1));
+  i_type_inst_free (img, Y_BEQ_OP, 0, 0, branch_offset (img, 2));
+  r_type_inst (img, (op == Y_SLE_POP ? Y_SLT_OP : Y_SLTU_OP), rd, rs, rt);
 }
 
 
 static void
-set_gt_inst (int op, int rd, int rs, int rt)
+set_gt_inst (MIPSImage &img, int op, int rd, int rs, int rt)
 {
-  r_type_inst (op == Y_SGT_POP ? Y_SLT_OP : Y_SLTU_OP, rd, rt, rs);
+  r_type_inst (img, op == Y_SGT_POP ? Y_SLT_OP : Y_SLTU_OP, rd, rt, rs);
 }
 
 
 static void
-set_ge_inst (int op, int rd, int rs, int rt)
+set_ge_inst (MIPSImage &img, int op, int rd, int rs, int rt)
 {
-  i_type_inst_free (Y_BNE_OP, rs, rt, branch_offset (3));
-  i_type_inst_free (Y_ORI_OP, rd, 0, const_imm_expr (1));
-  i_type_inst_free (Y_BEQ_OP, 0, 0, branch_offset (2));
-  r_type_inst (op == Y_SGE_POP ? Y_SLT_OP : Y_SLTU_OP, rd, rt, rs);
+  i_type_inst_free (img, Y_BNE_OP, rs, rt, branch_offset (img, 3));
+  i_type_inst_free (img, Y_ORI_OP, rd, 0, const_imm_expr (img, 1));
+  i_type_inst_free (img, Y_BEQ_OP, 0, 0, branch_offset (img, 2));
+  r_type_inst (img, op == Y_SGE_POP ? Y_SLT_OP : Y_SLTU_OP, rd, rt, rs);
 }
 
 
 static void
-set_eq_inst (int op, int rd, int rs, int rt)
+set_eq_inst (MIPSImage &img, int op, int rd, int rs, int rt)
 {
   imm_expr *if_eq, *if_neq;
 
   if (op == Y_SEQ_POP)
-    if_eq = const_imm_expr (1), if_neq = const_imm_expr (0);
+    if_eq = const_imm_expr (img, 1), if_neq = const_imm_expr (img, 0);
   else
-    if_eq = const_imm_expr (0), if_neq = const_imm_expr (1);
+    if_eq = const_imm_expr (img, 0), if_neq = const_imm_expr (img, 1);
 
-  i_type_inst_free (Y_BEQ_OP, rs, rt, branch_offset (3));
+  i_type_inst_free (img, Y_BEQ_OP, rs, rt, branch_offset (img, 3));
   /* RD <- 0 (if not equal) */
-  i_type_inst_free (Y_ORI_OP, rd, 0, if_neq);
-  i_type_inst_free (Y_BEQ_OP, 0, 0, branch_offset (2)); /* Branch always */
+  i_type_inst_free (img, Y_ORI_OP, rd, 0, if_neq);
+  i_type_inst_free (img, Y_BEQ_OP, 0, 0, branch_offset (img, 2)); /* Branch always */
   /* RD <- 1 */
-  i_type_inst_free (Y_ORI_OP, rd, 0, if_eq);
+  i_type_inst_free (img, Y_ORI_OP, rd, 0, if_eq);
 }
 
 
 /* Store the value either as a datum or instruction. */
 
 static void
-store_word_data (int value)
+store_word_data (MIPSImage &img, int value)
 {
   if (data_dir)
-    store_word (value);
+    store_word (img, value);
   else if (text_dir)
-    store_instruction (inst_decode (value));
+    store_instruction (img, inst_decode (img, value));
 }
 
 
@@ -2890,64 +2917,64 @@ initialize_parser (char *file_name)
 
 
 static void
-check_imm_range (imm_expr* expr, int32 min, int32 max)
+check_imm_range (MIPSImage &img, imm_expr* expr, int32 min, int32 max)
 {
   if (expr->symbol == NULL || SYMBOL_IS_DEFINED (expr->symbol))
     {
       /* If expression can be evaluated, compare its value against the limits
 	 and complain if the value is out of bounds. */
-      int32 value = eval_imm_expr (expr);
+      int32 value = eval_imm_expr (img, expr);
 
       if (value < min || max < value)
 	{
 	  char str[200];
 	  sprintf (str, "immediate value (%d) out of range (%d .. %d)",
 		   value, min, max);
-	  yywarn (str);
+	  yywarn (img, str);
 	}
     }
 }
 
 
 static void
-check_uimm_range (imm_expr* expr, uint32 min, uint32 max)
+check_uimm_range (MIPSImage &img, imm_expr* expr, uint32 min, uint32 max)
 {
   if (expr->symbol == NULL || SYMBOL_IS_DEFINED (expr->symbol))
     {
       /* If expression can be evaluated, compare its value against the limits
 	     and complain if the value is out of bounds. */
-      uint32 value = (uint32)eval_imm_expr (expr);
+      uint32 value = (uint32)eval_imm_expr (img, expr);
 
       if (value < min || max < value)
 	{
 	  char str[200];
 	  sprintf (str, "immediate value (%d) out of range (%d .. %d)",
 		   (int32)value, (int32)min, (int32)max);
-	  yywarn (str);
+	  yywarn (img, str);
 	}
     }
 }
 
 void
-yyerror (char *s)
+yyerror (MIPSImage &img, char *s)
 {
   parse_error_occurred = true;
-  clear_labels ();
-  yywarn (s);
+  clear_labels (img);
+  yywarn (img, s);
 }
 
 
 void
-yywarn (char *s)
+yywarn (MIPSImage &img, char *s)
 {
-  error ("spim: (parser) %s on line %d of file %s\n%s", s, line_no, input_file_name, erroneous_line ());
+  error (img, "spim: (parser) %s on line %d of file %s\n%s", s, line_no, input_file_name, erroneous_line (img));
 }
 
 
 static void
-mips32_r2_inst ()
+mips32_r2_inst (MIPSImage &img)
 {
-	yyerror ("Warning: MIPS32 Rev 2 instruction is not implemented. Instruction ignored.");
+	yyerror (img, "Warning: MIPS32 Rev 2 instruction is not implemented. Instruction ignored.");
 }
 
 

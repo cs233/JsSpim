@@ -33,6 +33,8 @@
 #ifndef SPIM_UTILS_H
 #define SPIM_UTILS_H
 
+#include <vector>
+#include "image.h"
 #include "inst.h"
 
 
@@ -63,26 +65,26 @@ extern bkpt *bkpts;
 
 /* Exported functions: */
 
-bool add_breakpoint (mem_addr addr, int context);
-bool delete_breakpoint (mem_addr addr, int context);
-void format_data_segs (str_stream *ss);
-void format_insts (str_stream *ss, mem_addr from, mem_addr to);
-void format_mem (str_stream *ss, mem_addr from, mem_addr to);
-void format_registers (str_stream *ss, int print_gpr_hex, int print_fpr_hex);
-void initialize_registers ();
-void initialize_stack (const char *command_line);
-void initialize_run_stack (int argc, char **argv);
-void initialize_world (size_t ctx, char *exception_file_name, bool print_message);
-void list_breakpoints (int context);
+bool add_breakpoint (MIPSImage &img, mem_addr addr);
+bool delete_breakpoint (MIPSImage &img, mem_addr addr);
+void format_data_segs (MIPSImage &img, str_stream *ss);
+void format_insts (MIPSImage &img, str_stream *ss, mem_addr from, mem_addr to);
+void format_mem (MIPSImage &img, str_stream *ss, mem_addr from, mem_addr to);
+void format_registers (MIPSImage &img, str_stream *ss, int print_gpr_hex, int print_fpr_hex);
+void initialize_registers (MIPSImage &img);
+void initialize_stack (MIPSImage &img, const char *command_line);
+void initialize_run_stack (MIPSImage &img, int argc, char **argv);
+void initialize_world (MIPSImage &img, char *exception_file_name, bool print_message);
+void list_breakpoints (MIPSImage &img);
 name_val_val *map_int_to_name_val_val (name_val_val tbl[], int tbl_len, int num);
 name_val_val *map_string_to_name_val_val (name_val_val tbl[], int tbl_len, char *id);
-bool read_assembly_file (char *fpath);
-bool run_spim_program(int steps, bool display, bool cont_bkpt, bool* continuable);
+bool read_assembly_file (MIPSImage &img, char *fpath);
+bool run_spim_program(std::vector<MIPSImage> &ctxs, int steps, bool display, bool cont_bkpt, bool* continuable);
 bool run_spimbot_program (int steps, bool display, bool cont_bkpt, bool* continuable);
-mem_addr starting_address ();
-char *str_copy (char *str);
-void write_startup_message ();
-void *xmalloc (int);
-void *zmalloc (int);
+mem_addr starting_address (MIPSImage &img);
+char *str_copy (MIPSImage &img, char *str);
+void write_startup_message (MIPSImage &img);
+void *xmalloc (MIPSImage&, int);
+void *zmalloc (MIPSImage&, int);
 
 #endif

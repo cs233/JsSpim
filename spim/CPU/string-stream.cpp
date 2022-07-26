@@ -84,7 +84,7 @@ ss_length (str_stream* ss)
 
 
 char*
-ss_to_string (str_stream* ss)
+ss_to_string (MIPSImage &img, str_stream* ss)
 {
   if (0 == ss->initialized) ss_init (ss);
 
@@ -94,7 +94,7 @@ ss_to_string (str_stream* ss)
       ss->max_length = ss->max_length + 1;
       ss->buf = (char *) realloc (ss->buf, (size_t)ss->max_length);
       if (NULL == ss->buf)
-	fatal_error ("realloc failed\n");
+	fatal_error (img, "realloc failed\n");
     }
   ss->buf[ss->empty_pos] = '\0'; /* Null terminate string */
   ss->empty_pos += 1;
@@ -103,7 +103,7 @@ ss_to_string (str_stream* ss)
 
 
 void
-ss_printf (str_stream* ss, char* fmt, ...)
+ss_printf (MIPSImage &img, str_stream* ss, char* fmt, ...)
 {
   int free_space;
   int n;
@@ -127,7 +127,7 @@ ss_printf (str_stream* ss, char* fmt, ...)
 	ss->buf = (char *) realloc (ss->buf, (size_t)ss->max_length);
 	free_space = ss->max_length - ss->empty_pos;
 	if (NULL == ss->buf)
-	  fatal_error ("realloc failed\n");
+	  fatal_error (img, "realloc failed\n");
 
 	va_end (args);		/* Restart argument pointer */
 	va_start (args, fmt);

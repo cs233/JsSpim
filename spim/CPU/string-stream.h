@@ -33,6 +33,8 @@
 #ifndef STRING_STREAM_H
 #define STRING_STREAM_H
 
+#include "image.h"
+
 typedef struct str_stm
 {
   char* buf;			/* Buffer containing output */
@@ -46,7 +48,7 @@ void ss_init (str_stream* ss);
 void ss_clear (str_stream* ss);
 void ss_erase (str_stream* ss, int n);
 int ss_length (str_stream* ss);
-char* ss_to_string (str_stream* ss);
-void ss_printf (str_stream* ss, char* fmt, ...);
+char* ss_to_string (MIPSImage &img, str_stream* ss);
+void ss_printf (MIPSImage &img, str_stream* ss, char* fmt, ...);
 
 #endif

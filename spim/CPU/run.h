@@ -33,4 +33,6 @@
 
 /* Exported functions: */
 
-bool spim_step (bool display);
+#include "image.h"
+
+bool spim_step (MIPSImage &img, bool display);

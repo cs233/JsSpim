@@ -53,9 +53,9 @@
 
 /* Internal functions: */
 
-static mem_addr copy_int_to_stack (int n);
-static mem_addr copy_str_to_stack (char *s);
-static void delete_all_breakpoints ();
+static mem_addr copy_int_to_stack (MIPSImage &img, int n);
+static mem_addr copy_str_to_stack (MIPSImage &img, char *s);
+static void delete_all_breakpoints (MIPSImage &img);
 
 
 bkpt *bkpts = NULL;
@@ -83,27 +83,26 @@ mem_addr initial_k_data_limit = K_DATA_LIMIT;
 /* Initialize or reinitialize the state of the machine. */
 
 void
-initialize_world (size_t ctx, char *exception_files, bool print_message)
+initialize_world (MIPSImage &img, char *exception_files, bool print_message)
 {
-  ctx_init(ctx);
-  reg().auto_alignment = 1;
+  img.reg_image().auto_alignment = 1;
   
   /* Allocate the floating point registers */
-  if (reg().FGR == NULL)
-    reg().FPR = (double *) xmalloc (FPR_LENGTH * sizeof (double));
+  if (img.reg_image().FGR == NULL)
+    img.reg_image().FPR = (double *) xmalloc (img, FPR_LENGTH * sizeof (double));
   /* Allocate the memory */
-  make_memory (initial_text_size,
+  make_memory (img, initial_text_size,
 	       initial_data_size, initial_data_limit,
 	       initial_stack_size, initial_stack_limit,
 	       initial_k_text_size,
 	       initial_k_data_size, initial_k_data_limit);
-  initialize_registers ();
+  initialize_registers (img);
   initialize_inst_tables ();
   initialize_symbol_table ();
-  k_text_begins_at_point (K_TEXT_BOT);
-  k_data_begins_at_point (K_DATA_BOT);
-  data_begins_at_point (DATA_BOT);
-  text_begins_at_point (TEXT_BOT);
+  k_text_begins_at_point (img, K_TEXT_BOT);
+  k_data_begins_at_point (img, K_DATA_BOT);
+  data_begins_at_point (img, DATA_BOT);
+  text_begins_at_point (img, TEXT_BOT);
 
   if (exception_files != NULL)
     {
@@ -118,15 +117,15 @@ initialize_world (size_t ctx, char *exception_files, bool print_message)
 
       /* strtok modifies the string, so we must back up the string prior to use. */
       if ((files = strdup (exception_files)) == NULL)
-         fatal_error ("Insufficient memory to complete.\n");
+         fatal_error (img, "Insufficient memory to complete.\n");
 
       for (filename = strtok (files, ";"); filename != NULL; filename = strtok (NULL, ";"))
          {
-            if (!read_assembly_file (filename))
-               fatal_error ("Cannot read exception handler: %s\n", filename);
+            if (!read_assembly_file (img, filename))
+               fatal_error (img, "Cannot read exception handler: %s\n", filename);
 
             if (print_message)
-                write_output (message_out, "Loaded: %s\n", filename);
+                write_output (img, message_out, "Loaded: %s\n", filename);
          }
 
       free (files);
@@ -137,54 +136,54 @@ initialize_world (size_t ctx, char *exception_files, bool print_message)
 
       if (!bare_machine)
       {
-	(void)make_label_global ("main"); /* In case .globl main forgotten */
-	(void)record_label ("main", 0, 0);
+	(void)make_label_global (img, "main"); /* In case .globl main forgotten */
+	(void)record_label (img, "main", 0, 0);
       }
     }
   initialize_scanner (stdin, "");
-  delete_all_breakpoints ();
+  delete_all_breakpoints (img); // bruh TODO: this function is meant to be contextual-based and then we have THIS here?!?!
 }
 
 
 void
-write_startup_message ()
+write_startup_message (MIPSImage &img)
 {
-  write_output (message_out, "SPIM %s\n", SPIM_VERSION);
-  write_output (message_out, "Copyright 1990-2017 by James Larus.\n");
-  write_output (message_out, "All Rights Reserved.\n");
-  write_output (message_out, "SPIM is distributed under a BSD license.\n");
-  write_output (message_out, "See the file README for a full copyright notice.\n");
+  write_output (img, message_out, "SPIM %s\n", SPIM_VERSION);
+  write_output (img, message_out, "Copyright 1990-2017 by James Larus.\n");
+  write_output (img, message_out, "All Rights Reserved.\n");
+  write_output (img, message_out, "SPIM is distributed under a BSD license.\n");
+  write_output (img, message_out, "See the file README for a full copyright notice.\n");
 }
 
 
 
 void
-initialize_registers ()
+initialize_registers (MIPSImage &img)
 {
-  memclr (reg().FPR, FPR_LENGTH * sizeof (double));
-  reg().FGR = (float *) reg().FPR;
-  reg().FWR = (int *) reg().FPR;
+  memclr (img.reg_image().FPR, FPR_LENGTH * sizeof (double));
+  img.reg_image().FGR = (float *) img.reg_image().FPR;
+  img.reg_image().FWR = (int *) img.reg_image().FPR;
 
-  memclr (reg().R, R_LENGTH * sizeof (reg_word));
-  reg().R[REG_SP] = STACK_TOP - BYTES_PER_WORD - 4096; /* Initialize $sp */
-  reg().HI = reg().LO = 0;
-  reg().PC = 0;
+  memclr (img.reg_image().R, R_LENGTH * sizeof (reg_word));
+  img.reg_image().R[REG_SP] = STACK_TOP - BYTES_PER_WORD - 4096; /* Initialize $sp */
+  img.reg_image().HI = img.reg_image().LO = 0;
+  img.reg_image().PC = 0;
 
-  reg().CP0_BadVAddr = 0;
-  reg().CP0_Count = 0;
-  reg().CP0_Compare = 0;
-  reg().CP0_Status = (CP0_Status_CU & 0x30000000) | CP0_Status_IM | CP0_Status_UM;
-  reg().CP0_Cause = 0;
-  reg().CP0_EPC = 0;
+  img.reg_image().CP0_BadVAddr = 0;
+  img.reg_image().CP0_Count = 0;
+  img.reg_image().CP0_Compare = 0;
+  img.reg_image().CP0_Status = (CP0_Status_CU & 0x30000000) | CP0_Status_IM | CP0_Status_UM;
+  img.reg_image().CP0_Cause = 0;
+  img.reg_image().CP0_EPC = 0;
 #ifdef SPIM_BIGENDIAN
-  reg().CP0_Config =  reg().CP0_Config_BE;
+  img.reg_image().CP0_Config =  img.reg_image().CP0_Config_BE;
 #else
-  reg().CP0_Config = 0;
+  img.reg_image().CP0_Config = 0;
 #endif
 
-  reg().FIR = FIR_W | FIR_D | FIR_S;	/* Word, double, & single implemented */
-  reg().FCSR = 0x0;
-  reg().RFE_cycle = 0;
+  img.reg_image().FIR = FIR_W | FIR_D | FIR_S;	/* Word, double, & single implemented */
+  img.reg_image().FCSR = 0x0;
+  img.reg_image().RFE_cycle = 0;
 }
 
 
@@ -192,13 +191,13 @@ initialize_registers ()
    successful and false otherwise. */
 
 bool
-read_assembly_file (char *fpath)
+read_assembly_file (MIPSImage &img, char *fpath)
 {
   FILE *file = fopen (fpath, "rt");
 
   if (file == NULL)
     {
-      error ("Cannot open file: `%s'\n", fpath);
+      error (img, "Cannot open file: `%s'\n", fpath);
       return false;
     }
   else
@@ -210,20 +209,20 @@ read_assembly_file (char *fpath)
       initialize_scanner (file, file_name);
       initialize_parser (fpath);
 
-      while (!yyparse ()) ;
+      while (!yyparse (img)) ;
 
       fclose (file);
-      flush_local_labels (!parse_error_occurred);
-      end_of_assembly_file ();
+      flush_local_labels (img, !parse_error_occurred);
+      end_of_assembly_file (img);
       return true;
     }
 }
 
 
 mem_addr
-starting_address ()
+starting_address (MIPSImage &img)
 {
-  return (find_symbol_address (DEFAULT_RUN_LOCATION));
+  return (find_symbol_address (img, DEFAULT_RUN_LOCATION));
 }
 
 
@@ -232,12 +231,12 @@ starting_address ()
 /* Initialize the SPIM stack from a string containing the command line. */
 
 void
-initialize_stack(const char *command_line)
+initialize_stack(MIPSImage &img, const char *command_line)
 {
     int argc = 0;
     char *argv[MAX_ARGS];
     char *a;
-    char *args = str_copy((char*)command_line); /* Destructively modify string */
+    char *args = str_copy(img, (char*)command_line); /* Destructively modify string */
     char *orig_args = args;
 
     while (*args != '\0')
@@ -266,7 +265,7 @@ initialize_stack(const char *command_line)
         }
     }
 
-    initialize_run_stack (argc, argv);
+    initialize_run_stack (img, argc, argv);
     free (orig_args);
 }
 
@@ -278,7 +277,7 @@ initialize_stack(const char *command_line)
 #endif
 
 void
-initialize_run_stack (int argc, char **argv)
+initialize_run_stack (MIPSImage &img, int argc, char **argv)
 {
   char **p;
   extern char **environ;
@@ -286,60 +285,60 @@ initialize_run_stack (int argc, char **argv)
   mem_addr addrs[10000];
 
 
-  reg().R[REG_SP] = STACK_TOP - 1; /* Initialize $sp */
+  img.reg_image().R[REG_SP] = STACK_TOP - 1; /* Initialize $sp */
 
   /* Put strings on stack: */
   /* env: */
   for (p = environ; *p != NULL; p++)
-    addrs[j++] = copy_str_to_stack (*p);
+    addrs[j++] = copy_str_to_stack (img, *p);
   env_j = j;
 
   /* argv; */
   for (i = 0; i < argc; i++)
-    addrs[j++] = copy_str_to_stack (argv[i]);
+    addrs[j++] = copy_str_to_stack (img, argv[i]);
 
   /* Align stack pointer for word-size data */
-  reg().R[REG_SP] = reg().R[REG_SP] & ~3;	/* Round down to nearest word */
-  reg().R[REG_SP] -= BYTES_PER_WORD;	/* First free word on stack */
-  reg().R[REG_SP] = reg().R[REG_SP] & ~7;	/* Double-word align stack-pointer*/
+  img.reg_image().R[REG_SP] = img.reg_image().R[REG_SP] & ~3;	/* Round down to nearest word */
+  img.reg_image().R[REG_SP] -= BYTES_PER_WORD;	/* First free word on stack */
+  img.reg_image().R[REG_SP] = img.reg_image().R[REG_SP] & ~7;	/* Double-word align stack-pointer*/
 
   /* Build vectors on stack: */
   /* env: */
-  (void)copy_int_to_stack (0);	/* Null-terminate vector */
+  (void)copy_int_to_stack (img, 0);	/* Null-terminate vector */
   for (i = env_j - 1; i >= 0; i--)
-    reg().R[REG_A2] = copy_int_to_stack (addrs[i]);
+    img.reg_image().R[REG_A2] = copy_int_to_stack (img, addrs[i]);
 
   /* argv: */
-  (void)copy_int_to_stack (0);	/* Null-terminate vector */
+  (void)copy_int_to_stack (img, 0);	/* Null-terminate vector */
   for (i = j - 1; i >= env_j; i--)
-    reg().R[REG_A1] = copy_int_to_stack (addrs[i]);
+    img.reg_image().R[REG_A1] = copy_int_to_stack (img, addrs[i]);
 
   /* argc: */
-  reg().R[REG_A0] = argc;
-  set_mem_word (reg().R[REG_SP], argc); /* Leave argc on stack */
+  img.reg_image().R[REG_A0] = argc;
+  set_mem_word (img, img.reg_image().R[REG_SP], argc); /* Leave argc on stack */
 }
 
 
 static mem_addr
-copy_str_to_stack (char *s)
+copy_str_to_stack (MIPSImage &img, char *s)
 {
   int i = (int)strlen (s);
   while (i >= 0)
     {
-      set_mem_byte (reg().R[REG_SP], s[i]);
-      reg().R[REG_SP] -= 1;
+      set_mem_byte (img, img.reg_image().R[REG_SP], s[i]);
+      img.reg_image().R[REG_SP] -= 1;
       i -= 1;
     }
-  return ((mem_addr) reg().R[REG_SP] + 1); /* Leaves stack pointer byte-aligned!! */
+  return ((mem_addr) img.reg_image().R[REG_SP] + 1); /* Leaves stack pointer byte-aligned!! */
 }
 
 
 static mem_addr
-copy_int_to_stack (int n)
+copy_int_to_stack (MIPSImage &img, int n)
 {
-  set_mem_word (reg().R[REG_SP], n);
-  reg().R[REG_SP] -= BYTES_PER_WORD;
-  return ((mem_addr) reg().R[REG_SP] + BYTES_PER_WORD); 
+  set_mem_word (img, img.reg_image().R[REG_SP], n);
+  img.reg_image().R[REG_SP] -= BYTES_PER_WORD;
+  return ((mem_addr) img.reg_image().R[REG_SP] + BYTES_PER_WORD);
 }
 
 /* Run the program, starting at PC, for 1 instruction. Display each
@@ -348,49 +347,46 @@ copy_int_to_stack (int n)
    execution can continue. Return true if breakpoint is encountered. */
 
 bool
-step_program (bool display, bool cont_bkpt, bool* continuable)
+step_program (MIPSImage &img, bool display, bool cont_bkpt, bool* continuable)
 {
   bool result = false;
 
-  if (inst_is_breakpoint (reg().PC)) {
-    mem_addr addr = reg().PC;
-    delete_breakpoint(addr, ctx_current());
-    reg().exception_occurred = false;
-    *continuable = spim_step(display);
-    add_breakpoint(addr, ctx_current());
+  if (inst_is_breakpoint (img, img.reg_image().PC)) {
+    mem_addr addr = img.reg_image().PC;
+    delete_breakpoint(img, addr);
+    img.reg_image().exception_occurred = false;
+    *continuable = spim_step(img, display);
+    add_breakpoint(img, addr);
   } else {
-    reg().exception_occurred = false;
-    *continuable = spim_step(display);
+    img.reg_image().exception_occurred = false;
+    *continuable = spim_step(img, display);
   }
 
-  if (reg().exception_occurred && CP0_ExCode(reg()) == ExcCode_Bp)
+  if (img.reg_image().exception_occurred && CP0_ExCode(img.reg_image()) == ExcCode_Bp)
   {
       /* Turn off EXL bit, so subsequent interrupts set EPC since the break is
       handled by SPIM code, not MIPS code. */
-      reg().CP0_Status &= ~CP0_Status_EXL;
+      img.reg_image().CP0_Status &= ~CP0_Status_EXL;
       return true;
   }
   else
     return false;
 }
 
-#include <iostream>
-
-bool run_spim_program(int steps, bool display, bool cont_bkpt, bool* continuable) {
+bool run_spim_program(std::vector<MIPSImage> &imgs, int steps, bool display, bool cont_bkpt, bool* continuable) {
   int pgrm_done;
 
   *continuable = true;
 
   for (int i = 0; i < steps; ++i) {
-    ctx_switch(0);
     pgrm_done = 0;
 
     bool bkpt_occurred = false;
 
-    for (size_t j = 0; j < NUM_CONTEXTS; ++j, ctx_increment()) {
-      if (!cont_bkpt && inst_is_breakpoint(reg().PC)) {
+    for (auto &img : imgs) {
+      if (!cont_bkpt && inst_is_breakpoint(img, img.reg_image().PC)) {
         bkpt_occurred = true;
-        error("Breakpoint encountered at 0x%08x\n", reg().PC);
+        error(img, "Breakpoint encountered at 0x%08x\n", img.reg_image().PC);
       }
     }
 
@@ -398,11 +394,9 @@ bool run_spim_program(int steps, bool display, bool cont_bkpt, bool* continuable
       return true;
     }
 
-    ctx_switch(0);
-
-    for (size_t j = 0; j < NUM_CONTEXTS; ++j, ctx_increment()) {
+    for (auto &img : imgs) {
       bool cont; // Determines if the given context program is finished
-      pgrm_done += !step_program(display, cont_bkpt, &cont);
+      pgrm_done += !step_program(img, display, cont_bkpt, &cont);
 
       *continuable &= cont; // If any of the contexts are not continuable, then end the program
     }
@@ -424,22 +418,22 @@ run_spimbot_program (int steps, bool display, bool cont_bkpt, bool* continuable)
     return true;
   }*/
 
-  for (int i = 0; i < steps; ++i, ctx_switch(0)) {
-    for (size_t j = 0; j < NUM_CONTEXTS; ++j, ctx_increment()) {
-      bool result = step_program(display, cont_bkpt, continuable);
-    }
+  // for (int i = 0; i < steps; ++i, ctx_switch(0)) {
+  //   for (size_t j = 0; j < NUM_CONTEXTS; ++j, ctx_increment()) {
+  //     bool result = step_program(display, cont_bkpt, continuable);
+  //   }
 
-    int spimbot_break = 0;//world_update();
-    if (spimbot_break >= 0) {
-      if (spimbot_break == 0) {
-        *continuable = false;
-        return false;
-      }
-      else if (spimbot_break == 1) {
-        return true;
-      }
-    }
-  }
+  //   int spimbot_break = 0;//world_update();
+  //   if (spimbot_break >= 0) {
+  //     if (spimbot_break == 0) {
+  //       *continuable = false;
+  //       return false;
+  //     }
+  //     else if (spimbot_break == 1) {
+  //       return true;
+  //     }
+  //   }
+  // }
 
 }
 
@@ -447,19 +441,18 @@ run_spimbot_program (int steps, bool display, bool cont_bkpt, bool* continuable)
 /* Set a breakpoint at memory location ADDR. */
 
 bool
-add_breakpoint (mem_addr addr, int context)
+add_breakpoint (MIPSImage &img, mem_addr addr)
 {
-  ctx_switch(context);
-
   breakpoint new_bkpt{addr: addr, inst: NULL};
-  if ((new_bkpt.inst = set_breakpoint (addr)) != NULL) {
-    breakpoints().insert({addr, new_bkpt});
+  if ((new_bkpt.inst = set_breakpoint (img, addr)) != NULL) {
+    img.breakpoints().insert({addr, new_bkpt});
+    error(img, "Added breakpoint at address 0x%08x\n", addr);
     return true;
   } else {
     if (exception_occurred)
-	    error ("Cannot put a breakpoint at address 0x%08x\n", addr);
+	    error (img, "Cannot put a breakpoint at address 0x%08x\n", addr);
     else
-	    error ("No instruction to breakpoint at address 0x%08x\n", addr);
+	    error (img, "No instruction to breakpoint at address 0x%08x\n", addr);
     return false;
   }
 }
@@ -468,46 +461,42 @@ add_breakpoint (mem_addr addr, int context)
 /* Delete all breakpoints at memory location ADDR. */
 
 bool
-delete_breakpoint (mem_addr addr, int context)
+delete_breakpoint (MIPSImage &img, mem_addr addr)
 {
-  ctx_switch(context);
-
-  auto res = breakpoints().find(addr);
-
-  if (res != breakpoints().end()) {
+  auto res = img.breakpoints().find(addr);
+  if (res != img.breakpoints().end()) {
     breakpoint &b = res->second;
-    set_mem_inst (addr, b.inst);
-    breakpoints().erase(res);
+    set_mem_inst (img, addr, b.inst);
+    img.breakpoints().erase(res);
     return true;
   } else {
-    error ("No breakpoint to delete at 0x%08x\n", addr);
+    error (img, "No breakpoint to delete at 0x%08x\n", addr);
     return false;
   }
 }
 
-
+// Should delete all breakpoints for a given context
 static void
-delete_all_breakpoints ()
+delete_all_breakpoints (MIPSImage &img)
 {
-  for (size_t j = 0; j < NUM_CONTEXTS; ++j, ctx_increment()) {
-    breakpoints().clear();
-  }
+  // for (size_t j = 0; j < NUM_CONTEXTS; ++j, ctx_increment()) {
+  //   breakpoints().clear();
+  // }
+  img.breakpoints().clear();
 }
 
 
 /* List all breakpoints. */
 
 void
-list_breakpoints (int context)
+list_breakpoints (MIPSImage &img)
 {
-  ctx_switch(context);
-
-  if (breakpoints().size() > 0) {
-    for (auto const &b: breakpoints()) { // b is std::pair<mem_addr, breakpoint>
-      write_output (message_out, "Breakpoint at 0x%08x\n", b.first);
+  if (img.breakpoints().size() > 0) {
+    for (auto const &b: img.breakpoints()) { // b is std::pair<mem_addr, breakpoint>
+      write_output (img, message_out, "Breakpoint at 0x%08x\n", b.first);
     }
   } else {
-    write_output (message_out, "No breakpoints set\n");
+    write_output (img, message_out, "No breakpoints set\n");
   }
 }
 
@@ -591,12 +580,12 @@ vsprintf (str, fmt, args)
 
 #ifdef NEED_STRTOL
 unsigned long
-strtol (const char* str, const char** eptr, int base)
+strtol (MIPSImage &img, const char* str, const char** eptr, int base)
 {
   long result;
 
   if (base != 0 && base != 16)
-    fatal_error ("SPIM's strtol only works for base 16 (not base %d)\n", base);
+    fatal_error (img, "SPIM's strtol only works for base 16 (not base %d)\n", base);
   if (*str == '0' && (*(str + 1) == 'x' || *(str + 1) == 'X'))
     {
       str += 2;
@@ -617,12 +606,12 @@ strtol (const char* str, const char** eptr, int base)
 
 #ifdef NEED_STRTOUL
 unsigned long
-strtoul (const char* str, char** eptr, int base)
+strtoul (MIPSImage &img, const char* str, char** eptr, int base)
 {
   unsigned long result;
 
   if (base != 0 && base != 16)
-    fatal_error ("SPIM's strtoul only works for base 16 (not base %d)\n", base);
+    fatal_error (img, "SPIM's strtoul only works for base 16 (not base %d)\n", base);
   if (*str == '0' && (*(str + 1) == 'x' || *(str + 1) == 'X'))
     {
       str += 2;
@@ -642,19 +631,19 @@ strtoul (const char* str, char** eptr, int base)
 
 
 char *
-str_copy (char *str)
+str_copy (MIPSImage &img, char *str)
 {
-  return (strcpy ((char*)xmalloc ((int)strlen (str) + 1), str));
+  return (strcpy ((char*)xmalloc (img, (int)strlen (str) + 1), str));
 }
 
 
 void *
-xmalloc (int size)
+xmalloc (MIPSImage &img, int size)
 {
   void *x = (void *) malloc (size);
 
   if (x == 0)
-    fatal_error ("Out of memory at request for %d bytes.\n");
+    fatal_error (img, "Out of memory at request for %d bytes.\n");
   return (x);
 }
 
@@ -662,12 +651,12 @@ xmalloc (int size)
 /* Allocate a zero'ed block of storage. */
 
 void *
-zmalloc (int size)
+zmalloc (MIPSImage &img, int size)
 {
   void *z = (void *) malloc (size);
 
   if (z == 0)
-    fatal_error ("Out of memory at request for %d bytes.\n");
+    fatal_error (img, "Out of memory at request for %d bytes.\n");
 
   memclr (z, size);
   return (z);

@@ -156,8 +156,8 @@ inline reg_word CP0_ExCode(reg_image_t &REG)	{ return ((REG.CP0_Cause & CP0_Caus
 
 #define FPR_S(REGIMG, REGNO)	REGIMG.FGR[REGNO]
 
-#define FPR_D(REGIMG, REGNO)	(((REGNO) & 0x1) \
-			 ? (run_error ("Odd FP double register number\n") , 0.0) \
+#define FPR_D(IMG, REGIMG, REGNO)	(((REGNO) & 0x1) \
+			 ? (run_error (IMG, "Odd FP double register number\n") , 0.0) \
 			 : REGIMG.FPR[(REGNO) / 2])
 
 #define FPR_W(REGIMG, REGNO)	REGIMG.FWR[REGNO]
@@ -165,8 +165,8 @@ inline reg_word CP0_ExCode(reg_image_t &REG)	{ return ((REG.CP0_Cause & CP0_Caus
 
 #define SET_FPR_S(REGIMG, REGNO, VALUE)	{REGIMG.FGR[REGNO] = (float) (VALUE);}
 
-#define SET_FPR_D(REGIMG, REGNO, VALUE) {if ((REGNO) & 0x1) \
-		run_error ("Odd FP double register number\n"); \
+#define SET_FPR_D(IMG, REGIMG, REGNO, VALUE) {if ((REGNO) & 0x1) \
+		run_error (img, "Odd FP double register number\n"); \
 		else REGIMG.FPR[(REGNO) / 2] = (double) (VALUE);}
 
 #define SET_FPR_W(REGIMG, REGNO, VALUE) {REGIMG.FWR[REGNO] = (int32) (VALUE);}

@@ -1,7 +1,7 @@
 #ifndef MEM_IMAGE_H
 #define MEM_IMAGE_H
 
-#include "inst.h"
+#include "instruction.h"
 
 /* Type of contents of a memory word. */
 

@@ -91,14 +91,11 @@ typedef union {int i; void* p;} intptr_union;
 #include <string.h>
 #define QSORT_FUNC int(*)(const void *, const void *)
 
+#include "image.h"
+
 
 
 #define K 1024
-
-
-/* Type of a memory address.  Must be a 32-bit quantity to match MIPS.  */
-
-typedef uint32 /*@alt int @*/ mem_addr;
 
 
 #define BYTES_PER_WORD 4	/* On the MIPS processor */
@@ -229,13 +226,13 @@ typedef union {int i; FILE* f;} port;
 /* Exported functions (from spim.c or xspim.c): */
 
 int console_input_available ();
-void error (char *fmt, ...);
-void fatal_error (char *fmt, ...);
+void error (MIPSImage const &img, char *fmt, ...);
+void fatal_error (MIPSImage const &img, char *fmt, ...);
 char get_console_char ();
 void put_console_char (char c);
 void read_input (char *str, int n);
-void run_error (char *fmt, ...);
-void write_output (port, char *fmt, ...);
+void run_error (MIPSImage const &img, char *fmt, ...);
+void write_output (MIPSImage const &img, port, char *fmt, ...);
 
 
 /* Exported variables: */

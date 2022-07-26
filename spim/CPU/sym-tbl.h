@@ -30,6 +30,7 @@
    OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 */
 
+#include "image.h"
 
 typedef struct lab_use
 {
@@ -60,17 +61,17 @@ typedef struct lab
 
 /* Exported functions: */
 
-mem_addr find_symbol_address (char *symbol);
-void flush_local_labels (int issue_undef_warnings);
+mem_addr find_symbol_address (MIPSImage &img, char *symbol);
+void flush_local_labels (MIPSImage &img, int issue_undef_warnings);
 void initialize_symbol_table ();
 label *label_is_defined (char *name);
-label *lookup_label (char *name);
-label *make_label_global (char *name);
-void print_symbols ();
-void print_undefined_symbols ();
-label *record_label (char *name, mem_addr address, int resolve_uses);
-void record_data_uses_symbol (mem_addr location, label *sym);
-void record_inst_uses_symbol (instruction *inst, label *sym);
+label *lookup_label (MIPSImage &img, char *name);
+label *make_label_global (MIPSImage &img, char *name);
+void print_symbols (MIPSImage &img);
+void print_undefined_symbols (MIPSImage &img);
+label *record_label (MIPSImage &img, char *name, mem_addr address, int resolve_uses);
+void record_data_uses_symbol (MIPSImage &img, mem_addr location, label *sym);
+void record_inst_uses_symbol (MIPSImage &img, instruction *inst, label *sym);
 char *undefined_symbol_string ();
-void resolve_a_label (label *sym, instruction *inst);
-void resolve_label_uses (label *sym);
+void resolve_a_label (MIPSImage &img, label *sym, instruction *inst);
+void resolve_label_uses (MIPSImage &img, label *sym);

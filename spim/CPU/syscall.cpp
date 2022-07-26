@@ -67,7 +67,8 @@
 #include <stdlib.h>
 #include <crtdbg.h>
 
-void myInvalidParameterHandler(const wchar_t* expression,
+void myInvalidParameterHandler(MIPSImage &img,
+   const wchar_t* expression,
    const wchar_t* function, 
    const wchar_t* file, 
    unsigned int line, 
@@ -75,16 +76,17 @@ void myInvalidParameterHandler(const wchar_t* expression,
 {
   if (function != NULL)
     {
-      run_error ("Bad parameter to system call: %s\n", function);
+      run_error (img, "Bad parameter to system call: %s\n", function);
     }
   else
     {
-      run_error ("Bad parameter to system call\n");
+      run_error (img, "Bad parameter to system call\n");
     }
 }
 
 static _invalid_parameter_handler oldHandler;
 
+// ig this wont work on Windows anymore due to MIPSImage lmao
 void windowsParameterHandlingControl(int flag )
 {
   static _invalid_parameter_handler oldHandler;
@@ -112,7 +114,7 @@ mem_addr last_exception_addr;
    exit syscall and non-zero to continue execution. */
 
 int
-do_syscall ()
+do_syscall (MIPSImage &img)
 {
 #ifdef _WIN32
     windowsParameterHandlingControl(0);
@@ -122,26 +124,26 @@ do_syscall ()
      use than the real syscall and are portable to non-MIPS operating
      systems. */
 
-  switch (reg().R[REG_V0])
+  switch (img.reg_image().R[REG_V0])
     {
     case PRINT_INT_SYSCALL:
-      write_output (console_out, "%d", reg().R[REG_A0]);
+      write_output (img, console_out, "%d", img.reg_image().R[REG_A0]);
       break;
 
     case PRINT_FLOAT_SYSCALL:
       {
-	float val = FPR_S (reg(), REG_FA0);
+	float val = FPR_S (img.reg_image(), REG_FA0);
 
-	write_output (console_out, "%.8f", val);
+	write_output (img, console_out, "%.8f", val);
 	break;
       }
 
     case PRINT_DOUBLE_SYSCALL:
-      write_output (console_out, "%.18g", reg().FPR[REG_FA0 / 2]);
+      write_output (img, console_out, "%.18g", img.reg_image().FPR[REG_FA0 / 2]);
       break;
 
     case PRINT_STRING_SYSCALL:
-      write_output (console_out, "%s", mem_reference (reg().R[REG_A0]));
+      write_output (img, console_out, "%s", mem_reference (img, img.reg_image().R[REG_A0]));
       break;
 
     case READ_INT_SYSCALL:
@@ -149,7 +151,7 @@ do_syscall ()
 	static char str [256];
 
 	read_input (str, 256);
-	reg().R[REG_RES] = atol (str);
+	img.reg_image().R[REG_RES] = atol (str);
 	break;
       }
 
@@ -158,7 +160,7 @@ do_syscall ()
 	static char str [256];
 
 	read_input (str, 256);
-	FPR_S (reg(), REG_FRES) = (float) atof (str);
+	FPR_S (img.reg_image(), REG_FRES) = (float) atof (str);
 	break;
       }
 
@@ -167,28 +169,28 @@ do_syscall ()
 	static char str [256];
 
 	read_input (str, 256);
-	reg().FPR [REG_FRES] = atof (str);
+	img.reg_image().FPR [REG_FRES] = atof (str);
 	break;
       }
 
     case READ_STRING_SYSCALL:
       {
-	read_input ( (char *) mem_reference (reg().R[REG_A0]), reg().R[REG_A1]);
-	mem().data_modified = true;
+	read_input ( (char *) mem_reference (img, img.reg_image().R[REG_A0]), img.reg_image().R[REG_A1]);
+	img.mem_image().data_modified = true;
 	break;
       }
 
     case SBRK_SYSCALL:
       {
-	mem_addr x = mem().data_top;
-	expand_data (reg().R[REG_A0]);
-	reg().R[REG_RES] = x;
-	mem().data_modified = true;
+	mem_addr x = img.mem_image().data_top;
+	expand_data (img, img.reg_image().R[REG_A0]);
+	img.reg_image().R[REG_RES] = x;
+	img.mem_image().data_modified = true;
 	break;
       }
 
     case PRINT_CHARACTER_SYSCALL:
-      write_output (console_out, "%c", reg().R[REG_A0]);
+      write_output (img, console_out, "%c", img.reg_image().R[REG_A0]);
       break;
 
     case READ_CHARACTER_SYSCALL:
@@ -197,7 +199,7 @@ do_syscall ()
 
 	read_input (str, 2);
 	if (*str == '\0') *str = '\n';      /* makes xspim = spim */
-	reg().R[REG_RES] = (long) str[0];
+	img.reg_image().R[REG_RES] = (long) str[0];
 	break;
       }
 
@@ -206,15 +208,15 @@ do_syscall ()
       return (0);
 
     case EXIT2_SYSCALL:
-      spim_return_value = reg().R[REG_A0];	/* value passed to spim's exit() call */
+      spim_return_value = img.reg_image().R[REG_A0];	/* value passed to spim's exit() call */
       return (0);
 
     case OPEN_SYSCALL:
       {
 #ifdef _WIN32
-        R[REG_RES] = _open((char*)mem_reference (R[REG_A0]), R[REG_A1], R[REG_A2]);
+        R[REG_RES] = _open((char*)mem_reference (img, R[REG_A0]), R[REG_A1], R[REG_A2]);
 #else
-	reg().R[REG_RES] = open((char*)mem_reference (reg().R[REG_A0]), reg().R[REG_A1], reg().R[REG_A2]);
+	img.reg_image().R[REG_RES] = open((char*)mem_reference (img, img.reg_image().R[REG_A0]), img.reg_image().R[REG_A1], img.reg_image().R[REG_A2]);
 #endif
 	break;
       }
@@ -222,24 +224,24 @@ do_syscall ()
     case READ_SYSCALL:
       {
 	/* Test if address is valid */
-	(void)mem_reference (reg().R[REG_A1] + reg().R[REG_A2] - 1);
+	(void)mem_reference (img, img.reg_image().R[REG_A1] + img.reg_image().R[REG_A2] - 1);
 #ifdef _WIN32
-	reg().R[REG_RES] = _read(reg().R[REG_A0], mem_reference (reg().R[REG_A1]), reg().R[REG_A2]);
+	img.reg_image().R[REG_RES] = _read(img.reg_image().R[REG_A0], mem_reference (img, img.reg_image().R[REG_A1]), img.reg_image().R[REG_A2]);
 #else
-	reg().R[REG_RES] = read(reg().R[REG_A0], mem_reference (reg().R[REG_A1]), reg().R[REG_A2]);
+	img.reg_image().R[REG_RES] = read(img.reg_image().R[REG_A0], mem_reference (img, img.reg_image().R[REG_A1]), img.reg_image().R[REG_A2]);
 #endif
-	mem().data_modified = true;
+	img.mem_image().data_modified = true;
 	break;
       }
 
     case WRITE_SYSCALL:
       {
 	/* Test if address is valid */
-	(void)mem_reference (reg().R[REG_A1] + reg().R[REG_A2] - 1);
+	(void)mem_reference (img, img.reg_image().R[REG_A1] + img.reg_image().R[REG_A2] - 1);
 #ifdef _WIN32
-	reg().R[REG_RES] = _write(reg().R[REG_A0], mem_reference (reg().R[REG_A1]), reg().R[REG_A2]);
+	img.reg_image().R[REG_RES] = _write(img.reg_image().R[REG_A0], mem_reference (img, img.reg_image().R[REG_A1]), img.reg_image().R[REG_A2]);
 #else
-	reg().R[REG_RES] = write(reg().R[REG_A0], mem_reference (reg().R[REG_A1]), reg().R[REG_A2]);
+	img.reg_image().R[REG_RES] = write(img.reg_image().R[REG_A0], mem_reference (img, img.reg_image().R[REG_A1]), img.reg_image().R[REG_A2]);
 #endif
 	break;
       }
@@ -247,19 +249,19 @@ do_syscall ()
     case CLOSE_SYSCALL:
       {
 #ifdef _WIN32
-	reg().R[REG_RES] = _close(reg().R[REG_A0]);
+	img.reg_image().R[REG_RES] = _close(img.reg_image().R[REG_A0]);
 #else
-	reg().R[REG_RES] = close(reg().R[REG_A0]);
+	img.reg_image().R[REG_RES] = close(img.reg_image().R[REG_A0]);
 #endif
 	break;
       }
 
 case PRINT_HEX_SYSCALL:
-    write_output (console_out, "%x", reg().R[REG_A0]);
+    write_output (img, console_out, "%x", img.reg_image().R[REG_A0]);
     break;
 
     default:
-      run_error ("Unknown system call: %d\n", reg().R[REG_V0]);
+      run_error (img, "Unknown system call: %d\n", img.reg_image().R[REG_V0]);
       break;
     }
 
@@ -271,76 +273,76 @@ case PRINT_HEX_SYSCALL:
 
 
 void
-handle_exception ()
+handle_exception (MIPSImage &img)
 {
-  if (!quiet && CP0_ExCode(reg()) != ExcCode_Int)
-    error ("Exception occurred at PC=0x%08x\n", last_exception_addr);
+  if (!quiet && CP0_ExCode(img.reg_image()) != ExcCode_Int)
+    error (img, "Exception occurred at PC=0x%08x\n", last_exception_addr);
 
-  reg().exception_occurred = 0;
-  reg().PC = EXCEPTION_ADDR;
+  img.reg_image().exception_occurred = 0;
+  img.reg_image().PC = EXCEPTION_ADDR;
 
-  switch (CP0_ExCode(reg()))
+  switch (CP0_ExCode(img.reg_image()))
     {
     case ExcCode_Int:
       break;
 
     case ExcCode_AdEL:
       if (!quiet)
-	error ("  Unaligned address in inst/data fetch: 0x%08x\n", reg().CP0_BadVAddr);
+	error (img, "  Unaligned address in inst/data fetch: 0x%08x\n", img.reg_image().CP0_BadVAddr);
       break;
 
     case ExcCode_AdES:
       if (!quiet)
-	error ("  Unaligned address in store: 0x%08x\n", reg().CP0_BadVAddr);
+	error (img, "  Unaligned address in store: 0x%08x\n", img.reg_image().CP0_BadVAddr);
       break;
 
     case ExcCode_IBE:
       if (!quiet)
-	error ("  Bad address in text read: 0x%08x\n", reg().CP0_BadVAddr);
+	error (img, "  Bad address in text read: 0x%08x\n", img.reg_image().CP0_BadVAddr);
       break;
 
     case ExcCode_DBE:
       if (!quiet)
-	error ("  Bad address in data/stack read: 0x%08x\n", reg().CP0_BadVAddr);
+	error (img, "  Bad address in data/stack read: 0x%08x\n", img.reg_image().CP0_BadVAddr);
       break;
 
     case ExcCode_Sys:
       if (!quiet)
-	error ("  Error in syscall\n");
+	error (img, "  Error in syscall\n");
       break;
 
     case ExcCode_Bp:
-      reg().exception_occurred = 0;
+      img.reg_image().exception_occurred = 0;
       return;
 
     case ExcCode_RI:
       if (!quiet)
-	error ("  Reserved instruction execution\n");
+	error (img, "  Reserved instruction execution\n");
       break;
 
     case ExcCode_CpU:
       if (!quiet)
-	error ("  Coprocessor unuable\n");
+	error (img, "  Coprocessor unuable\n");
       break;
 
     case ExcCode_Ov:
       if (!quiet)
-	error ("  Arithmetic overflow\n");
+	error (img, "  Arithmetic overflow\n");
       break;
 
     case ExcCode_Tr:
       if (!quiet)
-	error ("  Trap\n");
+	error (img, "  Trap\n");
       break;
 
     case ExcCode_FPE:
       if (!quiet)
-	error ("  Floating point\n");
+	error (img, "  Floating point\n");
       break;
 
     default:
       if (!quiet)
-	error ("Unknown exception: %d\n", CP0_ExCode);
+	error (img, "Unknown exception: %d\n", CP0_ExCode);
       break;
     }
 }

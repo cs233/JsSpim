@@ -39,7 +39,7 @@
 /* A note on directions:  "Bottom" of memory is the direction of
    decreasing addresses.  "Top" is the direction of increasing addresses.*/
 
-#include "mem_image.h"
+#include "image.h"
 
 /* The text boundaries. */
 #define TEXT_BOT ((mem_addr) 0x400000)
@@ -72,21 +72,21 @@
 /* Exported functions: */
 
 void check_memory_mapped_IO ();
-void expand_data (int addl_bytes);
-void expand_k_data (int addl_bytes);
-void expand_stack (int addl_bytes);
-void make_memory (int text_size, int data_size, int data_limit,
+void expand_data (MIPSImage &img, int addl_bytes);
+void expand_k_data (MIPSImage &img, int addl_bytes);
+void expand_stack (MIPSImage &img, int addl_bytes);
+void make_memory (MIPSImage &img, int text_size, int data_size, int data_limit,
 		  int stack_size, int stack_limit, int k_text_size,
 		  int k_data_size, int k_data_limit);
-void* mem_reference(mem_addr addr);
-void print_mem (mem_addr addr);
-instruction* read_mem_inst(mem_addr addr);
-reg_word read_mem_byte(mem_addr addr);
-reg_word read_mem_half(mem_addr addr);
-reg_word read_mem_word(mem_addr addr);
-void set_mem_inst(mem_addr addr, instruction* inst);
-void set_mem_byte(mem_addr addr, reg_word value);
-void set_mem_half(mem_addr addr, reg_word value);
-void set_mem_word(mem_addr addr, reg_word value);
+void* mem_reference(MIPSImage &img, mem_addr addr); // TODO: Stopped here
+void print_mem (MIPSImage &img, mem_addr addr);
+instruction* read_mem_inst(MIPSImage &img, mem_addr addr);
+reg_word read_mem_byte(MIPSImage &img, mem_addr addr);
+reg_word read_mem_half(MIPSImage &img, mem_addr addr);
+reg_word read_mem_word(MIPSImage &img, mem_addr addr);
+void set_mem_inst(MIPSImage &img, mem_addr addr, instruction* inst);
+void set_mem_byte(MIPSImage &img, mem_addr addr, reg_word value);
+void set_mem_half(MIPSImage &img, mem_addr addr, reg_word value);
+void set_mem_word(MIPSImage &img, mem_addr addr, reg_word value);
 
 #endif

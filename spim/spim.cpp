@@ -40,6 +40,7 @@
 #include <stdio.h>
 #include <stdarg.h>
 #include <string>
+#include <vector>
 
 #include "CPU/spim.h"
 #include "CPU/string-stream.h"
@@ -67,23 +68,33 @@ port message_out, console_out, console_in;
 bool mapped_io;            /* => activate memory-mapped IO */
 int spim_return_value;        /* Value returned when spim exits */
 
+
+std::vector<MIPSImage> make_ctxs() {
+  return std::vector<MIPSImage>();
+}
+
+static std::vector<MIPSImage> ctxs = make_ctxs();
+
 static str_stream ss;
 void init() {
-  error("Based on <a href='http://spimsimulator.sourceforge.net/'>SPIM</a> %s "
-        "by <a href='https://people.epfl.ch/james.larus'>James Larus</a>.\n",
-        SPIM_VERSION);
-  
-  ctx_switch(0);
+  // error("Based on <a href='http://spimsimulator.sourceforge.net/'>SPIM</a> %s "
+  //       "by <a href='https://people.epfl.ch/james.larus'>James Larus</a>.\n",
+  //       SPIM_VERSION);
+
+  std::vector<MIPSImage> initial_ctxs;
         
   for (int i = 0; i < NUM_CONTEXTS; ++i) {
-    initialize_world(i, DEFAULT_EXCEPTION_HANDLER, false);
-    initialize_run_stack(0, nullptr);
+    MIPSImage new_image(i);
+    initialize_world(new_image, DEFAULT_EXCEPTION_HANDLER, false);
+    initialize_run_stack(new_image, 0, nullptr);
     char file_name[64];
     sprintf(file_name, "./input_%d.s", i);
-    read_assembly_file(file_name);
-    reg().PC = starting_address();
-    ctx_increment();
+    read_assembly_file(new_image, file_name); // check if the file
+    new_image.reg_image().PC = starting_address(new_image);
+    initial_ctxs.push_back(new_image);
   }
+
+  ctxs = initial_ctxs;
 }
 
 
@@ -91,11 +102,13 @@ int step(int step_size, bool cont_bkpt) {
   if (step_size == 0) step_size = DEFAULT_RUN_STEPS;
 
   bool continuable, bp_encountered;
-  bp_encountered = run_spim_program(step_size, false, cont_bkpt, &continuable);
+  bp_encountered = run_spim_program(ctxs, step_size, false, cont_bkpt, &continuable);
 
   if (!continuable) { // finished
     printf("\n"); // to flush output
-    error("Execution finished\n");
+    for (auto &img : ctxs) {
+      error(img, "Execution finished\n");
+    }
     return 0;
   }
 
@@ -106,37 +119,68 @@ int step(int step_size, bool cont_bkpt) {
   return 1;
 }
 
+bool delete_ctx_breakpoint(mem_addr addr, int ctx) {
+  MIPSImage &img = ctxs[ctx]; // will exception if ctx out of bounds
+  return delete_breakpoint(img, addr);
+}
+
+bool add_ctx_breakpoint(mem_addr addr, int ctx) {
+  MIPSImage &img = ctxs[ctx]; // will exception if ctx out of bounds
+  return add_breakpoint(img, addr);
+}
+
 #ifdef WASM
 std::string getUserText(int ctx) {
+  MIPSImage &img = ctxs[ctx]; // will exception if ctx out of bounds
   ss_clear(&ss);
-  format_insts(&ss, TEXT_BOT, memview(ctx).text_top);
-  return std::string(ss_to_string(&ss));
+  format_insts(img, &ss, TEXT_BOT, img.memview_image().text_top);
+  return std::string(ss_to_string(img, &ss));
 }
 
 std::string getKernelText(int ctx) {
+  MIPSImage &img = ctxs[ctx]; // will exception if ctx out of bounds
   ss_clear(&ss);
-  format_insts(&ss, K_TEXT_BOT, memview(ctx).k_text_top);
-  return std::string(ss_to_string(&ss));
+  format_insts(img, &ss, K_TEXT_BOT, img.memview_image().k_text_top);
+  return std::string(ss_to_string(img, &ss));
 }
 
-val getStack(int ctx) { return val(typed_memory_view(STACK_LIMIT / 16, (unsigned int *) memview(ctx).stack_seg)); }
-val getUserData(int ctx) { return val(typed_memory_view(memview(ctx).data_top - DATA_BOT, (unsigned int *) memview(ctx).data_seg)); }
-val getKernelData(int ctx) { return val(typed_memory_view(memview(ctx).k_data_top - K_DATA_BOT, (unsigned int *) memview(ctx).k_data_seg)); }
-val getGeneralRegVals(int ctx) { return val(typed_memory_view(32, (unsigned int *) regview(ctx).R)); }
-val getFloatRegVals(int ctx) { return val(typed_memory_view(32, (float *) regview(ctx).FPR)); }
-val getDoubleRegVals(int ctx) { return val(typed_memory_view(16, (double *) regview(ctx).FPR)); }
+val getStack(int ctx) {
+  MIPSImage &img = ctxs[ctx]; // will exception if ctx out of bounds
+  return val(typed_memory_view(STACK_LIMIT / 16, (unsigned int *) img.memview_image().stack_seg));
+}
+val getUserData(int ctx) {
+  MIPSImage &img = ctxs[ctx]; // will exception if ctx out of bounds
+  return val(typed_memory_view(img.memview_image().data_top - DATA_BOT, (unsigned int *) img.memview_image().data_seg));
+}
+val getKernelData(int ctx) {
+  MIPSImage &img = ctxs[ctx]; // will exception if ctx out of bounds
+  return val(typed_memory_view(img.memview_image().k_data_top - K_DATA_BOT, (unsigned int *) img.memview_image().k_data_seg));
+}
+val getGeneralRegVals(int ctx) {
+  MIPSImage &img = ctxs[ctx]; // will exception if ctx out of bounds
+  return val(typed_memory_view(32, (unsigned int *) img.regview_image().R));
+}
+val getFloatRegVals(int ctx) {
+  MIPSImage &img = ctxs[ctx]; // will exception if ctx out of bounds
+  return val(typed_memory_view(32, (float *) img.regview_image().FPR));
+  }
+val getDoubleRegVals(int ctx) {
+  MIPSImage &img = ctxs[ctx]; // will exception if ctx out of bounds
+  return val(typed_memory_view(16, (double *) img.regview_image().FPR));
+}
 
 val getSpecialRegVals(int ctx) {
+  MIPSImage &img = ctxs[ctx]; // will exception if ctx out of bounds
   static unsigned int specialRegs[9];
-  specialRegs[0] = regview(ctx).PC;
-  specialRegs[1] = regview(ctx).CP0_EPC;
-  specialRegs[2] = regview(ctx).CP0_Cause;
-  specialRegs[3] = regview(ctx).CP0_BadVAddr;
-  specialRegs[4] = regview(ctx).CP0_Status;
-  specialRegs[5] = regview(ctx).HI;
-  specialRegs[6] = regview(ctx).LO;
-  specialRegs[7] = regview(ctx).FIR;
-  specialRegs[8] = regview(ctx).FCSR;
+  specialRegs[0] = img.regview_image().PC;
+  specialRegs[1] = img.regview_image().CP0_EPC;
+  specialRegs[2] = img.regview_image().CP0_Cause;
+  specialRegs[3] = img.regview_image().CP0_BadVAddr;
+  specialRegs[4] = img.regview_image().CP0_Status;
+  specialRegs[5] = img.regview_image().HI;
+  specialRegs[6] = img.regview_image().LO;
+  specialRegs[7] = img.regview_image().FIR;
+  specialRegs[8] = img.regview_image().FCSR;
 
   return val(typed_memory_view(9, specialRegs));
 }
@@ -152,16 +196,16 @@ EMSCRIPTEN_BINDINGS(getGeneralRegVals) { function("getGeneralRegVals", &getGener
 EMSCRIPTEN_BINDINGS(getFloatRegVals) { function("getFloatRegVals", &getFloatRegVals); }
 EMSCRIPTEN_BINDINGS(getDoubleRegVals) { function("getDoubleRegVals", &getDoubleRegVals); }
 EMSCRIPTEN_BINDINGS(getSpecialRegVals) { function("getSpecialRegVals", &getSpecialRegVals); }
-EMSCRIPTEN_BINDINGS(delete_breakpoint) { function("deleteBreakpoint", &delete_breakpoint); }
-EMSCRIPTEN_BINDINGS(add_breakpoint) { function("addBreakpoint", &add_breakpoint); }
+EMSCRIPTEN_BINDINGS(delete_breakpoint) { function("deleteBreakpoint", &delete_ctx_breakpoint); }
+EMSCRIPTEN_BINDINGS(add_breakpoint) { function("addBreakpoint", &add_ctx_breakpoint); }
 #endif
 
 /* Print an error message. */
 
-void error(char *fmt, ...) {
+void error(MIPSImage const &img, char *fmt, ...) {
   va_list args;
   va_start(args, fmt);
-  fprintf(stderr, "(%u)\t", ctx_current());
+  fprintf(stderr, "(%u)\t", img.get_ctx());
   vfprintf(stderr, fmt, args);
   fflush(stderr);
   va_end(args);
@@ -169,11 +213,11 @@ void error(char *fmt, ...) {
 
 /* Print the error message then exit. */
 
-void fatal_error(char *fmt, ...) {
+void fatal_error(MIPSImage const &img, char *fmt, ...) {
   va_list args;
   va_start(args, fmt);
   fmt = va_arg(args, char *);
-  fprintf(stderr, "(%u)\t", ctx_current());
+  fprintf(stderr, "(%u)\t", img.get_ctx());
   vfprintf(stderr, fmt, args);
   fflush(stderr);
   exit(-1);
@@ -181,10 +225,10 @@ void fatal_error(char *fmt, ...) {
 
 /* Print an error message and return to top level. */
 
-void run_error(char *fmt, ...) {
+void run_error(MIPSImage const &img, char *fmt, ...) {
   va_list args;
   va_start(args, fmt);
-  fprintf(stderr, "(%u)\t", ctx_current());
+  fprintf(stderr, "(%u)\t", img.get_ctx());
   vfprintf(stderr, fmt, args);
   fflush(stderr);
   va_end(args);
@@ -192,10 +236,10 @@ void run_error(char *fmt, ...) {
 
 /* IO facilities: */
 
-void write_output(port fp, char *fmt, ...) {
+void write_output(MIPSImage const &img, port fp, char *fmt, ...) {
   va_list args;
   va_start(args, fmt);
-  fprintf(stdout, "(%u)\t", ctx_current());
+  fprintf(stdout, "(%u)\t", img.get_ctx());
   vfprintf(stdout, fmt, args);
   fflush(stdout);
   va_end(args);

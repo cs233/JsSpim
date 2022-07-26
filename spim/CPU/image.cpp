@@ -2,44 +2,32 @@
 #include "spim-utils.h"
 #include "image.h"
 
-static mips_image_t images[NUM_CONTEXTS]; 
 static size_t curr_ctx = 0;
 static size_t num_ctx = NUM_CONTEXTS;
 
-void ctx_switch(int ctx) { 
-    ctx %= NUM_CONTEXTS; 
-    curr_ctx = ctx; 
+MIPSImage::MIPSImage(int ctx) : ctx(ctx) {}
+
+int MIPSImage::get_ctx() const {
+    return ctx;
 }
 
-void ctx_init(int ctx) { 
-    images[ctx].ctx = ctx;
-    ctx_switch(ctx);
+mem_image_t &MIPSImage::mem_image() {
+    return mem_img;
 }
 
-void ctx_increment() { 
-    ctx_switch(curr_ctx+1);
+reg_image_t &MIPSImage::reg_image() {
+    return reg_img;
 }
 
-size_t ctx_current() { 
-    return curr_ctx; 
+const mem_image_t &MIPSImage::memview_image() const {
+    return mem_img;
 }
 
-mem_image_t &mem() { 
-    return images[curr_ctx].mem;
+const reg_image_t &MIPSImage::regview_image() const {
+    return reg_img;
 }
 
-reg_image_t &reg() { 
-    return images[curr_ctx].reg;
+std::unordered_map<mem_addr, breakpoint> &MIPSImage::breakpoints() {
+    return bkpt_map;
 }
 
-const mem_image_t &memview(int ctx) { 
-    return images[ctx].mem;
-}
-
-const reg_image_t &regview(int ctx) { 
-    return images[ctx].reg;
-}
-
-std::unordered_map<mem_addr, breakpoint> &breakpoints() {
-    return images[curr_ctx].breakpoints;
-}

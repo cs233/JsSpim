@@ -48,49 +48,49 @@ char* int_reg_names[32] =
    "t8", "t9", "k0", "k1", "gp", "sp", "s8", "ra"};
 
 
-static mem_addr format_partial_line (str_stream *ss, mem_addr addr);
+static mem_addr format_partial_line (MIPSImage &img, str_stream *ss, mem_addr addr);
 
 
 /* Write to the stream the contents of the machine's registers, in a wide
    variety of formats. */
 
 void
-format_registers (str_stream *ss, int print_gpr_hex, int print_fpr_hex, int ctx)
+format_registers (MIPSImage &img, str_stream *ss, int print_gpr_hex, int print_fpr_hex)
 {
   int i;
   char *grstr, *fpstr;
   char *grfill, *fpfill;
-  const reg_image_t &reg = regview(ctx);
+  const reg_image_t &reg = img.regview_image();
 
-  ss_printf (ss, " PC      = %08x   ", reg.PC);
-  ss_printf (ss, "EPC     = %08x  ", reg.CP0_EPC);
-  ss_printf (ss, " Cause   = %08x  ", reg.CP0_Cause);
-  ss_printf (ss, " BadVAddr= %08x\n", reg.CP0_BadVAddr);
-  ss_printf (ss, " Status  = %08x   ", reg.CP0_Status);
-  ss_printf (ss, "HI      = %08x  ", reg.HI);
-  ss_printf (ss, " LO      = %08x\n", reg.LO);
+  ss_printf (img, ss, " PC      = %08x   ", reg.PC);
+  ss_printf (img, ss, "EPC     = %08x  ", reg.CP0_EPC);
+  ss_printf (img, ss, " Cause   = %08x  ", reg.CP0_Cause);
+  ss_printf (img, ss, " BadVAddr= %08x\n", reg.CP0_BadVAddr);
+  ss_printf (img, ss, " Status  = %08x   ", reg.CP0_Status);
+  ss_printf (img, ss, "HI      = %08x  ", reg.HI);
+  ss_printf (img, ss, " LO      = %08x\n", reg.LO);
 
   if (print_gpr_hex)
     grstr = "R%-2d (%2s) = %08x", grfill = "  ";
   else
     grstr = "R%-2d (%2s) = %-10d", grfill = " ";
 
-  ss_printf (ss, "\t\t\t\t General Registers\n");
+  ss_printf (img, ss, "\t\t\t\t General Registers\n");
   for (i = 0; i < 8; i++)
     {
-      ss_printf (ss, grstr, i, int_reg_names[i], reg.R[i]);
-      ss_printf (ss, grfill);
-      ss_printf (ss, grstr, i+8, int_reg_names[i+8], reg.R[i+8]);
-      ss_printf (ss, grfill);
-      ss_printf (ss, grstr, i+16, int_reg_names[i+16], reg.R[i+16]);
-      ss_printf (ss, grfill);
-      ss_printf (ss, grstr, i+24, int_reg_names[i+24], reg.R[i+24]);
-      ss_printf (ss, "\n");
+      ss_printf (img, ss, grstr, i, int_reg_names[i], reg.R[i]);
+      ss_printf (img, ss, grfill);
+      ss_printf (img, ss, grstr, i+8, int_reg_names[i+8], reg.R[i+8]);
+      ss_printf (img, ss, grfill);
+      ss_printf (img, ss, grstr, i+16, int_reg_names[i+16], reg.R[i+16]);
+      ss_printf (img, ss, grfill);
+      ss_printf (img, ss, grstr, i+24, int_reg_names[i+24], reg.R[i+24]);
+      ss_printf (img, ss, "\n");
     }
 
-  ss_printf (ss, "\n FIR    = %08x   ", reg.FIR);
-  ss_printf (ss, " FCSR    = %08x   ", reg.FCSR);
-  ss_printf (ss, "\t\t\t      Double Floating Point Registers\n");
+  ss_printf (img, ss, "\n FIR    = %08x   ", reg.FIR);
+  ss_printf (img, ss, " FCSR    = %08x   ", reg.FCSR);
+  ss_printf (img, ss, "\t\t\t      Double Floating Point Registers\n");
 
   if (print_fpr_hex)
     fpstr = "FP%-2d=%08x,%08x", fpfill = " ";
@@ -105,31 +105,31 @@ format_registers (str_stream *ss, int print_gpr_hex, int print_fpr_hex, int ctx)
 	/* Use pointers to cast to ints without invoking float->int conversion
 	   so we can just print the bits. */
 	r1 = (int *)&reg.FPR[i]; r2 = r1 + 1;
-	ss_printf (ss, fpstr, 2*i, *r1, *r2);
-	ss_printf (ss, fpfill);
+	ss_printf (img, ss, fpstr, 2*i, *r1, *r2);
+	ss_printf (img, ss, fpfill);
 
 	r1 = (int *)&reg.FPR[i+4]; r2 = r1 + 1;
-	ss_printf (ss, fpstr, 2*i+8, *r1, *r2);
-	ss_printf (ss, fpfill);
+	ss_printf (img, ss, fpstr, 2*i+8, *r1, *r2);
+	ss_printf (img, ss, fpfill);
 
 	r1 = (int *)&reg.FPR[i+8]; r2 = r1 + 1;
-	ss_printf (ss, fpstr, 2*i+16, *r1, *r2);
-	ss_printf (ss, fpfill);
+	ss_printf (img, ss, fpstr, 2*i+16, *r1, *r2);
+	ss_printf (img, ss, fpfill);
 
 	r1 = (int *)&reg.FPR[i+12]; r2 = r1 + 1;
-	ss_printf (ss, fpstr, 2*i+24, *r1, *r2);
-	ss_printf (ss, "\n");
+	ss_printf (img, ss, fpstr, 2*i+24, *r1, *r2);
+	ss_printf (img, ss, "\n");
       }
   else for (i = 0; i < 4; i += 1)
     {
-      ss_printf (ss, fpstr, 2*i, reg.FPR[i]);
-      ss_printf (ss, fpfill);
-      ss_printf (ss, fpstr, 2*i+8, reg.FPR[i+4]);
-      ss_printf (ss, fpfill);
-      ss_printf (ss, fpstr, 2*i+16, reg.FPR[i+8]);
-      ss_printf (ss, fpfill);
-      ss_printf (ss, fpstr, 2*i+24, reg.FPR[i+12]);
-      ss_printf (ss, "\n");
+      ss_printf (img, ss, fpstr, 2*i, reg.FPR[i]);
+      ss_printf (img, ss, fpfill);
+      ss_printf (img, ss, fpstr, 2*i+8, reg.FPR[i+4]);
+      ss_printf (img, ss, fpfill);
+      ss_printf (img, ss, fpstr, 2*i+16, reg.FPR[i+8]);
+      ss_printf (img, ss, fpfill);
+      ss_printf (img, ss, fpstr, 2*i+24, reg.FPR[i+12]);
+      ss_printf (img, ss, "\n");
     }
 
   if (print_fpr_hex)
@@ -137,35 +137,35 @@ format_registers (str_stream *ss, int print_gpr_hex, int print_fpr_hex, int ctx)
   else
     fpstr = "FP%-2d = %#-13.6g", fpfill = " ";
 
-  ss_printf (ss, "\t\t\t      Single Floating Point Registers\n");
+  ss_printf (img, ss, "\t\t\t      Single Floating Point Registers\n");
 
   if (print_fpr_hex)
     for (i = 0; i < 8; i += 1)
       {
 	/* Use pointers to cast to ints without invoking float->int conversion
 	   so we can just print the bits. */
-	ss_printf (ss, fpstr, i, *(int *)&FPR_S(reg, i));
-	ss_printf (ss, fpfill);
+	ss_printf (img, ss, fpstr, i, *(int *)&FPR_S(reg, i));
+	ss_printf (img, ss, fpfill);
 
-	ss_printf (ss, fpstr, i+8, *(int *)&FPR_S(reg, i+8));
-	ss_printf (ss, fpfill);
+	ss_printf (img, ss, fpstr, i+8, *(int *)&FPR_S(reg, i+8));
+	ss_printf (img, ss, fpfill);
 
-	ss_printf (ss, fpstr, i+16, *(int *)&FPR_S(reg, i+16));
-	ss_printf (ss, fpfill);
+	ss_printf (img, ss, fpstr, i+16, *(int *)&FPR_S(reg, i+16));
+	ss_printf (img, ss, fpfill);
 
-	ss_printf (ss, fpstr, i+24, *(int *)&FPR_S(reg, i+24));
-	ss_printf (ss, "\n");
+	ss_printf (img, ss, fpstr, i+24, *(int *)&FPR_S(reg, i+24));
+	ss_printf (img, ss, "\n");
       }
   else for (i = 0; i < 8; i += 1)
     {
-      ss_printf (ss, fpstr, i, FPR_S(reg, i));
-      ss_printf (ss, fpfill);
-      ss_printf (ss, fpstr, i+8, FPR_S(reg, i+8));
-      ss_printf (ss, fpfill);
-      ss_printf (ss, fpstr, i+16, FPR_S(reg, i+16));
-      ss_printf (ss, fpfill);
-      ss_printf (ss, fpstr, i+24, FPR_S(reg, i+24));
-      ss_printf (ss, "\n");
+      ss_printf (img, ss, fpstr, i, FPR_S(reg, i));
+      ss_printf (img, ss, fpfill);
+      ss_printf (img, ss, fpstr, i+8, FPR_S(reg, i+8));
+      ss_printf (img, ss, fpfill);
+      ss_printf (img, ss, fpstr, i+16, FPR_S(reg, i+16));
+      ss_printf (img, ss, fpfill);
+      ss_printf (img, ss, fpstr, i+24, FPR_S(reg, i+24));
+      ss_printf (img, ss, "\n");
     }
 }
 
@@ -175,17 +175,17 @@ format_registers (str_stream *ss, int print_gpr_hex, int print_fpr_hex, int ctx)
    memory addresses: FROM...TO. */
 
 void
-format_insts (str_stream *ss, mem_addr from, mem_addr to)
+format_insts (MIPSImage &img, str_stream *ss, mem_addr from, mem_addr to)
 {
   instruction *inst;
   mem_addr i;
 
   for (i = from; i < to; i += 4)
     {
-      inst = read_mem_inst (i);
+      inst = read_mem_inst (img, i);
       if (inst != NULL)
 	{
-	  format_an_inst (ss, inst, i);
+	  format_an_inst (img, ss, inst, i);
 	}
     }
 }
@@ -195,23 +195,16 @@ format_insts (str_stream *ss, mem_addr from, mem_addr to)
    segments. */
 
 void
-format_data_segs (str_stream *ss, int ctx)
+format_data_segs (MIPSImage &img, str_stream *ss)
 { 
-  int pre_ctx = ctx_current();
-  if (ctx != pre_ctx)
-    ctx_switch(ctx);
+  ss_printf (img, ss, "\tDATA\n");
+  format_mem (img, ss, DATA_BOT, img.mem_image().data_top);
 
-  ss_printf (ss, "\tDATA\n");
-  format_mem (ss, DATA_BOT, mem().data_top);
+  ss_printf (img, ss, "\n\tSTACK\n");
+  format_mem (img, ss, ROUND_DOWN (img.reg_image().R[29], BYTES_PER_WORD), STACK_TOP);
 
-  ss_printf (ss, "\n\tSTACK\n");
-  format_mem (ss, ROUND_DOWN (reg().R[29], BYTES_PER_WORD), STACK_TOP);
-
-  ss_printf (ss, "\n\tKERNEL DATA\n");
-  format_mem (ss, K_DATA_BOT, mem().k_data_top);
-
-  if (ctx != pre_ctx)
-    ctx_switch(pre_ctx);
+  ss_printf (img, ss, "\n\tKERNEL DATA\n");
+  format_mem (img, ss, K_DATA_BOT, img.mem_image().k_data_top);
 }
 
 
@@ -222,20 +215,20 @@ format_data_segs (str_stream *ss, int ctx)
    address: FROM...TO. */
 
 void
-format_mem (str_stream *ss, mem_addr from, mem_addr to)
+format_mem (MIPSImage &img, str_stream *ss, mem_addr from, mem_addr to)
 {
   mem_word val;
   mem_addr i = ROUND_UP (from, BYTES_PER_WORD);
   int j;
 
-  i = format_partial_line (ss, i);
+  i = format_partial_line (img, ss, i);
 
   for ( ; i < to; )
     {
       /* Count consecutive zero words */
       for (j = 0; (i + (uint32) j * BYTES_PER_WORD) < to; j += 1)
 	{
-	  val = read_mem_word (i + (uint32) j * BYTES_PER_WORD);
+	  val = read_mem_word (img, i + (uint32) j * BYTES_PER_WORD);
 	  if (val != 0)
 	    {
 	      break;
@@ -245,26 +238,26 @@ format_mem (str_stream *ss, mem_addr from, mem_addr to)
       if (j >= 4)
 	{
 	  /* Block of 4 or more zero memory words: */
-	  ss_printf (ss, "[0x%08x]...[0x%08x]	0x00000000\n",
+	  ss_printf (img, ss, "[0x%08x]...[0x%08x]	0x00000000\n",
 		     i,
 		     i + (uint32) j * BYTES_PER_WORD);
 
 	  i = i + (uint32) j * BYTES_PER_WORD;
-	  i = format_partial_line (ss, i);
+	  i = format_partial_line (img, ss, i);
 	}
       else
 	{
 	  /* Fewer than 4 zero words, print them on a single line: */
-	  ss_printf (ss, "[0x%08x]		      ", i);
+	  ss_printf (img, ss, "[0x%08x]		      ", i);
 	  do
 	    {
-	      val = read_mem_word (i);
-	      ss_printf (ss, "  0x%08x", (unsigned int)val);
+	      val = read_mem_word (img, i);
+	      ss_printf (img, ss, "  0x%08x", (unsigned int)val);
 	      i += BYTES_PER_WORD;
 	    }
 	  while (i % BYTES_PER_LINE != 0);
 
-	  ss_printf (ss, "\n");
+	  ss_printf (img, ss, "\n");
 	}
     }
 }
@@ -274,19 +267,19 @@ format_mem (str_stream *ss, mem_addr from, mem_addr to)
    quadword. Return the address after the last one written.  */
 
 static mem_addr
-format_partial_line (str_stream *ss, mem_addr addr)
+format_partial_line (MIPSImage &img, str_stream *ss, mem_addr addr)
 {
   if ((addr % BYTES_PER_LINE) != 0)
     {
-      ss_printf (ss, "[0x%08x]		      ", addr);
+      ss_printf (img, ss, "[0x%08x]		      ", addr);
 
       for (; (addr % BYTES_PER_LINE) != 0; addr += BYTES_PER_WORD)
 	{
-	  mem_word val = read_mem_word (addr);
-	  ss_printf (ss, "  0x%08x", (unsigned int)val);
+	  mem_word val = read_mem_word (img, addr);
+	  ss_printf (img, ss, "  0x%08x", (unsigned int)val);
 	}
 
-      ss_printf (ss, "\n");
+      ss_printf (img, ss, "\n");
     }
 
   return addr;
