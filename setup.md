@@ -22,7 +22,18 @@ You can debug the program with `qmake DEBUG=1 && make -j<number of threads on yo
 
 ```
 sudo apt install git bison flex     # linux
-brew install flex                   # mac
+
+brew install bison flex             # mac
+
+brew unlink bison
+echo 'export PATH="/usr/local/opt/bison/bin:$PATH"' >> ~/.zshrc
+export LDFLAGS="-L/usr/local/opt/bison/lib"
+source ~/.zshrc			    # mac on zsh shell (default)
+
+brew unlink bison
+echo 'export PATH="/usr/local/opt/bison/bin:$PATH"' >> ~/.bash_profile
+export LDFLAGS="-L/usr/local/opt/bison/lib"
+source ~/.bash_profile		    # mac on bash shell
 ```
 
 

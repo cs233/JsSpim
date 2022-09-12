@@ -146,9 +146,9 @@ SOURCES += spim/spim.cpp\
 #     ../Spimbot/spimbotwidget.ui
 
 
-INCLUDEPATH = spim/CPU $ENV{EMSCRIPTEN}/system/include/ # ../spim ../QtSpim
-INCLUDEPATH += "/usr/local/Cellar/boost/1.76.0/include/"
-INCLUDEPATH += "/opt/homebrew/Cellar/boost/1.76.0/include/"
+INCLUDEPATH = ../CPU ../spim ../QtSpim
+INCLUDEPATH += "/usr/local/Cellar/boost/1.79.0_2/include/"
+INCLUDEPATH += "/opt/homebrew/Cellar/boost/1.79.0_2/include/"
 
 # RESOURCES = windows_images.qrc exception.qrc ../Spimbot/images/spimbot_images.qrc
 
@@ -156,10 +156,10 @@ INCLUDEPATH += "/opt/homebrew/Cellar/boost/1.76.0/include/"
 
 
 QMAKE_YACC          = bison
-QMAKE_YACCFLAGS     = -d --defines=parser.tab.h --output=parser.tab.cpp
+QMAKE_YACCFLAGS     = -d --defines=parser_yacc.h --output=parser_yacc.cpp
 QMAKE_YACCFLAGS_MANGLE = -p yy
-QMAKE_YACC_HEADER   = parser.tab.h
-QMAKE_YACC_SOURCE   = parser.tab.cpp
+QMAKE_YACC_HEADER   = parser_yacc.h
+QMAKE_YACC_SOURCE   = parser_yacc.cpp
 
 QMAKE_LEX           = flex
 QMAKE_LEXFLAGS_MANGLE = -Pyy
