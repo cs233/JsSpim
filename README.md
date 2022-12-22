@@ -22,6 +22,23 @@ The source code is published at [GitHub](https://github.com/ShawnZhong/JsSpim/)
 - **Highlight** on changed registers, data segment, and stack
 - **Radix** support for all values
 
+## How to build
+
+### Dependencies
+
+- `emsdk >= 2.0.14`
+- `bison`
+- `flex`
+
+### How to build
+
+```
+emcmake cmake . -B build/
+make -C build/
+```
+
+You can append `-j<num_of_threads_on_your_machine>` to `make` parallelize the build process.
+
 ## Built With
 
 - [Spim](http://spimsimulator.sourceforge.net/) - The original simulator written in C++
