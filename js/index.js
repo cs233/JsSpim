@@ -31,8 +31,16 @@ var Module = {
     }
 };
 
-async function main(fileInput = `Tests/${fileList[0]}`) {
-    for (var ctx = 0; ctx < 2; ctx++) {
+async function main(fileInput = `Tests/${fileList[0]}`, ctx = null) {
+    console.log("Running main load");
+    if (ctx == null) {
+        for (var ctx = 0; ctx < 2; ctx++) {
+            let data = await loadData(fileInput);
+            const stream = FS.open('input_'+ctx+'.s', 'w+');
+            FS.write(stream, new Uint8Array(data), 0, data.byteLength, 0);
+            FS.close(stream);
+        }
+    } else {
         let data = await loadData(fileInput);
         const stream = FS.open('input_'+ctx+'.s', 'w+');
         FS.write(stream, new Uint8Array(data), 0, data.byteLength, 0);
