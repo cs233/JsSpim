@@ -31,29 +31,7 @@
 */
 
 #include "image.h"
-
-typedef struct lab_use
-{
-  instruction *inst;		/* NULL => Data, not code */
-  mem_addr addr;
-  struct lab_use *next;
-} label_use;
-
-
-/* Symbol table information on a label. */
-
-typedef struct lab
-{
-  char *name;			/* Name of label */
-  long addr;			/* Address of label or 0 if not yet defined */
-  unsigned global_flag : 1;	/* Non-zero => declared global */
-  unsigned gp_flag : 1;		/* Non-zero => referenced off gp */
-  unsigned const_flag : 1;	/* Non-zero => constant value (in addr) */
-  struct lab *next;		/* Hash table link */
-  struct lab *next_local;	/* Link in list of local labels */
-  label_use *uses;		/* List of instructions that reference */
-} label;			/* label that has not yet been defined */
-
+#include "label.h"
 
 #define SYMBOL_IS_DEFINED(SYM) ((SYM)->addr != 0)
 
@@ -63,8 +41,8 @@ typedef struct lab
 
 mem_addr find_symbol_address (MIPSImage &img, char *symbol);
 void flush_local_labels (MIPSImage &img, int issue_undef_warnings);
-void initialize_symbol_table ();
-label *label_is_defined (char *name);
+void initialize_symbol_table (MIPSImage &img);
+label *label_is_defined (MIPSImage &img, char *name);
 label *lookup_label (MIPSImage &img, char *name);
 label *make_label_global (MIPSImage &img, char *name);
 void print_symbols (MIPSImage &img);
@@ -72,6 +50,6 @@ void print_undefined_symbols (MIPSImage &img);
 label *record_label (MIPSImage &img, char *name, mem_addr address, int resolve_uses);
 void record_data_uses_symbol (MIPSImage &img, mem_addr location, label *sym);
 void record_inst_uses_symbol (MIPSImage &img, instruction *inst, label *sym);
-char *undefined_symbol_string ();
+char *undefined_symbol_string (MIPSImage &img);
 void resolve_a_label (MIPSImage &img, label *sym, instruction *inst);
 void resolve_label_uses (MIPSImage &img, label *sym);

@@ -36,3 +36,4 @@
 #include "image.h"
 
 bool spim_step (MIPSImage &img, bool display);
+bool run_spim (mem_addr initial_PC, int steps, bool display);

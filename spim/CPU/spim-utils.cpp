@@ -98,7 +98,7 @@ initialize_world (MIPSImage &img, char *exception_files, bool print_message)
 	       initial_k_data_size, initial_k_data_limit);
   initialize_registers (img);
   initialize_inst_tables ();
-  initialize_symbol_table ();
+  initialize_symbol_table (img);
   k_text_begins_at_point (img, K_TEXT_BOT);
   k_data_begins_at_point (img, K_DATA_BOT);
   data_begins_at_point (img, DATA_BOT);

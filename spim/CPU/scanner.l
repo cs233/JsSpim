@@ -184,7 +184,7 @@ static char scan_escape (MIPSImage &img, char **str);
 			  if (only_id && token != 0)
 			    yyerror (img, "Cannot use opcodes as labels");
 
-			  if ((l = label_is_defined (yytext)) != NULL
+			  if ((l = label_is_defined (img, yytext)) != NULL
 			      && l->const_flag)
 			    {
 			      /* Defined label */
@@ -227,7 +227,7 @@ static char scan_escape (MIPSImage &img, char **str);
 			  else
 			    {
 			      /* Otherwise, an integer or identifier */
-			      label *l = label_is_defined (yytext);
+			      label *l = label_is_defined (img, yytext);
 
 			      if (l != NULL && l->const_flag)
 				{

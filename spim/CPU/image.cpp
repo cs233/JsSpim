@@ -19,6 +19,18 @@ reg_image_t &MIPSImage::reg_image() {
     return reg_img;
 }
 
+label **MIPSImage::get_label_hash_table() {
+    return label_hash_table;
+}
+
+label *MIPSImage::get_local_labels() {
+    return local_labels;
+}
+
+void MIPSImage::set_local_labels(label *lbl) {
+    local_labels = lbl;
+}
+
 const mem_image_t &MIPSImage::memview_image() const {
     return mem_img;
 }

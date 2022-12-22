@@ -46,7 +46,7 @@
 
 /* Local functions: */
 
-static void get_hash (char *name, int *slot_no, label **entry);
+static void get_hash (MIPSImage &img, char *name, int *slot_no, label **entry);
 static void resolve_a_label_sub (MIPSImage &img, label *sym, instruction *inst, mem_addr pc);
 
 
@@ -60,23 +60,14 @@ static void resolve_a_label_sub (MIPSImage &img, label *sym, instruction *inst, 
    labels so they can't be seen in other files.	 */
 
 
-static label *local_labels = NULL; /* Labels local to current file. */
-
 
 #define HASHBITS 30
-
-#define LABEL_HASH_TABLE_SIZE 8191
-
-
-/* Map from name of a label to a label structure. */
-
-static label *label_hash_table [LABEL_HASH_TABLE_SIZE];
 
 
 /* Initialize the symbol table by removing and freeing old entries. */
 
 void
-initialize_symbol_table ()
+initialize_symbol_table (MIPSImage &img)
 {
   int i;
 
@@ -84,16 +75,16 @@ initialize_symbol_table ()
   {
     label *x, *n;
 
-    for (x = label_hash_table [i]; x != NULL; x = n)
+    for (x = img.get_label_hash_table()[i]; x != NULL; x = n)
     {
       free (x->name);
       n = x->next;
       free (x);
     }
-    label_hash_table [i] = NULL;
+    img.get_label_hash_table() [i] = NULL;
   }
 
-  local_labels = NULL;
+  img.set_local_labels(NULL);
 }
 
 
@@ -104,7 +95,7 @@ initialize_symbol_table ()
    set ENTRY to be NULL. */
 
 static void
-get_hash (char *name, int *slot_no, label **entry)
+get_hash (MIPSImage &img, char *name, int *slot_no, label **entry)
 {
   int hi;
   int i;
@@ -124,7 +115,7 @@ get_hash (char *name, int *slot_no, label **entry)
 
   *slot_no = hi;
   /* Search table for entry */
-  for (lab = label_hash_table [hi]; lab; lab = lab->next)
+  for (lab = img.get_label_hash_table()[hi]; lab; lab = lab->next)
     if (streq (lab->name, name))
       {
 	*entry = lab;		/* <-- return if found */
@@ -138,12 +129,12 @@ get_hash (char *name, int *slot_no, label **entry)
    if it is not in the table. */
 
 label *
-label_is_defined (char *name)
+label_is_defined (MIPSImage &img, char *name)
 {
   int hi;
   label *entry;
 
-  get_hash (name, &hi, &entry);
+  get_hash (img, name, &hi, &entry);
 
   return (entry);
 }
@@ -158,7 +149,7 @@ lookup_label (MIPSImage &img, char *name)
   int hi;
   label *entry, *lab;
 
-  get_hash (name, &hi, &entry);
+  get_hash (img, name, &hi, &entry);
 
   if (entry != NULL)
     return (entry);
@@ -172,8 +163,8 @@ lookup_label (MIPSImage &img, char *name)
   lab->gp_flag = 0;
   lab->uses = NULL;
 
-  lab->next = label_hash_table [hi];
-  label_hash_table [hi] = lab;
+  lab->next = img.get_label_hash_table()[hi];
+  img.get_label_hash_table()[hi] = lab;
   return lab;			/* <-- return if created */
 }
 
@@ -203,8 +194,8 @@ record_label (MIPSImage &img, char *name, mem_addr address, int resolve_uses)
 
   if (!l->global_flag)
     {
-      l->next_local = local_labels;
-      local_labels = l;
+      l->next_local = img.get_local_labels();
+      img.set_local_labels(l);
     }
   return (l);
 }
@@ -407,20 +398,20 @@ flush_local_labels (MIPSImage &img, int issue_undef_warnings)
 {
   label *l;
 
-  for (l = local_labels; l != NULL; l = l->next_local)
+  for (l = img.get_local_labels(); l != NULL; l = l->next_local)
     {
       int hi;
       label *entry, *lab, *p;
 
-      get_hash (l->name, &hi, &entry);
+      get_hash (img, l->name, &hi, &entry);
 
-      for (lab = label_hash_table [hi], p = NULL;
+      for (lab = img.get_label_hash_table()[hi], p = NULL;
 	   lab;
 	   p = lab, lab = lab->next)
 	if (lab == entry)
 	  {
 	    if (p == NULL)
-	      label_hash_table [hi] = lab->next;
+	      img.get_label_hash_table()[hi] = lab->next;
 	    else
 	      p->next = lab->next;
 	    if (issue_undef_warnings && entry->addr == 0 && !entry->const_flag)
@@ -430,7 +421,7 @@ flush_local_labels (MIPSImage &img, int issue_undef_warnings)
 	    break;
 	  }
     }
-  local_labels = NULL;
+  img.set_local_labels(NULL);
 }
 
 
@@ -457,7 +448,7 @@ print_symbols (MIPSImage &img)
   label *l;
 
   for (i = 0; i < LABEL_HASH_TABLE_SIZE; i ++)
-    for (l = label_hash_table [i]; l != NULL; l = l->next)
+    for (l = img.get_label_hash_table()[i]; l != NULL; l = l->next)
       write_output (img, message_out, "%s%s at 0x%08x\n",
 		    l->global_flag ? "g\t" : "\t", l->name, l->addr);
 }
@@ -472,7 +463,7 @@ print_undefined_symbols (MIPSImage &img)
   label *l;
 
   for (i = 0; i < LABEL_HASH_TABLE_SIZE; i ++)
-    for (l = label_hash_table [i]; l != NULL; l = l->next)
+    for (l = img.get_label_hash_table()[i]; l != NULL; l = l->next)
       if (l->addr == 0)
 	write_output (img, message_out, "%s\n", l->name);
 }
@@ -483,7 +474,7 @@ print_undefined_symbols (MIPSImage &img)
    are undefined. */
 
 char *
-undefined_symbol_string ()
+undefined_symbol_string (MIPSImage &img)
 {
   int buffer_length = 128;
   int string_length = 0;
@@ -493,7 +484,7 @@ undefined_symbol_string ()
   label *l;
 
   for (i = 0; i < LABEL_HASH_TABLE_SIZE; i ++)
-    for (l = label_hash_table[i]; l != NULL; l = l->next)
+    for (l = img.get_label_hash_table()[i]; l != NULL; l = l->next)
       if (l->addr == 0)
       {
 	int name_length = (int)strlen(l->name);
