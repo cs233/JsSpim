@@ -18,9 +18,9 @@ typedef struct regimage {
 	mem_addr PC, nPC;
 
 	/* Floating Point Coprocessor (1) registers: */
-	double *FPR;		/* Dynamically allocate so overlay */
-	float *FGR;		/* is possible */
-	int *FWR;		/* is possible */
+	double *FPR = 0;		/* Dynamically allocate so overlay */
+	float *FGR = 0;		/* is possible */
+	int *FWR = 0;		/* is possible */
 
 	/* Coprocessor registers: */
 	reg_word CCR[4][32], CPR[4][32];
