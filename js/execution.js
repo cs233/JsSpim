@@ -54,6 +54,9 @@ class Execution {
     }
 
     static togglePlay() {
+        if (!Execution.started) { // TODO: REMOVE. TEMPORARY FIX FOR PROOF OF CONCEPT
+            Module.run_entire_program();
+        }
         Execution.started = true;
         if (Execution.playing) {
             Execution.playing = false;
@@ -63,7 +66,7 @@ class Execution {
             Elements.playButton.innerHTML = "Pause";
             if (Execution.updateDrawTmeId !== undefined)
                 window.cancelAnimationFrame(Execution.updateDrawTmeId)
-            window.requestAnimationFrame(Execution.play);
+            window.requestAnimationFrame(Execution.updateUI);
         }
     }
 
@@ -105,7 +108,21 @@ class Execution {
         } else {
             Execution.step(Math.floor(Execution.draw_cycle)); // This number refers to the number of cycles to elapse before the program draws to the screen
         }
-        window.requestAnimationFrame(Execution.play);
+        // window.requestAnimationFrame(Execution.play);
+        window.requestAnimationFrame(Execution.updateUI);
+    }
+
+    static updateUI(_timestamp) {
+        if (Execution.playing) {
+            if (Module.lockSimulator(100)) { // make this magic number related to the refresh rate of the monitor
+                RegisterUtils.update();
+                MemoryUtils.update();
+                InstructionUtils.highlightCurrentInstruction();
+
+                Module.unlockSimulator();
+            }
+            window.requestAnimationFrame(Execution.updateUI);
+        }
     }
 
     static getDrawCycleStep(speed, refreshRateScale) {

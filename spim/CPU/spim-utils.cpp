@@ -373,7 +373,7 @@ step_program (MIPSImage &img, bool display, bool cont_bkpt, bool* continuable)
     return false;
 }
 
-bool run_spim_program(std::vector<MIPSImage> &imgs, int steps, bool display, bool cont_bkpt, bool* continuable) {
+bool run_spim_program(std::vector<MIPSImage> &imgs, int steps, bool display, bool cont_bkpt, bool* continuable, std::timed_mutex &mtx) {
   int pgrm_done;
 
   *continuable = true;
@@ -383,6 +383,7 @@ bool run_spim_program(std::vector<MIPSImage> &imgs, int steps, bool display, boo
 
     bool bkpt_occurred = false;
 
+    std::lock_guard<std::timed_mutex> lock(mtx);
     for (auto &img : imgs) {
       if (!cont_bkpt && inst_is_breakpoint(img, img.reg_image().PC)) {
         bkpt_occurred = true;

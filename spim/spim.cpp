@@ -39,7 +39,10 @@
 #include <unistd.h>
 #include <stdio.h>
 #include <stdarg.h>
+#include <chrono>
+#include <mutex>
 #include <string>
+#include <thread>
 #include <vector>
 
 #include "CPU/spim.h"
@@ -74,6 +77,7 @@ std::vector<MIPSImage> make_ctxs() {
 }
 
 static std::vector<MIPSImage> ctxs = make_ctxs();
+static std::timed_mutex simulator_mtx;
 
 static str_stream ss;
 void init() {
@@ -97,12 +101,23 @@ void init() {
   ctxs = initial_ctxs;
 }
 
+int start_program() {
+    step(0, false);
+    return 0;
+}
+
+int run_entire_program() {
+    std::thread t(start_program);
+    t.detach();
+    return 0;
+}
 
 int step(int step_size, bool cont_bkpt) {
   if (step_size == 0) step_size = DEFAULT_RUN_STEPS;
 
   bool continuable, bp_encountered;
-  bp_encountered = run_spim_program(ctxs, step_size, false, cont_bkpt, &continuable);
+
+  bp_encountered = run_spim_program(ctxs, step_size, false, cont_bkpt, &continuable, simulator_mtx);
 
   if (!continuable) { // finished
     printf("\n"); // to flush output
@@ -130,6 +145,20 @@ bool add_ctx_breakpoint(mem_addr addr, int ctx) {
 }
 
 #ifdef WASM
+
+EMSCRIPTEN_BINDINGS(run_entire_program) { function("run_entire_program", &run_entire_program); }
+
+void unlockSimulator() {
+    simulator_mtx.unlock();
+}
+
+bool lockSimulator(int timeout_usec) {
+   return simulator_mtx.try_lock_for(std::chrono::microseconds(timeout_usec)); // to prevent main thread from holding and waiting
+}
+
+EMSCRIPTEN_BINDINGS(unlockSimulator) { function("unlockSimulator", &unlockSimulator); }
+EMSCRIPTEN_BINDINGS(lockSimulator) { function("lockSimulator", &lockSimulator); }
+
 std::string getUserText(int ctx) {
   MIPSImage &img = ctxs[ctx]; // will exception if ctx out of bounds
   ss_clear(&ss);
@@ -279,3 +308,4 @@ void put_console_char(char c) {
   putc(c, stdout);
   fflush(stdout);
 }
+

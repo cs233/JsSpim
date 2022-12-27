@@ -34,6 +34,7 @@
 #define SPIM_UTILS_H
 
 #include <vector>
+#include <mutex>
 #include "image.h"
 #include "inst.h"
 
@@ -79,7 +80,7 @@ void list_breakpoints (MIPSImage &img);
 name_val_val *map_int_to_name_val_val (name_val_val tbl[], int tbl_len, int num);
 name_val_val *map_string_to_name_val_val (name_val_val tbl[], int tbl_len, char *id);
 bool read_assembly_file (MIPSImage &img, char *fpath);
-bool run_spim_program(std::vector<MIPSImage> &ctxs, int steps, bool display, bool cont_bkpt, bool* continuable);
+bool run_spim_program(std::vector<MIPSImage> &ctxs, int steps, bool display, bool cont_bkpt, bool* continuable, std::timed_mutex &mtx);
 bool run_spimbot_program (int steps, bool display, bool cont_bkpt, bool* continuable);
 mem_addr starting_address (MIPSImage &img);
 char *str_copy (MIPSImage &img, char *str);
