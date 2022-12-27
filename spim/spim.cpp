@@ -78,6 +78,7 @@ std::vector<MIPSImage> make_ctxs() {
 
 static std::vector<MIPSImage> ctxs = make_ctxs();
 static std::timed_mutex simulator_mtx;
+static unsigned long intermidate_cycle_delay_usec = 0;
 
 static str_stream ss;
 void init() {
@@ -117,7 +118,7 @@ int step(int step_size, bool cont_bkpt) {
 
   bool continuable, bp_encountered;
 
-  bp_encountered = run_spim_program(ctxs, step_size, false, cont_bkpt, &continuable, simulator_mtx);
+  bp_encountered = run_spim_program(ctxs, step_size, false, cont_bkpt, &continuable, simulator_mtx, intermidate_cycle_delay_usec);
 
   if (!continuable) { // finished
     printf("\n"); // to flush output
@@ -158,6 +159,12 @@ bool lockSimulator(int timeout_usec) {
 
 EMSCRIPTEN_BINDINGS(unlockSimulator) { function("unlockSimulator", &unlockSimulator); }
 EMSCRIPTEN_BINDINGS(lockSimulator) { function("lockSimulator", &lockSimulator); }
+
+void setDelay(unsigned long delay_usec) {
+    intermidate_cycle_delay_usec = delay_usec;
+}
+
+EMSCRIPTEN_BINDINGS(setDelay) { function("setDelay", &setDelay); }
 
 std::string getUserText(int ctx) {
   MIPSImage &img = ctxs[ctx]; // will exception if ctx out of bounds

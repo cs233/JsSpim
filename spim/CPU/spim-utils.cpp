@@ -31,10 +31,12 @@
 */
 
 
+#include <chrono>
 #include <stdio.h>
 #include <ctype.h>
 #include <string.h>
 #include <stdarg.h>
+#include <thread>
 
 #include "spim.h"
 #include "version.h"
@@ -373,7 +375,7 @@ step_program (MIPSImage &img, bool display, bool cont_bkpt, bool* continuable)
     return false;
 }
 
-bool run_spim_program(std::vector<MIPSImage> &imgs, int steps, bool display, bool cont_bkpt, bool* continuable, std::timed_mutex &mtx) {
+bool run_spim_program(std::vector<MIPSImage> &imgs, int steps, bool display, bool cont_bkpt, bool* continuable, std::timed_mutex &mtx, const unsigned long &delay_usec) {
   int pgrm_done;
 
   *continuable = true;
@@ -382,6 +384,10 @@ bool run_spim_program(std::vector<MIPSImage> &imgs, int steps, bool display, boo
     pgrm_done = 0;
 
     bool bkpt_occurred = false;
+
+    if (delay_usec) {
+        std::this_thread::sleep_for(std::chrono::microseconds(delay_usec));
+    }
 
     std::lock_guard<std::timed_mutex> lock(mtx);
     for (auto &img : imgs) {

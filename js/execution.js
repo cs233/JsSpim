@@ -139,6 +139,25 @@ class Execution {
         }
     }
 
+    static getCycleDelay(speed) {
+        // [1 / 30, 8192] cycles range given a domain speed of [1, 100]
+        // need to calculate seconds / cycle
+        // [0.5 sec, 2.03 usec]
+        if (speed >= 100) {
+            // do not delay whatsoever
+            return 0;
+        } else if (speed >= 20) {
+            // Exponential after speed of 20
+            // range of [25000 usec, 2.03 usec)
+            const b = 1.1249119103644276; // assume base 2: 2 ** ((log(25000) - log(10 ** 6 / (8192 * 60))) / 80)
+            const a = 263214.8025904987; // 25000 / b ** -20
+            return Math.round(a * Math.pow(b, -speed));
+        } else {
+            // Linear below 20
+            return Math.round(-23750 * speed + 0.5e6);
+        }
+    }
+
     static getMedianRefreshRate() {
         var refreshRatesMs = [];
         for (var i = 1; i < Execution.previousDrawTimes.length; i++) {
@@ -159,6 +178,8 @@ class Execution {
 
     static setSpeed(newSpeed) {
         Execution.speed = newSpeed;
+        Module.setDelay(Execution.getCycleDelay(newSpeed));
+        console.log("Set speed delay to " + Execution.getCycleDelay(newSpeed) + "usec");
         if (Execution.started) return;
         Elements.playButton.innerHTML = (Execution.speed === Execution.maxSpeed) ? "Run" : "Play";
     }
