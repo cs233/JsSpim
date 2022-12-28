@@ -39,6 +39,31 @@ make -C build/
 
 You can append `-j<num_of_threads_on_your_machine>` to `make` parallelize the build process.
 
+You can view any extra `cmake` configuration variables with `cmake -B build/ -LH`.
+
+Example output of variables:
+```
+-- Cache values
+// Choose the type of build, options are: None Debug Release RelWithDebInfo MinSizeRel ...
+CMAKE_BUILD_TYPE:STRING=
+
+// Install path prefix, prepended onto install directories.
+CMAKE_INSTALL_PREFIX:PATH=/usr/local
+
+// You can add additional debug linker flags here
+EXTRA_DEBUG_LINKER_FLAGS:BOOL=OFF
+
+// Build to WASM Code
+WASM:BOOL=0
+```
+
+You can change these by adding them like `-D<variable>=<value>` similar to compiler defines.
+
+If you have to remake the CMake configuration (e.g. switching to a different target host), run:
+```
+rm -r build/CMakeFiles/ build/CMakeCache.txt
+```
+
 ## Built With
 
 - [Spim](http://spimsimulator.sourceforge.net/) - The original simulator written in C++
