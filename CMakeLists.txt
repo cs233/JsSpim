@@ -51,7 +51,7 @@ add_compile_definitions(
     K_TEXT_SIZE=65536
 )
 
-if (WASM)
+if (EMSCRIPTEN)
     add_executable(wasm spim/spim.cpp)
 else()
     add_executable(wasm main.cpp spim/spim.cpp)
@@ -60,14 +60,14 @@ target_link_directories(wasm PUBLIC spim/CPU/)
 add_subdirectory(spim/CPU)
 
 target_link_libraries(wasm spim)
-if (WASM)
+if (EMSCRIPTEN)
     target_include_directories(wasm PUBLIC $ENV{EMSCRIPTEN}/system/include/)
 endif()
 
 add_compile_options(-I. -I$CPU -Wall -pedantic -Wextra -Wunused -Wno-write-strings -x c++)
 set_target_properties(wasm PROPERTIES LINK_FLAGS "${LINKER_FLAGS}")
 
-if (WASM)
+if (EMSCRIPTEN)
     add_custom_command(TARGET wasm
         POST_BUILD
         COMMAND sed -i \"s/throw 'getitimer\(\) is not implemented yet'//g\" wasm.js
