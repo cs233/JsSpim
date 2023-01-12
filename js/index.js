@@ -18,12 +18,14 @@ fileList.forEach(filename => {
 var Module = {
     postRun: [main],
     print: (text) => {
-        Elements.output.innerHTML += text + "\n";
+        Elements.output.insertAdjacentHTML("beforeend", text + "\n");
         Elements.output.scrollTop = Elements.output.scrollHeight;
+        console.log("from  module: " + text);
     },
     printErr: (text) => {
-        Elements.log.innerHTML += text + "\n";
+        Elements.log.insertAdjacentText("beforeend", text + "\n");
         Elements.log.scrollTop = Elements.output.scrollHeight;
+        console.error("from  module: " + text);
     }
 };
 
