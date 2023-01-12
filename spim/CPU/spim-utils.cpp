@@ -351,27 +351,16 @@ copy_int_to_stack (MIPSImage &img, int n)
 bool
 step_program (MIPSImage &img, bool display, bool cont_bkpt, bool* continuable)
 {
-  bool result = false;
-
-  if (inst_is_breakpoint (img, img.reg_image().PC)) {
-    mem_addr addr = img.reg_image().PC;
-    delete_breakpoint(img, addr);
     img.reg_image().exception_occurred = false;
     *continuable = spim_step(img, display);
-    add_breakpoint(img, addr);
-  } else {
-    img.reg_image().exception_occurred = false;
-    *continuable = spim_step(img, display);
-  }
 
-  if (img.reg_image().exception_occurred && CP0_ExCode(img.reg_image()) == ExcCode_Bp)
-  {
-      /* Turn off EXL bit, so subsequent interrupts set EPC since the break is
+    if (img.reg_image().exception_occurred && CP0_ExCode(img.reg_image()) == ExcCode_Bp) {
+        /* Turn off EXL bit, so subsequent interrupts set EPC since the break is
       handled by SPIM code, not MIPS code. */
-      img.reg_image().CP0_Status &= ~CP0_Status_EXL;
-      return true;
-  }
-  else
+        img.reg_image().CP0_Status &= ~CP0_Status_EXL;
+        return true;
+    }
+
     return false;
 }
 
@@ -390,11 +379,14 @@ bool run_spim_program(std::vector<MIPSImage> &imgs, int steps, bool display, boo
     }
 
     std::lock_guard<std::timed_mutex> lock(mtx);
-    for (auto &img : imgs) {
-      if (!cont_bkpt && inst_is_breakpoint(img, img.reg_image().PC)) {
-        bkpt_occurred = true;
-        error(img, "Breakpoint encountered at 0x%08x\n", img.reg_image().PC);
-      }
+    if (!cont_bkpt) {
+        for (auto & img : imgs) {
+            auto res = img.breakpoints().find(img.reg_image().PC);
+            if (res != img.breakpoints().end()) {
+                bkpt_occurred = true;
+                error(img, "Breakpoint encountered at 0x%08x\n", img.reg_image().PC);
+            }
+        }
     }
 
     if (bkpt_occurred) {
@@ -450,18 +442,15 @@ run_spimbot_program (int steps, bool display, bool cont_bkpt, bool* continuable)
 bool
 add_breakpoint (MIPSImage &img, mem_addr addr)
 {
-  breakpoint new_bkpt{addr: addr, inst: NULL};
-  if ((new_bkpt.inst = set_breakpoint (img, addr)) != NULL) {
-    img.breakpoints().insert({addr, new_bkpt});
+    const auto [_, ok] = img.breakpoints().emplace(addr, addr);
+
+    if (!ok) {
+        error (img, "Cannot put a breakpoint at address 0x%08x\n", addr);
+        return false;
+    }
+
     error(img, "Added breakpoint at address 0x%08x\n", addr);
     return true;
-  } else {
-    if (exception_occurred)
-	    error (img, "Cannot put a breakpoint at address 0x%08x\n", addr);
-    else
-	    error (img, "No instruction to breakpoint at address 0x%08x\n", addr);
-    return false;
-  }
 }
 
 
@@ -470,16 +459,15 @@ add_breakpoint (MIPSImage &img, mem_addr addr)
 bool
 delete_breakpoint (MIPSImage &img, mem_addr addr)
 {
-  auto res = img.breakpoints().find(addr);
-  if (res != img.breakpoints().end()) {
-    breakpoint &b = res->second;
-    set_mem_inst (img, addr, b.inst);
-    img.breakpoints().erase(res);
+    const auto ok = img.breakpoints().erase(addr);
+
+    if (!ok) {
+        error (img, "No breakpoint to delete at 0x%08x\n", addr);
+        return false;
+    }
+
+    error (img, "Deleted breakpoint at 0x%08x\n", addr);
     return true;
-  } else {
-    error (img, "No breakpoint to delete at 0x%08x\n", addr);
-    return false;
-  }
 }
 
 // Should delete all breakpoints for a given context
