@@ -7,7 +7,7 @@ project(JsSpim)
 
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_EXPORT_COMPILE_COMMANDS 1) # helps out clangd LSP
-option(EXTRA_DEBUG_LINKER_FLAGS "You can add additional debug linker flags here" "")
+set(EXTRA_DEBUG_LINKER_FLAGS "" CACHE STRING "You can add additional debug linker flags here")
 
 list(APPEND DEBUG_PROFILES "Debug" "RelWithDebugInfo")
 
@@ -19,14 +19,15 @@ if (EMSCRIPTEN)
                 OR using 'emcmake cmake ..' to build")
     endif ()
 
-    if (${EMSCRIPTEN_VERSION} VERSION_LESS "2.0.14")
-        message(FATAL_ERROR "EMSCRIPTEN version looks too old. Was ${EMSCRIPTEN_VERSION}, should be at least 2.0.24.")
+    if (${EMSCRIPTEN_VERSION} VERSION_LESS "3.0.0")
+        message(FATAL_ERROR "EMSCRIPTEN version looks too old. Was ${EMSCRIPTEN_VERSION}, should be at least 3.0.0.")
     endif ()
 
     set(DEFAULT_EXCEPTION_HANDLER "\"/usr/share/spim/exceptions.s\"")
-    set(LINKER_FLAGS "-pthread -lm --bind -s WASM=1 -s PROXY_TO_PTHREAD -s ALLOW_MEMORY_GROWTH -s FORCE_FILESYSTEM=1 -s ENVIRONMENT=web,worker -s EXPORTED_RUNTIME_METHODS=['ccall','cwrap'] --preload-file spim/CPU/exceptions.s@${DEFAULT_EXCEPTION_HANDLER}") # -s INITIAL_MEMORY=576mb -fsanitize=undefined -s MAXIMUM_MEMORY=4gb -s IMPORTED_MEMORY -s SAFE_HEAP=1 -s SAFE_HEAP_LOG=1 -s INITIAL_MEMORY=512mb -fsanitize=address # --post-js ${CMAKE_SOURCE_DIR}/src/JS/JavaScriptLoader.js --no-entry
+    set(LINKER_FLAGS "-s EXIT_RUNTIME=0 -s PROXY_TO_PTHREAD -s PTHREAD_POOL_SIZE_STRICT=0 -s NO_DISABLE_EXCEPTION_CATCHING -s INITIAL_MEMORY=512MB -s DEFAULT_PTHREAD_STACK_SIZE=4MB -s STACK_SIZE=4MB -pthread -lm -lembind -s WASM=1 -s ALLOW_MEMORY_GROWTH -s FORCE_FILESYSTEM=1 -s ENVIRONMENT=web,worker -s EXPORTED_RUNTIME_METHODS=['ccall','cwrap'] --preload-file spim/CPU/exceptions.s@${DEFAULT_EXCEPTION_HANDLER}") # -s INITIAL_MEMORY=576mb -fsanitize=undefined -s MAXIMUM_MEMORY=4gb -s IMPORTED_MEMORY -s SAFE_HEAP=1 -s SAFE_HEAP_LOG=1 -s INITIAL_MEMORY=512mb -fsanitize=address # --post-js ${CMAKE_SOURCE_DIR}/src/JS/JavaScriptLoader.js --no-entry
 
-    if (${CMAKE_BUILD_TYPE} AND ${CMAKE_BUILD_TYPE} IN_LIST DEBUG_PROFILES)
+    if (CMAKE_BUILD_TYPE AND ${CMAKE_BUILD_TYPE} IN_LIST DEBUG_PROFILES)
+        message("Adding additional Emscripten debug flags")
         string(JOIN " " ${LINKER_FLAGS} ${LINKER_FLAGS} "-gdwarf-5 -s ASSERTIONS=2" ${EXTRA_DEBUG_LINKER_FLAGS})
     endif()
 
@@ -35,8 +36,8 @@ if (EMSCRIPTEN)
 else()
     message("Preparing native Makefile")
     set(DEFAULT_EXCEPTION_HANDLER "\"spim/CPU/exceptions.s\"")
-    set(LINKER_FLAGS "") # -g
-    if (${CMAKE_BUILD_TYPE} AND ${CMAKE_BUILD_TYPE} IN_LIST DEBUG_PROFILES)
+    set(LINKER_FLAGS "-pthread") # -g
+    if (CMAKE_BUILD_TYPE AND ${CMAKE_BUILD_TYPE} IN_LIST DEBUG_PROFILES)
         string(JOIN " " ${LINKER_FLAGS} ${LINKER_FLAGS} ${EXTRA_DEBUG_LINKER_FLAGS})
     endif()
     # add spim.cpp and spim.h
@@ -52,17 +53,14 @@ add_compile_definitions(
 )
 
 if (EMSCRIPTEN)
-    add_executable(wasm spim/spim.cpp)
+    add_executable(wasm spim/spim.cpp spim/worker.cpp)
 else()
-    add_executable(wasm main.cpp spim/spim.cpp)
+    add_executable(wasm spim/spim.cpp spim/worker.cpp) # main.cpp
 endif()
 target_link_directories(wasm PUBLIC spim/CPU/)
 add_subdirectory(spim/CPU)
 
 target_link_libraries(wasm spim)
-if (EMSCRIPTEN)
-    target_include_directories(wasm PUBLIC $ENV{EMSCRIPTEN}/system/include/)
-endif()
 
 add_compile_options(-I. -I$CPU -Wall -pedantic -Wextra -Wunused -Wno-write-strings -x c++)
 set_target_properties(wasm PROPERTIES LINK_FLAGS "${LINKER_FLAGS}")

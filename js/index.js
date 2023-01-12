@@ -20,7 +20,6 @@ fileList.forEach(filename => {
 });
 
 var Module = {
-    postRun: [main],
     print: (text) => {
         Elements.output.insertAdjacentHTML("beforeend", text + "\n");
         Elements.output.scrollTop = Elements.output.scrollHeight;
@@ -30,6 +29,10 @@ var Module = {
         Elements.log.insertAdjacentText("beforeend", text + "\n");
         Elements.log.scrollTop = Elements.output.scrollHeight;
         console.error("from  module: " + text);
+    },
+    onRuntimeInitialized: async () => {
+        console.log("Now setting up UI");
+        await main();
     }
 };
 

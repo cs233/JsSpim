@@ -34,9 +34,12 @@
 #define SPIM_UTILS_H
 
 #include <vector>
+#include <set>
+#include <map>
 #include <mutex>
 #include "image.h"
 #include "inst.h"
+#include "instruction.h"
 
 
 /* Triple containing a string and two integers.	 Used in tables
@@ -62,7 +65,10 @@ typedef struct bkptrec
 
 extern bkpt *bkpts;
 
-
+typedef struct {
+    std::set<unsigned int> finished_ctxs;
+    std::map<unsigned int, mem_addr> bp_encountered_ctxs;
+} cycle_result_t;
 
 /* Exported functions: */
 
@@ -81,6 +87,7 @@ name_val_val *map_int_to_name_val_val (name_val_val tbl[], int tbl_len, int num)
 name_val_val *map_string_to_name_val_val (name_val_val tbl[], int tbl_len, char *id);
 bool read_assembly_file (MIPSImage &img, char *fpath);
 bool run_spim_program(std::vector<MIPSImage> &ctxs, int steps, bool display, bool cont_bkpt, bool* continuable, std::timed_mutex &mtx, const unsigned long &delay_usec);
+cycle_result_t run_spim_cycle_multi_ctx(std::map<unsigned int, MIPSImage> &imgs, bool cont_bkpt);
 bool run_spimbot_program (int steps, bool display, bool cont_bkpt, bool* continuable);
 mem_addr starting_address (MIPSImage &img);
 char *str_copy (MIPSImage &img, char *str);

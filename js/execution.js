@@ -19,7 +19,8 @@ class Execution {
         Elements.output.innerHTML = '';
         Elements.log.innerHTML = '';
 
-        Module.init();
+        Module.reset(); // 2, [0, 1]);
+        while (!Module.lockSimulator(100));
         RegisterUtils.init();
         MemoryUtils.init();
 
@@ -30,13 +31,15 @@ class Execution {
             InstructionUtils.init();
             InstructionUtils.highlightCurrentInstruction();
         }
+        Module.unlockSimulator();
+
         if (Execution.updateDrawTmeId !== undefined)
             window.cancelAnimationFrame(Execution.updateDrawTmeId)
         Execution.updateDrawTmeId = window.requestAnimationFrame(Execution.updateDrawTme);
     }
 
     static step(stepSize = 1) {
-        const result = Module.step(stepSize, Execution.playing ? Execution.skipBreakpoint : true);
+        const result = Module.step(stepSize); // , Execution.playing ? Execution.skipBreakpoint : true);
 
         if (result === 0)  // finished
             Execution.finish();
@@ -54,14 +57,16 @@ class Execution {
     }
 
     static togglePlay() {
-        if (!Execution.started) { // TODO: REMOVE. TEMPORARY FIX FOR PROOF OF CONCEPT
-            Module.run_entire_program();
-        }
+        // if (!Execution.started) { // TODO: REMOVE. TEMPORARY FIX FOR PROOF OF CONCEPT
+        //     Module.run_entire_program();
+        // }
         Execution.started = true;
         if (Execution.playing) {
+            Module.pause();
             Execution.playing = false;
             Elements.playButton.innerHTML = "Continue"
         } else {
+            Module.play();
             Execution.playing = true;
             Elements.playButton.innerHTML = "Pause";
             if (Execution.updateDrawTmeId !== undefined)
