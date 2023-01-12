@@ -11,9 +11,13 @@
 
 #define NUM_CONTEXTS 2
 
-typedef struct {
+typedef struct breakpoint {
   mem_addr addr;
   instruction *inst;
+
+  breakpoint(mem_addr addr) {
+    this->addr = addr;
+  }
 } breakpoint;
 
 class MIPSImage {
