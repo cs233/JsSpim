@@ -33,6 +33,14 @@ if (EMSCRIPTEN)
 
     set(CMAKE_REQUIRED_FLAGS "${LINKER_FLAGS}")
     add_compile_definitions(WASM)
+    set(DIST_DIR "dist")
+    add_custom_target(build-dist-directory ALL
+        COMMAND ${CMAKE_COMMAND} -E remove_directory ${CMAKE_SOURCE_DIR}/${DIST_DIR}
+        COMMAND ${CMAKE_COMMAND} -E make_directory ${CMAKE_SOURCE_DIR}/${DIST_DIR}
+        COMMAND ${CMAKE_COMMAND} -E copy_directory ${CMAKE_SOURCE_DIR}/js/ ${CMAKE_SOURCE_DIR}/${DIST_DIR}/js/
+        COMMAND ${CMAKE_COMMAND} -E copy_directory ${CMAKE_SOURCE_DIR}/css/ ${CMAKE_SOURCE_DIR}/${DIST_DIR}/css/
+        COMMAND ${CMAKE_COMMAND} -E copy ${CMAKE_SOURCE_DIR}/index.html ${CMAKE_SOURCE_DIR}/${DIST_DIR}/
+    )
 else()
     message("Preparing native Makefile")
     set(DEFAULT_EXCEPTION_HANDLER "\"spim/CPU/exceptions.s\"")
@@ -70,7 +78,7 @@ if (EMSCRIPTEN)
         POST_BUILD
         COMMAND sed -i \"s/throw 'getitimer\(\) is not implemented yet'//g\" wasm.js
         COMMAND sed -i \"s/throw 'setitimer\(\) is not implemented yet'//g\" wasm.js
-        COMMAND mv wasm.* ../
+        COMMAND mv wasm.* ../${DIST_DIR}/
     )
 else()
     add_custom_command(TARGET wasm
