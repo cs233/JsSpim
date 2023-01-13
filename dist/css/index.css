@@ -1,0 +1,115 @@
+body {
+    height: 100vh;
+    width: max-content;
+    margin: auto !important;
+    display: grid;
+    grid-template-areas: "toolbar toolbar toolbar toolbar" "reg text text data" "reg text text data" "reg text text gap3" "reg text text stack" "reg gap2 gap2 stack" "reg output log stack";
+    grid-template-rows: min-content 1fr 1fr 10px 1fr 10px min-content;
+    grid-template-columns: 16rem 26rem 26rem 36rem;
+    grid-column-gap: 10px;
+    padding-bottom: 10px;
+}
+
+pre {
+    width: fit-content;
+    margin: auto;
+}
+
+.card {
+    display: flex;
+    flex-direction: column;
+    height: 100%;
+}
+
+.card-body {
+    overflow: auto;
+}
+
+.card-header * {
+    margin: 0;
+}
+
+.segment-title {
+    text-align: center;
+    font-weight: bold;
+    cursor: initial !important;
+}
+
+#toolbar {
+    grid-area: toolbar;
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: space-around;
+}
+
+#regs-panel {
+    grid-area: reg;
+}
+
+
+/* for long binary values */
+
+#regs-panel pre {
+    margin-left: 1rem;
+    white-space: pre-wrap;
+}
+
+#text-panel {
+    grid-area: text;
+}
+
+#text-panel pre {
+    cursor: pointer;
+    width: unset;
+}
+
+#data-panel {
+    grid-area: data;
+}
+
+#stack-panel {
+    grid-area: stack;
+}
+
+#stack-wrapper {
+    height: 100%;
+    display: flex;
+    align-items: flex-end;
+}
+
+#stack-content {
+    max-height: 100%;
+    overflow: auto;
+    margin-bottom: 0;
+}
+
+#output-panel {
+    grid-area: output;
+}
+
+#log-panel {
+    grid-area: log;
+}
+
+#output-panel pre,
+#log-panel pre {
+    white-space: pre-wrap;
+    height: 8rem;
+}
+
+#output-panel .card-body,
+#log-panel .card-body {
+    margin: 0;
+}
+
+.data-number {
+    color: #1c00cf;
+}
+
+.highlight {
+    background-color: yellow;
+}
+
+.unused {
+    color: gainsboro;
+}
