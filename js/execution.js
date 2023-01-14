@@ -120,13 +120,32 @@ class Execution {
     static updateUI(_timestamp) {
         if (Execution.playing) {
             if (Module.lockSimulator(100)) { // make this magic number related to the refresh rate of the monitor
+                let status = Execution.processStatus(Module.getStatus());
                 RegisterUtils.update();
                 MemoryUtils.update();
                 InstructionUtils.highlightCurrentInstruction();
 
                 Module.unlockSimulator();
             }
-            window.requestAnimationFrame(Execution.updateUI);
+            if (Execution.playing) {
+                window.requestAnimationFrame(Execution.updateUI);
+            }
+        }
+    }
+
+    static processStatus(status) {
+        switch (status) {
+            case 1: // Not running
+                console.log("Simulator stopped");
+                Execution.finish();
+                break;
+            case -1:
+                console.log("Breakpoint encountered");
+                Execution.skipBreakpoint = true;
+                Execution.playing = false;
+                Elements.playButton.innerHTML = "Continue";
+            default:
+                break;
         }
     }
 

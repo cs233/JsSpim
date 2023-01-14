@@ -13,6 +13,11 @@ std::timed_mutex simulator_mtx; // Mutex for locking the simulator. Will be join
 bool simulator_ready = false;
 static std::thread simulator_thread;
 
+//  1 - Not running/finished
+// -1 - Breakpoint encountered
+//  0 - Status reset
+static int status = 0;
+
 static bool finished = false;
 static std::optional<unsigned long> steps_left = 0;
 static unsigned long cycle_delay_usec = 0; // no need to lock since there is 1 writer
@@ -130,6 +135,12 @@ void set_speed(unsigned long delay_usec) {
     cycle_delay_usec = delay_usec;
 }
 
+int get_simulator_status() {
+    int status_to_return = status;
+    status = 0;
+    return status_to_return;
+}
+
 // Simulator thread
 // Returns status code
 int simulate() {
@@ -153,6 +164,8 @@ int simulate() {
         if (steps_left) {
             steps_left.value()--;
         }
+
+        status = 0;
         ul.unlock();
 
 /*         if (cycle_delay_usec) { */
@@ -183,10 +196,12 @@ int simulate() {
                 error(ctxs.at(ctx_num), "Execution finished\n");
             }
             finished = true;
+            status = 1;
             break;
         } else if (result.bp_encountered_ctxs.size()) {
             cont_bkpt = true;
             steps_left = 0;
+            status = -1;
             for (auto &[ctx_num, bkpt_addr] : result.bp_encountered_ctxs) {
                 error(ctxs.at(ctx_num), "Breakpoint encountered at 0x%08x\n", bkpt_addr);
             }

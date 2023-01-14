@@ -204,6 +204,9 @@ void setDelay(unsigned long delay_usec) {
     set_speed(delay_usec);
 }
 
+int getStatus() {
+    return get_simulator_status();
+}
 
 std::string getUserText(int ctx) {
   MIPSImage &img = ctxs.at(ctx); // will exception if ctx out of bounds
@@ -284,6 +287,7 @@ EMSCRIPTEN_BINDINGS(readSimulationSnapshot) {
     function("getFloatRegVals", &getFloatRegVals);
     function("getDoubleRegVals", &getDoubleRegVals);
     function("getSpecialRegVals", &getSpecialRegVals);
+    function("getStatus", &getStatus);
 }
 
 EMSCRIPTEN_BINDINGS(simulationControls) {

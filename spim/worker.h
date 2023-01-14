@@ -26,5 +26,6 @@ void pause_simulation();
 bool add_breakpoint(int ctx, mem_addr addr);
 int delete_breakpoint(int ctx, mem_addr addr);  
 void set_speed(unsigned long delay_usec);
+int get_simulator_status();
 
 #endif
