@@ -26,7 +26,7 @@ The source code is published at [GitHub](https://github.com/ShawnZhong/JsSpim/)
 
 ### Dependencies
 
-- `emsdk >= 2.0.14`
+- `emsdk == 3.1.14`
 - `bison`
 - `flex`
 
@@ -41,20 +41,14 @@ You can append `-j<num_of_threads_on_your_machine>` to `make` parallelize the bu
 
 You can view any extra `cmake` configuration variables with `cmake -B build/ -LH`.
 
-Example output of variables:
+Here are some of the variables you can change on configuration:
 ```
 -- Cache values
 // Choose the type of build, options are: None Debug Release RelWithDebInfo MinSizeRel ...
 CMAKE_BUILD_TYPE:STRING=
 
-// Install path prefix, prepended onto install directories.
-CMAKE_INSTALL_PREFIX:PATH=/usr/local
-
 // You can add additional debug linker flags here
-EXTRA_DEBUG_LINKER_FLAGS:BOOL=OFF
-
-// Build to WASM Code
-WASM:BOOL=0
+EXTRA_DEBUG_LINKER_FLAGS:STRING=
 ```
 
 You can change these by adding them like `-D<variable>=<value>` similar to compiler defines.

@@ -19,12 +19,17 @@ if (EMSCRIPTEN)
                 OR using 'emcmake cmake ..' to build")
     endif ()
 
-    if (${EMSCRIPTEN_VERSION} VERSION_LESS "3.0.0")
-        message(FATAL_ERROR "EMSCRIPTEN version looks too old. Was ${EMSCRIPTEN_VERSION}, should be at least 3.0.0.")
+    set(MIN_VERSION "3.1.14")
+    set(MAX_VERSION "3.1.14")
+    if (${EMSCRIPTEN_VERSION} VERSION_LESS MIN_VERSION)
+        message(FATAL_ERROR "EMSCRIPTEN version looks too old. Was ${EMSCRIPTEN_VERSION}, should be at least ${MIN_VERSION}.")
+    endif ()
+    if (${EMSCRIPTEN_VERSION} VERSION_GREATER MAX_VERSION)
+        message(FATAL_ERROR "EMSCRIPTEN version is too new. Was ${EMSCRIPTEN_VERSION}, should be at least ${MAX_VERSION}.")
     endif ()
 
     set(DEFAULT_EXCEPTION_HANDLER "\"/usr/share/spim/exceptions.s\"")
-    set(LINKER_FLAGS "-s EXIT_RUNTIME=0 -s PROXY_TO_PTHREAD -s PTHREAD_POOL_SIZE_STRICT=0 -s NO_DISABLE_EXCEPTION_CATCHING -s INITIAL_MEMORY=512MB -s DEFAULT_PTHREAD_STACK_SIZE=4MB -s STACK_SIZE=4MB -pthread -lm -lembind -s WASM=1 -s ALLOW_MEMORY_GROWTH -s FORCE_FILESYSTEM=1 -s ENVIRONMENT=web,worker -s EXPORTED_RUNTIME_METHODS=['ccall','cwrap'] --preload-file spim/CPU/exceptions.s@${DEFAULT_EXCEPTION_HANDLER}") # -s INITIAL_MEMORY=576mb -fsanitize=undefined -s MAXIMUM_MEMORY=4gb -s IMPORTED_MEMORY -s SAFE_HEAP=1 -s SAFE_HEAP_LOG=1 -s INITIAL_MEMORY=512mb -fsanitize=address # --post-js ${CMAKE_SOURCE_DIR}/src/JS/JavaScriptLoader.js --no-entry
+    set(LINKER_FLAGS "-s EXIT_RUNTIME=0 -s PROXY_TO_PTHREAD -s PTHREAD_POOL_SIZE_STRICT=0 -s NO_DISABLE_EXCEPTION_CATCHING -s INITIAL_MEMORY=512MB -s DEFAULT_PTHREAD_STACK_SIZE=4MB -s TOTAL_STACK=4MB -pthread -lm -lembind -s WASM=1 -s ALLOW_MEMORY_GROWTH -s FORCE_FILESYSTEM=1 -s ENVIRONMENT=web,worker -s EXPORTED_RUNTIME_METHODS=['ccall','cwrap'] --preload-file spim/CPU/exceptions.s@${DEFAULT_EXCEPTION_HANDLER}") # -s INITIAL_MEMORY=576mb -fsanitize=undefined -s MAXIMUM_MEMORY=4gb -s IMPORTED_MEMORY -s SAFE_HEAP=1 -s SAFE_HEAP_LOG=1 -s INITIAL_MEMORY=512mb -fsanitize=address # --post-js ${CMAKE_SOURCE_DIR}/src/JS/JavaScriptLoader.js --no-entry
 
     if (CMAKE_BUILD_TYPE AND ${CMAKE_BUILD_TYPE} IN_LIST DEBUG_PROFILES)
         message("Adding additional Emscripten debug flags")
