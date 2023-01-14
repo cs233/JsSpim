@@ -4,11 +4,11 @@ on:
   workflow_dispatch:
     
 jobs:
+  build:
+    uses: ./github/workflows/build.yml
   deploy:
     runs-on: ubuntu-latest
     steps:
-    - uses: ./github/workflows/build.yml
-
     - name: Deploy to GitHub Pages
       uses: peaceiris/actions-gh-pages@v3
       with:
