@@ -10,6 +10,12 @@ jobs:
     runs-on: ubuntu-latest
     needs: build
     steps:
+    - name: Download build-output artifact
+      uses: actions/download-artifact@v3
+      with:
+        name: build-output
+        path: dist/
+
     - name: Deploy to GitHub Pages
       uses: peaceiris/actions-gh-pages@v3
       with:

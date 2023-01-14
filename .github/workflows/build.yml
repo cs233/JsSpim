@@ -33,3 +33,9 @@ jobs:
   
       - name: Build
         run: cmake --build ${{github.workspace}}/build -j
+
+      - name: Create build-output artifact
+        uses: actions/upload-artifact@v3
+        with:
+          name: build-output
+          path: dist/
