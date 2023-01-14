@@ -13,7 +13,8 @@ std::timed_mutex simulator_mtx; // Mutex for locking the simulator. Will be join
 bool simulator_ready = false;
 static std::thread simulator_thread;
 
-//  1 - Not running/finished
+//  1 - Finished
+//  2 - Not running
 // -1 - Breakpoint encountered
 //  0 - Status reset
 static int status = 0;
@@ -83,7 +84,7 @@ void reset(unsigned int max_contexts, std::set<unsigned int> &active_ctxs) {
     simulator_thread = std::thread(simulate);
 }
 
-void step(unsigned additional_steps = 1) {
+void step_simulation(unsigned additional_steps = 1) {
     std::lock_guard<std::mutex> lock(settings_mtx);
     steps_left = steps_left.value_or(0) + additional_steps;
     steps_left_cv.notify_all();
@@ -151,6 +152,7 @@ int simulate() {
         bool continue_after_delay = false;
         while (!finished && (steps_left.value_or(1) == 0 || (delay_usec && !continue_after_delay))) { // check if it should step again (if not set, continue)
             if (steps_left.value_or(1) == 0) {
+                status = 2;
                 steps_left_cv.wait(ul);
             } else {
                 steps_left_cv.wait_for(ul, std::chrono::microseconds(delay_usec));
@@ -161,11 +163,12 @@ int simulate() {
             break;
         }
 
+        status = 0;
+
         if (steps_left) {
             steps_left.value()--;
         }
 
-        status = 0;
         ul.unlock();
 
 /*         if (cycle_delay_usec) { */

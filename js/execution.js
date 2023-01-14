@@ -39,21 +39,9 @@ class Execution {
     }
 
     static step(stepSize = 1) {
-        const result = Module.step(stepSize); // , Execution.playing ? Execution.skipBreakpoint : true);
-
-        if (result === 0)  // finished
-            Execution.finish();
-        else if (result === -1) {  // break point encountered
-            Execution.skipBreakpoint = true;
-            Execution.playing = false;
-            Elements.playButton.innerHTML = "Continue";
-        } else if (result === 1) { // break point not encountered
-            Execution.skipBreakpoint = false;
-        }
-
-        RegisterUtils.update();
-        MemoryUtils.update();
-        InstructionUtils.highlightCurrentInstruction();
+        Module.step(stepSize);
+        Execution.playing = true;
+        requestAnimationFrame(Execution.updateUI);
     }
 
     static togglePlay() {
@@ -119,25 +107,35 @@ class Execution {
 
     static updateUI(_timestamp) {
         if (Execution.playing) {
-            if (Module.lockSimulator(100)) { // make this magic number related to the refresh rate of the monitor
-                let status = Execution.processStatus(Module.getStatus());
-                RegisterUtils.update();
-                MemoryUtils.update();
-                InstructionUtils.highlightCurrentInstruction();
+            Execution.forceUpdateUI();
 
-                Module.unlockSimulator();
-            }
             if (Execution.playing) {
                 window.requestAnimationFrame(Execution.updateUI);
             }
         }
     }
 
+    static forceUpdateUI(_timestamp) {
+        if (Module.lockSimulator(100)) { // make this magic number related to the refresh rate of the monitor
+            let status = Execution.processStatus(Module.getStatus());
+            RegisterUtils.update();
+            MemoryUtils.update();
+            InstructionUtils.highlightCurrentInstruction();
+
+            Module.unlockSimulator();
+        }
+    }
+
     static processStatus(status) {
         switch (status) {
             case 1: // Not running
-                console.log("Simulator stopped");
+                console.log("Simulator finished");
                 Execution.finish();
+                break;
+            case 2:
+                console.log("Simulator stopped");
+                Execution.playing = false;
+                Elements.playButton.innerText = "Continue";
                 break;
             case -1:
                 console.log("Breakpoint encountered");

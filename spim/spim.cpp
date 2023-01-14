@@ -200,6 +200,10 @@ bool lockSimulator(int timeout_usec) {
     return is_locked;
 }
 
+void step(unsigned additional_steps) {
+    step_simulation(additional_steps);
+}
+
 void setDelay(unsigned long delay_usec) {
     set_speed(delay_usec);
 }
