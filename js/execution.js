@@ -143,7 +143,8 @@ class Execution {
                 console.log("Breakpoint encountered");
                 Execution.skipBreakpoint = true;
                 Execution.playing = false;
-                Elements.playButton.innerHTML = "Continue";
+                Elements.playButton.innerText = "Continue";
+                break;
             default:
                 break;
         }
@@ -197,7 +198,7 @@ class Execution {
         Elements.playButton.disabled = true;
         Elements.stepButton.disabled = true;
 
-        Elements.playButton.innerHTML = (Execution.speed === Execution.maxSpeed) ? "Run" : "Play";
+        Elements.playButton.innerText = (Execution.speed === Execution.maxSpeed) ? "Run" : "Play";
     }
 
     static setSpeed(newSpeed) {
