@@ -414,28 +414,28 @@ bool run_spim_program(std::vector<MIPSImage> &imgs, int steps, bool display, boo
 cycle_result_t run_spim_cycle_multi_ctx(std::map<unsigned int, MIPSImage> &imgs, bool cont_bkpt) {
     cycle_result_t result{};
 
-    bool bkpt_occurred = false;
+    bool ctx_finished = false;
+
+    for (auto &[ctx_num, img] : imgs) {
+        bool cont; // Determines if the given context program is finished
+        step_program(img, false, cont_bkpt, &cont);
+
+        if (!cont) {
+            ctx_finished = true;
+            result.finished_ctxs.insert(ctx_num);
+        }
+    }
+
+    if (ctx_finished) {
+        return result;
+    }
 
     if (!cont_bkpt) {
         for (auto &[ctx_num, img] : imgs) {
             auto res = img.breakpoints().find(img.reg_image().PC);
             if (res != img.breakpoints().end()) {
-                bkpt_occurred = true;
                 result.bp_encountered_ctxs.insert({ctx_num, img.reg_image().PC});
             }
-        }
-    }
-
-    if (bkpt_occurred) {
-        return result;
-    }
-
-    for (auto &[ctx_num, img] : imgs) {
-        bool cont; // Determines if the given context program is finished
-        !step_program(img, false, cont_bkpt, &cont);
-
-        if (!cont) {
-            result.finished_ctxs.insert(ctx_num);
         }
     }
 
