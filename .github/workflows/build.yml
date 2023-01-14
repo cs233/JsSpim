@@ -1,0 +1,35 @@
+name: Build
+
+on:
+  workflow_call:
+
+env:
+  EM_VERSION: 3.1.14
+  EM_CACHE_FOLDER: 'emsdk-cache'
+  BUILD_TYPE: Release
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      - name: Setup cache
+        id: cache-system-libraries
+        uses: actions/cache@v3
+        with:
+          path: ${{env.EM_CACHE_FOLDER}}
+          key: ${{env.EM_VERSION}}-${{ runner.os }}
+
+      - name: Install Emscripten
+        uses: mymindstorm/setup-emsdk@v12
+        with:
+          version: ${{env.EM_VERSION}}
+          actions-cache-folder: ${{env.EM_CACHE_FOLDER}}
+
+      - name: Configure CMake
+        run: emcmake cmake . -B ${{github.workspace}}/build -DCMAKE_BUILD_TYPE=${{env.BUILD_TYPE}}
+  
+      - name: Build
+        run: cmake --build ${{github.workspace}}/build -j
