@@ -15,6 +15,7 @@ static std::thread simulator_thread;
 
 //  1 - Finished
 //  2 - Not running
+//  3 - Incremented by at least a step since last check
 // -1 - Breakpoint encountered
 //  0 - Status reset
 static int status = 0;
@@ -165,7 +166,9 @@ int simulate() {
             break;
         }
 
-        status = 0;
+        if (status != 3) {
+            status = 0;
+        }
 
         if (steps_left) {
             steps_left.value()--;
@@ -194,6 +197,7 @@ int simulate() {
         }
 
         ul.lock();
+        status = 3;
         cont_bkpt = false;
 
         if (result.finished_ctxs.size()) {
