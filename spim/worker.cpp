@@ -18,7 +18,15 @@ static std::thread simulator_thread;
 //  3 - Incremented by at least a step since last check
 // -1 - Breakpoint encountered
 //  0 - Status reset
-static int status = 0;
+enum SimulatorStatusCode {
+    BREAKPOINT_ENCOUNTERED = -1,
+    NO_CHANGE = 0,
+    FINISHED_RUNNING = 1,
+    SIMULATOR_WAITING = 2,
+    STEPPED_CYCLE = 3
+};
+
+static SimulatorStatusCode status = SimulatorStatusCode::NO_CHANGE;
 
 static bool finished = false;
 static std::optional<unsigned long> steps_left = 0;
@@ -140,8 +148,8 @@ void set_speed(unsigned long delay_usec) {
 }
 
 int get_simulator_status() {
-    int status_to_return = status;
-    status = 0;
+    int status_to_return = static_cast<int>(status);
+    status = SimulatorStatusCode::NO_CHANGE;
     return status_to_return;
 }
 
@@ -155,7 +163,7 @@ int simulate() {
         bool continue_after_delay = false;
         while (!finished && (steps_left.value_or(1) == 0 || (delay_usec && !continue_after_delay))) { // check if it should step again (if not set, continue)
             if (steps_left.value_or(1) == 0) {
-                status = 2;
+                status = SimulatorStatusCode::SIMULATOR_WAITING;
                 steps_left_cv.wait(ul);
             } else {
                 steps_left_cv.wait_for(ul, std::chrono::microseconds(delay_usec));
@@ -166,8 +174,8 @@ int simulate() {
             break;
         }
 
-        if (status != 3) {
-            status = 0;
+        if (status != SimulatorStatusCode::STEPPED_CYCLE) {
+            status = SimulatorStatusCode::NO_CHANGE;
         }
 
         if (steps_left) {
@@ -197,7 +205,7 @@ int simulate() {
         }
 
         ul.lock();
-        status = 3;
+        status = SimulatorStatusCode::STEPPED_CYCLE;
         cont_bkpt = false;
 
         if (result.finished_ctxs.size()) {
@@ -205,12 +213,12 @@ int simulate() {
                 error(ctxs.at(ctx_num), "Execution finished\n");
             }
             finished = true;
-            status = 1;
+            status = SimulatorStatusCode::FINISHED_RUNNING;
             break;
         } else if (result.bp_encountered_ctxs.size()) {
             cont_bkpt = true;
             steps_left = 0;
-            status = -1;
+            status = SimulatorStatusCode::BREAKPOINT_ENCOUNTERED;
             for (auto &[ctx_num, bkpt_addr] : result.bp_encountered_ctxs) {
                 error(ctxs.at(ctx_num), "Breakpoint encountered at 0x%08x\n", bkpt_addr);
             }
