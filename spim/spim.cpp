@@ -30,6 +30,7 @@
    OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 */
 #include "spim.h"
+#include <ostream>
 
 #ifdef WASM
 #include "emscripten/bind.h"
@@ -304,49 +305,80 @@ EMSCRIPTEN_BINDINGS(simulationControls) {
 }
 #endif
 
+#include <memory>
+#include <string>
+#include <stdexcept>
+
+std::string string_vformat(const std::string& format, va_list args) {
+    int size_s = std::vsnprintf(nullptr, 0, format.c_str(), args) + 1; // Extra space for '\0'
+    if( size_s <= 0 ){ throw std::runtime_error( "Error during formatting." ); }
+    auto size = static_cast<size_t>(size_s);
+    std::unique_ptr<char[]> buf( new char[ size ] );
+    std::vsnprintf(buf.get(), size, format.c_str(), args);
+    return std::string( buf.get(), buf.get() + size - 1 ); // We don't want the '\0' inside
+}
+
+std::pair<char *, int> vformat_alloc(char *format, va_list args) {
+    int size = vsnprintf(NULL, 0, format, args) + 1;
+    char *formatted_string = new char[size];
+    vsprintf(formatted_string, format, args);
+    return std::make_pair(formatted_string, size - 1);
+}
+
 /* Print an error message. */
 
-void error(MIPSImage const &img, char *fmt, ...) {
-  va_list args;
-  va_start(args, fmt);
-  fprintf(stderr, "(%u)\t", img.get_ctx());
-  vfprintf(stderr, fmt, args);
-  fflush(stderr);
-  va_end(args);
+void error(MIPSImage &img, char *fmt, ...) {
+    va_list args;
+    va_start(args, fmt);
+    std::ostream os(img.get_std_err_buf());
+    char *formatted_str;
+    int str_size;
+    std::tie(formatted_str, str_size) = vformat_alloc(fmt, args);
+    os.write(formatted_str, str_size);
+    std::flush(os);
+    va_end(args);
 }
 
 /* Print the error message then exit. */
 
-void fatal_error(MIPSImage const &img, char *fmt, ...) {
-  va_list args;
-  va_start(args, fmt);
-  fmt = va_arg(args, char *);
-  fprintf(stderr, "(%u)\t", img.get_ctx());
-  vfprintf(stderr, fmt, args);
-  fflush(stderr);
-  exit(-1);
+void fatal_error(MIPSImage &img, char *fmt, ...) {
+    va_list args;
+    va_start(args, fmt);
+    fmt = va_arg(args, char *);
+    std::ostream os(img.get_std_err_buf());
+    char *formatted_str;
+    int str_size;
+    std::tie(formatted_str, str_size) = vformat_alloc(fmt, args);
+    os.write(formatted_str, str_size);
+    std::flush(os);
+    exit(-1);
 }
 
 /* Print an error message and return to top level. */
 
-void run_error(MIPSImage const &img, char *fmt, ...) {
-  va_list args;
-  va_start(args, fmt);
-  fprintf(stderr, "(%u)\t", img.get_ctx());
-  vfprintf(stderr, fmt, args);
-  fflush(stderr);
-  va_end(args);
+void run_error(MIPSImage &img, char *fmt, ...) {
+    va_list args;
+    va_start(args, fmt);
+    std::ostream os(img.get_std_err_buf());
+    char *formatted_str;
+    int str_size;
+    std::tie(formatted_str, str_size) = vformat_alloc(fmt, args);
+    os.write(formatted_str, str_size);
+    va_end(args);
 }
 
 /* IO facilities: */
 
-void write_output(MIPSImage const &img, port fp, char *fmt, ...) {
-  va_list args;
-  va_start(args, fmt);
-  fprintf(stdout, "(%u)\t", img.get_ctx());
-  vfprintf(stdout, fmt, args);
-  fflush(stdout);
-  va_end(args);
+void write_output(MIPSImage &img, port fp, char *fmt, ...) {
+    va_list args;
+    va_start(args, fmt);
+    std::ostream os(img.get_std_out_buf());
+    char *formatted_str;
+    int str_size;
+    std::tie(formatted_str, str_size) = vformat_alloc(fmt, args);
+    os.write(formatted_str, str_size);
+    std::flush(os); // TODO: Remove this bc stdout only flushes on \n or explicit flush
+    va_end(args);
 }
 
 /* Simulate the semantics of fgets (not gets) on Unix file. */

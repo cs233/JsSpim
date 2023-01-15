@@ -3,6 +3,7 @@ file(GLOB Spim_SOURCES CONFIGURE_DEPENDS
     "display-utils.cpp"
     "inst.cpp"
     "image.cpp"
+    "image_print_stream.cpp"
     "mem.cpp"
     "run.cpp"
     "spim-utils.cpp"

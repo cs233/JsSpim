@@ -2,10 +2,12 @@
 #include "spim-utils.h"
 #include "image.h"
 
+#include <iostream>
+
 static size_t curr_ctx = 0;
 static size_t num_ctx = NUM_CONTEXTS;
 
-MIPSImage::MIPSImage(int ctx) : ctx(ctx) {}
+MIPSImage::MIPSImage(int ctx) : ctx(ctx), std_out(ctx, std::cout), std_err(ctx, std::cerr) {}
 
 int MIPSImage::get_ctx() const {
     return ctx;
@@ -43,3 +45,10 @@ std::unordered_map<mem_addr, breakpoint> &MIPSImage::breakpoints() {
     return bkpt_map;
 }
 
+std::streambuf *MIPSImage::get_std_out_buf() {
+    return &std_out;
+}
+
+std::streambuf *MIPSImage::get_std_err_buf() {
+    return &std_err;
+}

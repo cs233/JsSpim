@@ -208,6 +208,30 @@ class Execution {
     }
 }
 
+let stdout = ["", ""]
+let stderr = ["", ""]
+
+function writeStdOut(ctx, msg) {
+    stdout[ctx] += msg;
+    console.log("Got message for ctx " + ctx + " stdout: \"" + msg + "\"");
+
+    if (ctx == 0) {
+        Elements.output.insertAdjacentHTML("beforeend", msg);
+        Elements.output.scrollTop = Elements.output.scrollHeight;
+    }
+}
+
+function writeStdErr(ctx, msg) {
+    stderr[ctx] += msg;
+    console.log("Got message for ctx " + ctx + " stderr");
+
+    if (ctx == 0) {
+        Elements.log.insertAdjacentText("beforeend", msg);
+        Elements.log.scrollTop = Elements.output.scrollHeight;
+        console.error("from  module: " + msg);
+    }
+}
+
 const median = arr => {
     const mid = Math.floor(arr.length / 2),
         nums = [...arr].sort((a, b) => a - b);

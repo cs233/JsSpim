@@ -3,6 +3,7 @@
 
 #include <unordered_map>
 
+#include "image_print_stream.h"
 #include "mem_image.h"
 #include "reg_image.h"
 #include "label.h"
@@ -31,6 +32,8 @@ class MIPSImage {
     label *local_labels = NULL;
     label *label_hash_table[LABEL_HASH_TABLE_SIZE] = {0};
 
+    MIPSImagePrintStream std_out;
+    MIPSImagePrintStream std_err;
   public:
     MIPSImage(int ctx);
 
@@ -45,6 +48,8 @@ class MIPSImage {
     const reg_image_t &regview_image() const;
     std::unordered_map<mem_addr, breakpoint> &breakpoints();
 
+    std::streambuf *get_std_out_buf();
+    std::streambuf *get_std_err_buf();
 };
 
 #define DATA_PC(img) (img.reg_image().in_kernel ? img.reg_image().next_k_data_pc : img.reg_image().next_data_pc)
