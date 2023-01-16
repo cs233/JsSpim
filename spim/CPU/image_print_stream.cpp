@@ -58,6 +58,6 @@ int MIPSImagePrintStream::sync() {
     delete[] s;
     return -1;
 #else
-    return sink.write(pbase(), n);
+    return !((bool) sink.write(pbase(), n));
 #endif
 }
