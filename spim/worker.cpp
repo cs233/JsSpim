@@ -225,6 +225,14 @@ int simulate() {
         }
     }
 
+    // Flush all buffers
+    for (auto &[ctx, img] : ctxs) {
+        std::ostream os_out(img.get_std_out_buf());
+        std::ostream os_err(img.get_std_err_buf());
+
+        os_out.flush();
+        os_err.flush();
+    }
     fprintf(stderr, "Cycles elpased: %lu\n", cycles_elapsed);
     fflush(stderr);
     // TODO: send status code here aand also return it
