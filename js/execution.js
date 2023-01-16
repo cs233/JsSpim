@@ -116,8 +116,9 @@ class Execution {
     }
 
     static forceUpdateUI(_timestamp) {
-        if (Module.lockSimulator(100)) { // make this magic number related to the refresh rate of the monitor
-            let status = Execution.processStatus(Module.getStatus());
+        let status = Module.getStatus();
+        Execution.processStatus(status);
+        if (status != 0 && Module.lockSimulator(100)) { // make this magic number related to the refresh rate of the monitor
             RegisterUtils.update();
             MemoryUtils.update();
             InstructionUtils.highlightCurrentInstruction();
