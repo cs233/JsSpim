@@ -377,7 +377,6 @@ void write_output(MIPSImage &img, port fp, char *fmt, ...) {
     int str_size;
     std::tie(formatted_str, str_size) = vformat_alloc(fmt, args);
     os.write(formatted_str, str_size);
-    std::flush(os); // TODO: Remove this bc stdout only flushes on \n or explicit flush
     va_end(args);
 }
 

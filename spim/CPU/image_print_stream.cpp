@@ -17,8 +17,20 @@ MIPSImagePrintStream::MIPSImagePrintStream(unsigned int ctx, std::ostream &sink,
     setp(base, base + buf.size() - 1);
 }
 
-bool MIPSImagePrintStream::flush() {
-    return !sync();
+MIPSImagePrintStream::~MIPSImagePrintStream() {
+    sync(); // Flush the buffer on exit
+}
+
+std::streamsize MIPSImagePrintStream::xsputn(const char *s, std::streamsize n) {
+    std::streamsize char_pos = 0;
+    while (char_pos < n) {
+        if (overflow(MIPSImagePrintStream::traits_type::to_int_type(*s)) == MIPSImagePrintStream::traits_type::eof()) {
+            break;
+        }
+        char_pos++;
+        s++;
+    }
+    return char_pos;
 }
 
 MIPSImagePrintStream::int_type MIPSImagePrintStream::overflow(MIPSImagePrintStream::int_type ch) {
