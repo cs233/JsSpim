@@ -29,7 +29,9 @@ if (EMSCRIPTEN)
     endif ()
 
     set(DEFAULT_EXCEPTION_HANDLER "\"/usr/share/spim/exceptions.s\"")
-    set(LINKER_FLAGS "-s EXIT_RUNTIME=0 -s PROXY_TO_PTHREAD -s PTHREAD_POOL_SIZE_STRICT=0 -s NO_DISABLE_EXCEPTION_CATCHING -s INITIAL_MEMORY=512MB -s DEFAULT_PTHREAD_STACK_SIZE=4MB -s TOTAL_STACK=4MB -pthread -lm -lembind -s WASM=1 -s ALLOW_MEMORY_GROWTH -s FORCE_FILESYSTEM=1 -s ENVIRONMENT=web,worker -s EXPORTED_RUNTIME_METHODS=['ccall','cwrap'] --preload-file spim/CPU/exceptions.s@${DEFAULT_EXCEPTION_HANDLER}") # -s INITIAL_MEMORY=576mb -fsanitize=undefined -s MAXIMUM_MEMORY=4gb -s IMPORTED_MEMORY -s SAFE_HEAP=1 -s SAFE_HEAP_LOG=1 -s INITIAL_MEMORY=512mb -fsanitize=address # --post-js ${CMAKE_SOURCE_DIR}/src/JS/JavaScriptLoader.js --no-entry
+    set(LINKER_FLAGS "-s EXIT_RUNTIME=0 -s PROXY_TO_PTHREAD -s PTHREAD_POOL_SIZE_STRICT=0 -s NO_DISABLE_EXCEPTION_CATCHING -s INITIAL_MEMORY=256MB -s DEFAULT_PTHREAD_STACK_SIZE=64KB -s TOTAL_STACK=64KB -pthread -lm -lembind -s WASM=1 -s ALLOW_MEMORY_GROWTH -s FORCE_FILESYSTEM=1 -s ENVIRONMENT=web,worker -s EXPORTED_RUNTIME_METHODS=['ccall','cwrap'] --preload-file spim/CPU/exceptions.s@${DEFAULT_EXCEPTION_HANDLER}") # -s INITIAL_MEMORY=576mb -fsanitize=undefined -s MAXIMUM_MEMORY=4gb -s IMPORTED_MEMORY -s SAFE_HEAP=1 -s SAFE_HEAP_LOG=1 -s INITIAL_MEMORY=512mb -fsanitize=address # --post-js ${CMAKE_SOURCE_DIR}/src/JS/JavaScriptLoader.js --no-entry
+    # When we switch to ...
+    # emcc version 3.1.25, change TOTAL_STACK to STACK_SIZE
 
     if (CMAKE_BUILD_TYPE AND ${CMAKE_BUILD_TYPE} IN_LIST DEBUG_PROFILES)
         message("Adding additional Emscripten debug flags")
