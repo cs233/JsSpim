@@ -48,7 +48,6 @@ if (EMSCRIPTEN)
         COMMAND ${CMAKE_COMMAND} -E copy_directory ${CMAKE_SOURCE_DIR}/css/ ${CMAKE_SOURCE_DIR}/${DIST_DIR}/css/
         COMMAND ${CMAKE_COMMAND} -E copy_directory ${CMAKE_SOURCE_DIR}/Tests/ ${CMAKE_SOURCE_DIR}/${DIST_DIR}/Tests/
         COMMAND ${CMAKE_COMMAND} -E copy ${CMAKE_SOURCE_DIR}/index.html ${CMAKE_SOURCE_DIR}/${DIST_DIR}/
-        COMMAND ${CMAKE_COMMAND} -E copy ${CMAKE_SOURCE_DIR}/coi-serviceworker.min.js ${CMAKE_SOURCE_DIR}/${DIST_DIR}/
     )
 else()
     message("Preparing native Makefile")
