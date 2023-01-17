@@ -83,8 +83,8 @@ set_target_properties(wasm PROPERTIES LINK_FLAGS "${LINKER_FLAGS}")
 if (EMSCRIPTEN)
     add_custom_command(TARGET wasm
         POST_BUILD
-        COMMAND sed -i \"s/throw 'getitimer\(\) is not implemented yet'//g\" wasm.js
-        COMMAND sed -i \"s/throw 'setitimer\(\) is not implemented yet'//g\" wasm.js
+        # COMMAND sed -i"" "s/throw 'getitimer\(\) is not implemented yet'//g" wasm.js
+        # COMMAND sed -i"" "s/throw 'setitimer\(\) is not implemented yet'//g" wasm.js
         COMMAND mv wasm.* ../${DIST_DIR}/
     )
 else()
