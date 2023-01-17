@@ -23,9 +23,10 @@ class MIPSImagePrintStream : public std::streambuf {
         explicit MIPSImagePrintStream(unsigned int ctx, std::ostream &sink, std::size_t buffer_size = 256); 
         MIPSImagePrintStream(const MIPSImagePrintStream&) = delete;
         MIPSImagePrintStream& operator=(const MIPSImagePrintStream&) = delete;
+        ~MIPSImagePrintStream();
 
-        bool flush();
     private:
+        std::streamsize xsputn(const char *s, std::streamsize n);
         int_type overflow(int_type ch);
         int sync();
 

@@ -60,5 +60,7 @@ compile_commands.json
 CTestTestfile.cmake
 _deps
 
+# Cmake and build directories
 build/
 dist/
+.cache/

@@ -26,6 +26,7 @@ The source code is published at [GitHub](https://github.com/ShawnZhong/JsSpim/)
 
 ### Dependencies
 
+- `cmake >= 3.21.1`
 - `emsdk == 3.1.14`
 - `bison`
 - `flex`
