@@ -31,7 +31,12 @@
 */
 
 
+#include <memory>
+#include <string>
+#include <stdexcept>
+
 #include <chrono>
+#include <unistd.h>
 #include <stdio.h>
 #include <ctype.h>
 #include <string.h>
@@ -686,4 +691,110 @@ zmalloc (MIPSImage &img, int size)
 
   memclr (z, size);
   return (z);
+}
+
+std::string string_vformat(const std::string& format, va_list args) {
+    int size_s = std::vsnprintf(nullptr, 0, format.c_str(), args) + 1; // Extra space for '\0'
+    if( size_s <= 0 ){ throw std::runtime_error( "Error during formatting." ); }
+    auto size = static_cast<size_t>(size_s);
+    std::unique_ptr<char[]> buf( new char[ size ] );
+    std::vsnprintf(buf.get(), size, format.c_str(), args);
+    return std::string( buf.get(), buf.get() + size - 1 ); // We don't want the '\0' inside
+}
+
+std::pair<char *, int> vformat_alloc(char *format, va_list args) {
+    int size = vsnprintf(NULL, 0, format, args) + 1;
+    char *formatted_string = new char[size];
+    vsprintf(formatted_string, format, args);
+    return std::make_pair(formatted_string, size - 1);
+}
+
+/* Print an error message. */
+
+void error(MIPSImage &img, char *fmt, ...) {
+    va_list args;
+    va_start(args, fmt);
+    std::ostream os(img.get_std_err_buf());
+    char *formatted_str;
+    int str_size;
+    std::tie(formatted_str, str_size) = vformat_alloc(fmt, args);
+    os.write(formatted_str, str_size);
+    std::flush(os);
+    va_end(args);
+}
+
+/* Print the error message then exit. */
+
+void fatal_error(MIPSImage &img, char *fmt, ...) {
+    va_list args;
+    va_start(args, fmt);
+    fmt = va_arg(args, char *);
+    std::ostream os(img.get_std_err_buf());
+    char *formatted_str;
+    int str_size;
+    std::tie(formatted_str, str_size) = vformat_alloc(fmt, args);
+    os.write(formatted_str, str_size);
+    std::flush(os);
+    exit(-1);
+}
+
+/* Print an error message and return to top level. */
+
+void run_error(MIPSImage &img, char *fmt, ...) {
+    va_list args;
+    va_start(args, fmt);
+    std::ostream os(img.get_std_err_buf());
+    char *formatted_str;
+    int str_size;
+    std::tie(formatted_str, str_size) = vformat_alloc(fmt, args);
+    os.write(formatted_str, str_size);
+    va_end(args);
+}
+
+/* IO facilities: */
+
+void write_output(MIPSImage &img, port fp, char *fmt, ...) {
+    va_list args;
+    va_start(args, fmt);
+    std::ostream os(img.get_std_out_buf());
+    char *formatted_str;
+    int str_size;
+    std::tie(formatted_str, str_size) = vformat_alloc(fmt, args);
+    os.write(formatted_str, str_size);
+    va_end(args);
+}
+
+/* Simulate the semantics of fgets (not gets) on Unix file. */
+
+void read_input(char *str, int str_size) {
+  char *ptr;
+  ptr = str;
+  while (1 < str_size) /* Reserve space for null */
+  {
+    char buf[1];
+    if (read((int) console_in.i, buf, 1) <= 0) /* Not in raw mode! */
+      break;
+
+    *ptr++ = buf[0];
+    str_size -= 1;
+
+    if (buf[0] == '\n') break;
+  }
+
+  if (0 < str_size) *ptr = '\0'; /* Null terminate input */
+}
+
+int console_input_available() {
+  return 0;
+}
+
+char get_console_char() {
+  char buf;
+  read(0, &buf, 1);
+  return (buf);
+}
+
+void put_console_char(char c) {
+  putc(c, stdout);
+  fflush(stdout);
 }
