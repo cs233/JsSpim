@@ -58,6 +58,16 @@
 #include "run.h"
 #include "sym-tbl.h"
 
+bool bare_machine;        /* => simulate bare machine */
+bool delayed_branches;        /* => simulate delayed branches */
+bool delayed_loads;        /* => simulate delayed loads */
+bool accept_pseudo_insts = true;    /* => parse pseudo instructions  */
+bool quiet;            /* => no warning messages */
+char *exception_file_name;
+port message_out, console_out, console_in;
+bool mapped_io;            /* => activate memory-mapped IO */
+int spim_return_value;        /* Value returned when spim exits */
+
 /* Internal functions: */
 
 static mem_addr copy_int_to_stack (MIPSImage &img, int n);
