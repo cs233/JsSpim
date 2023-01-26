@@ -86,6 +86,7 @@ void list_breakpoints (MIPSImage &img);
 name_val_val *map_int_to_name_val_val (name_val_val tbl[], int tbl_len, int num);
 name_val_val *map_string_to_name_val_val (name_val_val tbl[], int tbl_len, char *id);
 bool read_assembly_file (MIPSImage &img, char *fpath);
+bool step_program (MIPSImage &img, bool display, bool cont_bkpt, bool* continuable);
 bool run_spim_program(std::vector<MIPSImage> &ctxs, int steps, bool display, bool cont_bkpt, bool* continuable, std::timed_mutex &mtx, const unsigned long &delay_usec);
 cycle_result_t run_spim_cycle_multi_ctx(std::map<unsigned int, MIPSImage> &imgs, bool cont_bkpt);
 bool run_spimbot_program (int steps, bool display, bool cont_bkpt, bool* continuable);
