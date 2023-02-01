@@ -20,11 +20,11 @@ foreach (_headerFile ${Spim_HEADERS})
 endforeach()
 list (REMOVE_DUPLICATES Spim_INCLUDE_DIRS)
 
-find_package(BISON REQUIRED)
+find_package(BISON 3.5.0 REQUIRED)
 BISON_TARGET(MyParser parser.y ${CMAKE_CURRENT_BINARY_DIR}/parser_yacc.cpp
             DEFINES_FILE ${CMAKE_CURRENT_BINARY_DIR}/parser_yacc.h)
 
-find_package(FLEX REQUIRED)
+find_package(FLEX 2.6.4 REQUIRED)
 FLEX_TARGET(MyLexxer scanner.l ${CMAKE_CURRENT_BINARY_DIR}/lex.yy.cpp)
 
 add_compile_options(-Wall -pedantic -Wextra -Wunused -Wno-write-strings -Wno-narrowing -x c++)
