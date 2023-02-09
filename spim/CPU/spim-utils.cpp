@@ -729,6 +729,7 @@ void error(MIPSImage &img, char *fmt, ...) {
     int str_size;
     std::tie(formatted_str, str_size) = vformat_alloc(fmt, args);
     os.write(formatted_str, str_size);
+    delete[] formatted_str;
     std::flush(os);
     va_end(args);
 }
@@ -744,6 +745,7 @@ void fatal_error(MIPSImage &img, char *fmt, ...) {
     int str_size;
     std::tie(formatted_str, str_size) = vformat_alloc(fmt, args);
     os.write(formatted_str, str_size);
+    delete[] formatted_str;
     std::flush(os);
     exit(-1);
 }
@@ -758,6 +760,7 @@ void run_error(MIPSImage &img, char *fmt, ...) {
     int str_size;
     std::tie(formatted_str, str_size) = vformat_alloc(fmt, args);
     os.write(formatted_str, str_size);
+    delete[] formatted_str;
     va_end(args);
 }
 
@@ -771,6 +774,7 @@ void write_output(MIPSImage &img, port fp, char *fmt, ...) {
     int str_size;
     std::tie(formatted_str, str_size) = vformat_alloc(fmt, args);
     os.write(formatted_str, str_size);
+    delete[] formatted_str;
     va_end(args);
 }
 
