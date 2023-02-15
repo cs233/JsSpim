@@ -1,0 +1,13 @@
+name: CI
+
+on:
+  push:
+    branches: [ "master", "spimbot" ]
+  pull_request:
+    branches: [ "master", "spimbot" ]
+
+jobs:
+  build:
+    uses: ./.github/workflows/build.yml
+    with:
+      export-dist: false
