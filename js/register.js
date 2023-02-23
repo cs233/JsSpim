@@ -38,14 +38,25 @@ class RegisterUtils {
         this.doubleRegs.forEach(e => Elements.doubleReg.appendChild(e.element));
     }
 
-    static update() {
-        // values in special registers needs to be refreshed
-        this.specialRegVals = Module.getSpecialRegVals(0);
-        this.specialRegs.forEach((reg, i) => reg.updateValue(this.specialRegVals[i]));
+    // original update()
+    // static update() {
+    //     // values in special registers needs to be refreshed
+    //     this.specialRegVals = Module.getSpecialRegVals(0);
+    //     this.specialRegs.forEach((reg, i) => reg.updateValue(this.specialRegVals[i]));
 
-        this.generalRegs.forEach((reg, i) => reg.updateValue(this.generalRegVals[i]));
-        this.floatRegs.forEach((reg, i) => reg.updateValue(this.floatRegVals[i]));
-        this.doubleRegs.forEach((reg, i) => reg.updateValue(this.doubleRegVals[i]));
+    //     this.generalRegs.forEach((reg, i) => reg.updateValue(this.generalRegVals[i]));
+    //     this.floatRegs.forEach((reg, i) => reg.updateValue(this.floatRegVals[i]));
+    //     this.doubleRegs.forEach((reg, i) => reg.updateValue(this.doubleRegVals[i]));
+    // }
+
+    static update(ctx) {
+        // values in special registers needs to be refreshed
+        this.specialRegVals = Module.getSpecialRegVals(ctx);
+
+        this.specialRegs.forEach((reg, i) => reg.updateValue(this.specialRegVals[i]));
+        this.generalRegs.forEach((reg, i) => reg.updateValue(Module.getGeneralRegVals(ctx)[i]));
+        this.floatRegs.forEach((reg, i) => reg.updateValue(Module.getFloatRegVals(ctx)[i]));
+        this.doubleRegs.forEach((reg, i) => reg.updateValue(Module.getDoubleRegVals(ctx)[i]));
     }
 
     static changeRadix(radix) {

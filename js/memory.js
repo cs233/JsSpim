@@ -9,10 +9,10 @@ class MemoryUtils {
         this.stack.initialize();
     }
 
-    static update() {
-        this.userData.update();
-        this.kernelData.update();
-        this.stack.update();
+    static update(ctx) {
+        this.userData.update(ctx);
+        this.kernelData.update(ctx);
+        this.stack.update(ctx);
     }
 
     static changeStackRadix(radixStr) {
@@ -129,14 +129,14 @@ class UserData extends DataSegment {
         this.startAddress = 0x10000000;
     }
 
-    update() {
+    update(ctx) {
         for (let i = 0; i < this.content.length / 16; i++) {
             const addr = this.startAddress + i * 0x10;
             if (!this.isLineEmpty(addr) && !this.lineAddresses.has(addr))
                 this.addLine(addr);
         }
 
-        this.content = Module.getUserData(0);
+        this.content = Module.getUserData(ctx);
         this.lines.forEach(e => e.updateValues());
     }
 }
@@ -148,6 +148,17 @@ class KernelData extends DataSegment {
         this.content = Module.getKernelData(0);
         this.startAddress = 0x90000000;
     }
+
+    update(ctx) {
+        for (let i = 0; i < this.content.length / 16; i++) {
+            const addr = this.startAddress + i * 0x10;
+            if (!this.isLineEmpty(addr) && !this.lineAddresses.has(addr))
+                this.addLine(addr);
+        }
+
+        this.content = Module.getKernelData(ctx);
+        this.lines.forEach(e => e.updateValues());
+    }
 }
 
 class Stack extends Memory {
@@ -157,9 +168,11 @@ class Stack extends Memory {
         this.element = Elements.stack;
     }
 
-    update() {
+    update(ctx) {
         if (RegisterUtils.getSP() < this.minLineAddress)
             this.addNewLines(this.minLineAddress);
+
+        this.content = Module.getStack(ctx);
         this.lines.forEach(e => e.updateValues());
     }
 

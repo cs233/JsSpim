@@ -10,6 +10,7 @@ class Execution {
         Execution.maxCyclesAt60Hz = 8192;
         Execution.minCyclesAt60Hz = 1 / 60;
         Execution.cycleSkipCount = 0;
+        Execution.ctx = 0; // used for context switching
         // Execution.cycles = 0;
 
         Elements.stepButton.disabled = false;
@@ -52,7 +53,7 @@ class Execution {
         if (Execution.playing) {
             Module.pause();
             Execution.playing = false;
-            Elements.playButton.innerHTML = "Continue"
+            Elements.playButton.innerHTML = "Continue";
         } else {
             Module.play();
             Execution.playing = true;
@@ -119,8 +120,14 @@ class Execution {
         let status = Module.getStatus();
         Execution.processStatus(status);
         if (status != 0 && Module.lockSimulator(100)) { // make this magic number related to the refresh rate of the monitor
-            RegisterUtils.update();
-            MemoryUtils.update();
+            // original update()
+            // RegisterUtils.update();
+            // MemoryUtils.update();
+            // InstructionUtils.highlightCurrentInstruction();
+
+            RegisterUtils.update(Execution.ctx);
+            MemoryUtils.update(Execution.ctx);
+            // InstructionUtils.update(Execution.ctx);
             InstructionUtils.highlightCurrentInstruction();
 
             Module.unlockSimulator();
@@ -231,6 +238,21 @@ function writeStdErr(ctx, msg) {
         Elements.log.scrollTop = Elements.output.scrollHeight;
         console.error("from  module: " + msg);
     }
+}
+
+function updateStdOut(ctx) {
+    Elements.output.innerHTML = '';
+    Elements.output.insertAdjacentHTML("beforeend", stdout[ctx]);
+    Elements.output.scrollTop = Elements.output.scrollHeight;
+    console.log("update std out to ctx ", ctx);
+}
+
+function updateStdErr(ctx) {
+    Elements.log.innerHTML = '';
+    Elements.log.insertAdjacentHTML("beforeend", stderr[ctx]);
+    Elements.log.scrollTop = Elements.output.scrollHeight;
+    console.log("update std err to ctx ", ctx);
+
 }
 
 const median = arr => {

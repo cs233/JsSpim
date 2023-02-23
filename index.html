@@ -34,6 +34,9 @@
 
 <nav class="navbar navbar-light bg-light" id="toolbar">
     <div class="form-inline">
+        <div>
+            <select id="context-selector" onchange="changeContext(this.value)" class="form-control form-control"></select>
+        </div>
         <div>Please choose a <a href="https://github.com/ShawnZhong/JsSpim/tree/master/Tests" target="_blank">MIPS
             assembly file</a>: &nbsp
         </div>
@@ -211,6 +214,7 @@
     const Elements = Object.freeze({
         output: document.getElementById('output-content'),
         log: document.getElementById('log-content'),
+        contextSelector: document.getElementById('context-selector'),
         fileSelector0: document.getElementById('file-selector0'),
         fileSelector1: document.getElementById('file-selector1'),
         playButton: document.getElementById('play-button'),

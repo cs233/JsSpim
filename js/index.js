@@ -19,6 +19,19 @@ fileList.forEach(filename => {
     Elements.fileSelector1.add(option1);
 });
 
+const programList = [
+    'Program 1',
+    'Program 2'
+];
+let ctx_var = 0;
+programList.forEach(programName => {
+    const option = document.createElement("option");
+    option.text = programName;
+    option.value = ctx_var;
+    Elements.contextSelector.add(option);
+    ctx_var++;
+});
+
 var Module = {
     print: (text) => {
         Elements.output.insertAdjacentHTML("beforeend", text + "\n");
@@ -66,4 +79,21 @@ async function loadData(fileInput) {
         const response = await fetch(fileInput);
         return response.arrayBuffer();
     }
+}
+
+async function changeContext(ctx) {
+    console.log("change ctx from ", Execution.ctx, " to ", ctx);
+    Execution.ctx = ctx;
+    console.log("current ctx: ", Execution.ctx);
+
+    // Module.pause();
+    // Execution.playing = false;
+    // Elements.playButton.innerHTML = "Continue";
+
+    updateStdOut(Execution.ctx);
+    updateStdErr(Execution.ctx);
+    RegisterUtils.update(Execution.ctx);
+    MemoryUtils.update(Execution.ctx);
+    InstructionUtils.update(Execution.ctx);
+
 }
