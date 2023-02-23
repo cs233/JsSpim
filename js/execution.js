@@ -223,7 +223,7 @@ function writeStdOut(ctx, msg) {
     stdout[ctx] += msg;
     console.log("Got message for ctx " + ctx + " stdout: \"" + msg + "\"");
 
-    if (ctx == 0) {
+    if (ctx == Execution.ctx) {
         Elements.output.insertAdjacentHTML("beforeend", msg);
         Elements.output.scrollTop = Elements.output.scrollHeight;
     }
@@ -233,7 +233,7 @@ function writeStdErr(ctx, msg) {
     stderr[ctx] += msg;
     console.log("Got message for ctx " + ctx + " stderr");
 
-    if (ctx == 0) {
+    if (ctx == Execution.ctx) {
         Elements.log.insertAdjacentText("beforeend", msg);
         Elements.log.scrollTop = Elements.output.scrollHeight;
         console.error("from  module: " + msg);
