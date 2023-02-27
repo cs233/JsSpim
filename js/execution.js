@@ -26,8 +26,11 @@ class Execution {
         MemoryUtils.init();
 
         if (reset) {
-            InstructionUtils.removeAllBreakpoints();
+            // InstructionUtils.removeAllBreakpoints();
+            InstructionUtils.init();
             InstructionUtils.highlightCurrentInstruction();
+            Elements.contextSelector.selectedIndex = 0;
+
         } else {
             InstructionUtils.init();
             InstructionUtils.highlightCurrentInstruction();
