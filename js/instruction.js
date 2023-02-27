@@ -39,6 +39,8 @@ class InstructionUtils {
         this.userText.forEach(e => InstructionUtils.instructionDict[e.address] = e);
         this.kernelText.forEach(e => InstructionUtils.instructionDict[e.address] = e);
 
+        this.breakpointAddr = [[],[]];
+
         InstructionUtils.formatCode();
     }
 
@@ -62,6 +64,8 @@ class InstructionUtils {
 
         InstructionUtils.formatCode();
         InstructionUtils.highlightCurrentInstruction();
+
+        this.breakpointAddr[this.ctx].forEach(addr => InstructionUtils.instructionDict[addr].restoreBreakpoint());
     }
 
     static removeAllBreakpoints() {
@@ -71,6 +75,8 @@ class InstructionUtils {
                 e.isBreakpoint = false;
                 e.element.style.fontWeight = null;
             });
+        
+        this.breakpointAddr = [[],[]];
     }
 
     static highlightCurrentInstruction() {
@@ -174,9 +180,16 @@ class Instruction {
         if (this.isBreakpoint) {
             Module.addBreakpoint(this.address, this.ctx);
             this.element.style.fontWeight = "bold";
+            InstructionUtils.breakpointAddr[InstructionUtils.ctx].push(this.address);
         } else {
             Module.deleteBreakpoint(this.address, this.ctx);
             this.element.style.fontWeight = null;
+            InstructionUtils.breakpointAddr[InstructionUtils.ctx].splice(InstructionUtils.breakpointAddr[InstructionUtils.ctx].indexOf(this.address), 1);
         }
+    }
+
+    restoreBreakpoint() {
+        this.isBreakpoint = true;
+        this.element.style.fontWeight = "bold";
     }
 }
