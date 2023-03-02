@@ -67,6 +67,15 @@ async function main(fileInput = `Tests/${fileList[0]}`, ctx = null) {
         Execution.init(false, ctx);
         changeContext(ctx);
         Elements.contextSelector.selectedIndex = ctx;
+        switch (ctx) {
+            case 0:
+                Elements.fileSelector0.value = fileInput;
+                break;
+            case 1:
+                Elements.fileSelector1.value = fileInput;
+                break;
+            default:
+        }
     }
 
     // Execution.init();
@@ -93,9 +102,7 @@ async function changeContext(ctx) {
     // Module.pause();
     // Execution.playing = false;
     // Elements.playButton.innerHTML = "Continue";
-    let status = Module.getStatus();
-    Execution.processStatus(status);
-    if (status != 0 && Module.lockSimulator(100)) {
+    if (Module.lockSimulator(100)) {
         updateStdOut(Execution.ctx);
         updateStdErr(Execution.ctx);
         // RegisterUtils.update(Execution.ctx);
