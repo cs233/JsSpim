@@ -2,24 +2,70 @@ const worker = new Worker('js/highlight.min.js');
 worker.onmessage = (event) => event.data.forEach((e, i) => InstructionUtils.instructionList[i].instructionElement.innerHTML = e);
 
 class InstructionUtils {
-    static init() {
+    // static init() {
+    //     Elements.userTextContent.innerHTML = '';
+    //     Elements.kernelTextContent.innerHTML = '';
+
+    //     const ctx = 0;
+    //     const userText = Module.getUserText(ctx).split("\n").slice(0, -1).map(e => new Instruction(e, ctx));
+    //     userText.forEach(e => Elements.userTextContent.appendChild(e.element));
+
+    //     const kernelText = Module.getKernelText(ctx).split("\n").slice(0, -1).map(e => new Instruction(e, ctx));
+    //     kernelText.forEach(e => Elements.kernelTextContent.appendChild(e.element));
+
+    //     InstructionUtils.instructionList = [...userText, ...kernelText];
+
+    //     InstructionUtils.instructionDict = {};
+    //     userText.forEach(e => InstructionUtils.instructionDict[e.address] = e);
+    //     kernelText.forEach(e => InstructionUtils.instructionDict[e.address] = e);
+
+    //     InstructionUtils.formatCode();
+    // }
+
+    static init(ctx = 0) {
         Elements.userTextContent.innerHTML = '';
         Elements.kernelTextContent.innerHTML = '';
 
-        const ctx = 0;
-        const userText = Module.getUserText(ctx).split("\n").slice(0, -1).map(e => new Instruction(e, ctx));
-        userText.forEach(e => Elements.userTextContent.appendChild(e.element));
+        this.ctx = ctx;
+        this.userText = Module.getUserText(this.ctx).split("\n").slice(0, -1).map(e => new Instruction(e, this.ctx));
+        this.userText.forEach(e => Elements.userTextContent.appendChild(e.element));
 
-        const kernelText = Module.getKernelText(ctx).split("\n").slice(0, -1).map(e => new Instruction(e, ctx));
-        kernelText.forEach(e => Elements.kernelTextContent.appendChild(e.element));
+        this.kernelText = Module.getKernelText(this.ctx).split("\n").slice(0, -1).map(e => new Instruction(e, this.ctx));
+        this.kernelText.forEach(e => Elements.kernelTextContent.appendChild(e.element));
 
-        InstructionUtils.instructionList = [...userText, ...kernelText];
+        InstructionUtils.instructionList = [...this.userText, ...this.kernelText];
 
         InstructionUtils.instructionDict = {};
-        userText.forEach(e => InstructionUtils.instructionDict[e.address] = e);
-        kernelText.forEach(e => InstructionUtils.instructionDict[e.address] = e);
+        this.userText.forEach(e => InstructionUtils.instructionDict[e.address] = e);
+        this.kernelText.forEach(e => InstructionUtils.instructionDict[e.address] = e);
+
+        this.breakpointAddr = [[],[]];
 
         InstructionUtils.formatCode();
+    }
+
+    static update(ctx) {
+        Elements.userTextContent.innerHTML = '';
+        Elements.kernelTextContent.innerHTML = '';
+
+        this.ctx = ctx;
+
+        this.userText = Module.getUserText(this.ctx).split("\n").slice(0, -1).map(e => new Instruction(e, this.ctx));
+        this.userText.forEach(e => Elements.userTextContent.appendChild(e.element));
+
+        this.kernelText = Module.getKernelText(this.ctx).split("\n").slice(0, -1).map(e => new Instruction(e, this.ctx));
+        this.kernelText.forEach(e => Elements.kernelTextContent.appendChild(e.element));
+
+        InstructionUtils.instructionList = [...this.userText, ...this.kernelText];
+
+        InstructionUtils.instructionDict = {};
+        this.userText.forEach(e => InstructionUtils.instructionDict[e.address] = e);
+        this.kernelText.forEach(e => InstructionUtils.instructionDict[e.address] = e);
+
+        InstructionUtils.formatCode();
+        InstructionUtils.highlightCurrentInstruction();
+
+        this.breakpointAddr[this.ctx].forEach(addr => InstructionUtils.instructionDict[addr].restoreBreakpoint());
     }
 
     static removeAllBreakpoints() {
@@ -29,6 +75,8 @@ class InstructionUtils {
                 e.isBreakpoint = false;
                 e.element.style.fontWeight = null;
             });
+        
+        this.breakpointAddr = [[],[]];
     }
 
     static highlightCurrentInstruction() {
@@ -132,9 +180,16 @@ class Instruction {
         if (this.isBreakpoint) {
             Module.addBreakpoint(this.address, this.ctx);
             this.element.style.fontWeight = "bold";
+            InstructionUtils.breakpointAddr[InstructionUtils.ctx].push(this.address);
         } else {
             Module.deleteBreakpoint(this.address, this.ctx);
             this.element.style.fontWeight = null;
+            InstructionUtils.breakpointAddr[InstructionUtils.ctx].splice(InstructionUtils.breakpointAddr[InstructionUtils.ctx].indexOf(this.address), 1);
         }
+    }
+
+    restoreBreakpoint() {
+        this.isBreakpoint = true;
+        this.element.style.fontWeight = "bold";
     }
 }
