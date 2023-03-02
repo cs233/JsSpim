@@ -192,7 +192,7 @@ class Stack extends Memory {
     }
 
     addNewLines(endAddr = 0x80000000) {
-        for (; endAddr >= RegisterUtils.getSP(); endAddr -= 0x10) {
+        for (; endAddr > RegisterUtils.getSP(); endAddr -= 0x10) {
             const newLine = new MemoryLine(endAddr - 0x10, this);
             Elements.stack.prepend(newLine.element);
             this.lines.push(newLine);
