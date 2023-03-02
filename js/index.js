@@ -67,6 +67,15 @@ async function main(fileInput = `Tests/${fileList[0]}`, ctx = null) {
         Execution.init(false, ctx);
         changeContext(ctx);
         Elements.contextSelector.selectedIndex = ctx;
+        switch (ctx) {
+            case 0:
+                Elements.fileSelector0.value = fileInput;
+                break;
+            case 1:
+                Elements.fileSelector1.value = fileInput;
+                break;
+            default:
+        }
     }
 
     // Execution.init();

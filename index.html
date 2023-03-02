@@ -37,20 +37,30 @@
         <div>
             <select id="context-selector" onchange="changeContext(this.value)" class="form-control form-control"></select>
         </div>
+        &nbsp;
         <div>Please choose a <a href="https://github.com/ShawnZhong/JsSpim/tree/master/Tests" target="_blank">MIPS
             assembly file</a>: &nbsp
         </div>
         <div>
             <select id="file-selector0" onchange="main(this.value, 0)" class="form-control form-control"></select>
         </div>
+        <div>&nbsp or &nbsp</div>
+        <div>
+            <div class="custom-file">
+                <input type="file" class="custom-file-input" id="file-upload0"
+                       onChange="main(this.files[0], 0);this.value=''">
+                <div class="custom-file-label">upload your own</div>
+            </div>
+        </div>
+        &nbsp;
         <div>
             <select id="file-selector1" onchange="main(this.value, 1)" class="form-control form-control"></select>
         </div>
         <div>&nbsp or &nbsp</div>
         <div>
             <div class="custom-file">
-                <input type="file" class="custom-file-input" id="file-upload"
-                       onChange="main(this.files[0]);this.value=''">
+                <input type="file" class="custom-file-input" id="file-upload1"
+                       onChange="main(this.files[0], 1);this.value=''">
                 <div class="custom-file-label">upload your own</div>
             </div>
         </div>
