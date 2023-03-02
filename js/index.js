@@ -58,14 +58,18 @@ async function main(fileInput = `Tests/${fileList[0]}`, ctx = null) {
             FS.write(stream, new Uint8Array(data), 0, data.byteLength, 0);
             FS.close(stream);
         }
+        Execution.init();
     } else {
         let data = await loadData(fileInput);
         const stream = FS.open('input_'+ctx+'.s', 'w+');
         FS.write(stream, new Uint8Array(data), 0, data.byteLength, 0);
         FS.close(stream);
+        Execution.init(false, ctx);
+        changeContext(ctx);
+        Elements.contextSelector.selectedIndex = ctx;
     }
 
-    Execution.init();
+    // Execution.init();
 }
 
 async function loadData(fileInput) {
@@ -92,8 +96,10 @@ async function changeContext(ctx) {
 
     updateStdOut(Execution.ctx);
     updateStdErr(Execution.ctx);
-    RegisterUtils.update(Execution.ctx);
-    MemoryUtils.update(Execution.ctx);
+    // RegisterUtils.update(Execution.ctx);
+    // MemoryUtils.update(Execution.ctx);
+    RegisterUtils.init(Execution.ctx);
+    MemoryUtils.init(Execution.ctx);
     InstructionUtils.update(Execution.ctx);
 
 }

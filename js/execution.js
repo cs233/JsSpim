@@ -1,5 +1,5 @@
 class Execution {
-    static init(reset = false) {
+    static init(reset = false, ctx = 0) {
         Execution.maxSpeed = Elements.speedSelector.max;
         Execution.speed = Elements.speedSelector.value;
 
@@ -10,7 +10,7 @@ class Execution {
         Execution.maxCyclesAt60Hz = 8192;
         Execution.minCyclesAt60Hz = 1 / 60;
         Execution.cycleSkipCount = 0;
-        Execution.ctx = 0; // used for context switching
+        Execution.ctx = ctx; // used for context switching
         // Execution.cycles = 0;
 
         Elements.stepButton.disabled = false;
@@ -22,17 +22,17 @@ class Execution {
 
         Module.reset(); // 2, [0, 1]);
         while (!Module.lockSimulator(100));
-        RegisterUtils.init();
-        MemoryUtils.init();
+        RegisterUtils.init(ctx);
+        MemoryUtils.init(ctx);
 
         if (reset) {
             // InstructionUtils.removeAllBreakpoints();
-            InstructionUtils.init();
+            InstructionUtils.init(ctx);
             InstructionUtils.highlightCurrentInstruction();
-            Elements.contextSelector.selectedIndex = 0;
+            // Elements.contextSelector.selectedIndex = ctx;
 
         } else {
-            InstructionUtils.init();
+            InstructionUtils.init(ctx);
             InstructionUtils.highlightCurrentInstruction();
         }
         Module.unlockSimulator();
@@ -130,6 +130,8 @@ class Execution {
 
             RegisterUtils.update(Execution.ctx);
             MemoryUtils.update(Execution.ctx);
+            // RegisterUtils.init(Execution.ctx);
+            // MemoryUtils.init(Execution.ctx);
             // InstructionUtils.update(Execution.ctx);
             InstructionUtils.highlightCurrentInstruction();
 
@@ -264,6 +266,6 @@ const median = arr => {
     return arr.length % 2 !== 0 ? nums[mid] : (nums[mid - 1] + nums[mid]) / 2;
 };
 
-Elements.resetButton.onclick = () => Execution.init(true);
+Elements.resetButton.onclick = () => Execution.init(true, Execution.ctx);
 Elements.stepButton.onclick = () => Execution.step(1);
 Elements.playButton.onclick = () => Execution.togglePlay();

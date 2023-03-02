@@ -22,11 +22,11 @@ class InstructionUtils {
     //     InstructionUtils.formatCode();
     // }
 
-    static init() {
+    static init(ctx = 0) {
         Elements.userTextContent.innerHTML = '';
         Elements.kernelTextContent.innerHTML = '';
 
-        this.ctx = 0;
+        this.ctx = ctx;
         this.userText = Module.getUserText(this.ctx).split("\n").slice(0, -1).map(e => new Instruction(e, this.ctx));
         this.userText.forEach(e => Elements.userTextContent.appendChild(e.element));
 
