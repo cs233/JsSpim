@@ -128,10 +128,10 @@ class Execution {
             // MemoryUtils.update();
             // InstructionUtils.highlightCurrentInstruction();
 
-            // RegisterUtils.update(Execution.ctx);
-            // MemoryUtils.update(Execution.ctx);
-            RegisterUtils.init(Execution.ctx);
-            MemoryUtils.init(Execution.ctx);
+            RegisterUtils.update(Execution.ctx);
+            MemoryUtils.update(Execution.ctx);
+            // RegisterUtils.init(Execution.ctx);
+            // MemoryUtils.init(Execution.ctx);
             // InstructionUtils.update(Execution.ctx);
             InstructionUtils.highlightCurrentInstruction();
 
