@@ -1,18 +1,18 @@
 class MemoryUtils {
-    static init() {
-        this.userData = new UserData();
-        this.kernelData = new KernelData();
-        this.stack = new Stack();
+    static init(ctx = 0) {
+        this.userData = new UserData(ctx);
+        this.kernelData = new KernelData(ctx);
+        this.stack = new Stack(ctx);
 
-        this.userData.initialize();
-        this.kernelData.initialize();
-        this.stack.initialize();
+        this.userData.initialize(ctx);
+        this.kernelData.initialize(ctx);
+        this.stack.initialize(ctx);
     }
 
-    static update() {
-        this.userData.update();
-        this.kernelData.update();
-        this.stack.update();
+    static update(ctx) {
+        this.userData.update(ctx);
+        this.kernelData.update(ctx);
+        this.stack.update(ctx);
     }
 
     static changeStackRadix(radixStr) {
@@ -45,7 +45,8 @@ class Memory {
     /**
      * Initialize `element` and `lines`
      */
-    initialize() {
+    initialize(ctx) {
+        this.ctx = ctx;
         this.element.innerHTML = '';
         this.addNewLines();
     }
@@ -122,44 +123,65 @@ class DataSegment extends Memory {
 }
 
 class UserData extends DataSegment {
-    constructor() {
+    constructor(ctx) {
         super();
+        this.ctx = ctx;
         this.element = Elements.userData;
-        this.content = Module.getUserData(0);
+        this.content = Module.getUserData(this.ctx);
         this.startAddress = 0x10000000;
+        
     }
 
-    update() {
+    update(ctx) {
+        this.ctx = ctx;
+        this.content = Module.getUserData(ctx);
+
         for (let i = 0; i < this.content.length / 16; i++) {
             const addr = this.startAddress + i * 0x10;
             if (!this.isLineEmpty(addr) && !this.lineAddresses.has(addr))
                 this.addLine(addr);
         }
 
-        this.content = Module.getUserData(0);
         this.lines.forEach(e => e.updateValues());
     }
 }
 
 class KernelData extends DataSegment {
-    constructor() {
+    constructor(ctx) {
         super();
+        this.ctx = ctx;
         this.element = Elements.kernelData;
-        this.content = Module.getKernelData(0);
+        this.content = Module.getKernelData(this.ctx);
         this.startAddress = 0x90000000;
+    }
+
+    update(ctx) {
+        this.ctx = ctx;
+        this.content = Module.getKernelData(ctx);
+
+        for (let i = 0; i < this.content.length / 16; i++) {
+            const addr = this.startAddress + i * 0x10;
+            if (!this.isLineEmpty(addr) && !this.lineAddresses.has(addr))
+                this.addLine(addr);
+        }
+
+        this.lines.forEach(e => e.updateValues());
     }
 }
 
 class Stack extends Memory {
-    constructor() {
+    constructor(ctx) {
         super();
-        this.content = Module.getStack(0);
+        this.ctx = ctx;
+        this.content = Module.getStack(this.ctx);
         this.element = Elements.stack;
     }
 
-    update() {
+    update(ctx) {
         if (RegisterUtils.getSP() < this.minLineAddress)
             this.addNewLines(this.minLineAddress);
+        this.ctx = ctx;
+        this.content = Module.getStack(ctx);
         this.lines.forEach(e => e.updateValues());
     }
 
@@ -170,7 +192,7 @@ class Stack extends Memory {
     }
 
     addNewLines(endAddr = 0x80000000) {
-        for (; endAddr >= RegisterUtils.getSP(); endAddr -= 0x10) {
+        for (; endAddr > RegisterUtils.getSP(); endAddr -= 0x10) {
             const newLine = new MemoryLine(endAddr - 0x10, this);
             Elements.stack.prepend(newLine.element);
             this.lines.push(newLine);

@@ -1,5 +1,5 @@
 class Execution {
-    static init(reset = false) {
+    static init(reset = false, ctx = 0) {
         Execution.maxSpeed = Elements.speedSelector.max;
         Execution.speed = Elements.speedSelector.value;
 
@@ -10,6 +10,7 @@ class Execution {
         Execution.maxCyclesAt60Hz = 8192;
         Execution.minCyclesAt60Hz = 1 / 60;
         Execution.cycleSkipCount = 0;
+        Execution.ctx = ctx; // used for context switching
         // Execution.cycles = 0;
 
         Elements.stepButton.disabled = false;
@@ -21,14 +22,17 @@ class Execution {
 
         Module.reset(); // 2, [0, 1]);
         while (!Module.lockSimulator(100));
-        RegisterUtils.init();
-        MemoryUtils.init();
+        RegisterUtils.init(ctx);
+        MemoryUtils.init(ctx);
 
         if (reset) {
-            InstructionUtils.removeAllBreakpoints();
+            // InstructionUtils.removeAllBreakpoints();
+            InstructionUtils.init(ctx);
             InstructionUtils.highlightCurrentInstruction();
+            // Elements.contextSelector.selectedIndex = ctx;
+
         } else {
-            InstructionUtils.init();
+            InstructionUtils.init(ctx);
             InstructionUtils.highlightCurrentInstruction();
         }
         Module.unlockSimulator();
@@ -52,7 +56,7 @@ class Execution {
         if (Execution.playing) {
             Module.pause();
             Execution.playing = false;
-            Elements.playButton.innerHTML = "Continue"
+            Elements.playButton.innerHTML = "Continue";
         } else {
             Module.play();
             Execution.playing = true;
@@ -119,8 +123,16 @@ class Execution {
         let status = Module.getStatus();
         Execution.processStatus(status);
         if (status != 0 && Module.lockSimulator(100)) { // make this magic number related to the refresh rate of the monitor
-            RegisterUtils.update();
-            MemoryUtils.update();
+            // original update()
+            // RegisterUtils.update();
+            // MemoryUtils.update();
+            // InstructionUtils.highlightCurrentInstruction();
+
+            RegisterUtils.update(Execution.ctx);
+            MemoryUtils.update(Execution.ctx);
+            // RegisterUtils.init(Execution.ctx);
+            // MemoryUtils.init(Execution.ctx);
+            // InstructionUtils.update(Execution.ctx);
             InstructionUtils.highlightCurrentInstruction();
 
             Module.unlockSimulator();
@@ -216,7 +228,7 @@ function writeStdOut(ctx, msg) {
     stdout[ctx] += msg;
     console.log("Got message for ctx " + ctx + " stdout: \"" + msg + "\"");
 
-    if (ctx == 0) {
+    if (ctx == Execution.ctx) {
         Elements.output.insertAdjacentHTML("beforeend", msg);
         Elements.output.scrollTop = Elements.output.scrollHeight;
     }
@@ -226,11 +238,26 @@ function writeStdErr(ctx, msg) {
     stderr[ctx] += msg;
     console.log("Got message for ctx " + ctx + " stderr");
 
-    if (ctx == 0) {
+    if (ctx == Execution.ctx) {
         Elements.log.insertAdjacentText("beforeend", msg);
         Elements.log.scrollTop = Elements.output.scrollHeight;
         console.error("from  module: " + msg);
     }
+}
+
+function updateStdOut(ctx) {
+    Elements.output.innerHTML = '';
+    Elements.output.insertAdjacentHTML("beforeend", stdout[ctx]);
+    Elements.output.scrollTop = Elements.output.scrollHeight;
+    console.log("update std out to ctx ", ctx);
+}
+
+function updateStdErr(ctx) {
+    Elements.log.innerHTML = '';
+    Elements.log.insertAdjacentHTML("beforeend", stderr[ctx]);
+    Elements.log.scrollTop = Elements.output.scrollHeight;
+    console.log("update std err to ctx ", ctx);
+
 }
 
 const median = arr => {
@@ -239,6 +266,6 @@ const median = arr => {
     return arr.length % 2 !== 0 ? nums[mid] : (nums[mid - 1] + nums[mid]) / 2;
 };
 
-Elements.resetButton.onclick = () => Execution.init(true);
+Elements.resetButton.onclick = () => Execution.init(true, Execution.ctx);
 Elements.stepButton.onclick = () => Execution.step(1);
 Elements.playButton.onclick = () => Execution.togglePlay();
