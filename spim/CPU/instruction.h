@@ -1,6 +1,6 @@
 #ifndef INSTRUCTION_H
 #define INSTRUCTION_H
-#include "spim.h"
+#include "types.h"
 
 /* Type of a memory address.  Must be a 32-bit quantity to match MIPS.  */
 

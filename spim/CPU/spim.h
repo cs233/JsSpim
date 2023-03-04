@@ -46,14 +46,7 @@
 #define SPIM_LITTLENDIAN
 #endif
 
-
-/* Type declarations for portability.  They work for DEC's Alpha (64 bits)
-   and 32 bit machines */
-
-typedef int int32;
-typedef unsigned int  uint32;
-typedef union {int i; void* p;} intptr_union;
-
+#include "types.h"
 
 #define streq(s1, s2) !strcmp(s1, s2)
 

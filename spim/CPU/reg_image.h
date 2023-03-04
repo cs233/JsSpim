@@ -1,6 +1,9 @@
 #ifndef REG_IMAGE_H
 #define REG_IMAGE_H
 
+#include "types.h"
+#include "instruction.h"
+
 typedef int32 /*@alt unsigned int @*/ reg_word;
 typedef uint32 u_reg_word;
 
