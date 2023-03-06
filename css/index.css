@@ -5,7 +5,7 @@ body {
     display: grid;
     grid-template-areas: "toolbar toolbar toolbar toolbar toolbar" "gui reg text text data" "gui reg text text data" "gui reg text text gap3" "gui reg text text stack" "gui reg gap2 gap2 stack" "gui reg output log stack";
     grid-template-rows: min-content 1fr 1fr 10px 1fr 10px min-content;
-    grid-template-columns: 50rem 16rem 26rem 26rem 36rem;
+    grid-template-columns: 30vw 12vw 17vw 17vw 20vw;
     grid-column-gap: 10px;
     padding-bottom: 10px;
 }
