@@ -70,7 +70,7 @@ add_compile_definitions(
 )
 
 if (EMSCRIPTEN)
-    add_executable(wasm spim/spim.cpp spim/worker.cpp)
+    add_executable(wasm main.cpp spim/spim.cpp spim/worker.cpp)
 else()
     add_executable(wasm spim/spim.cpp spim/worker.cpp) # main.cpp
 endif()

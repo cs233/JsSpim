@@ -1,7 +1,2 @@
-#include "spim/spim.h"
-
-int main () {
-    init();
-
-    step(0, false);
-}
+// Need to provide main() function for JsSpim to work
+int main() {}

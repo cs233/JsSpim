@@ -101,15 +101,15 @@ static std::thread simulator_thread;
 //
 // - When a breakpoint occurred (Which context and at what PC)
 // - Has program exited? (which context exited and what is the status code?)
-int main() {
-    /* simulator_thread = std::move(std::thread(&start_simulator, 2, std::set<unsigned int>{0, 1})); */
-    /* simulator_thread.detach(); */
-    /* start_simulator(2, std::set<unsigned int>{0, 1}); */
-    std::cout << "main()" << std::endl;
-    #ifndef WASM
-    while (true) {}
-    #endif
-}
+/* int main() { */
+/*     /1* simulator_thread = std::move(std::thread(&start_simulator, 2, std::set<unsigned int>{0, 1})); *1/ */
+/*     /1* simulator_thread.detach(); *1/ */
+/*     /1* start_simulator(2, std::set<unsigned int>{0, 1}); *1/ */
+/*     std::cout << "main()" << std::endl; */
+/*     #ifndef WASM */
+/*     while (true) {} */
+/*     #endif */
+/* } */
 
 /* void init() { */
 /*   // error("Based on <a href='http://spimsimulator.sourceforge.net/'>SPIM</a> %s " */
