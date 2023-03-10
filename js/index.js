@@ -32,38 +32,101 @@ programList.forEach(programName => {
     ctx_var++;
 });
 
-var Module = {
-    print: (text) => {
-        Elements.output.insertAdjacentHTML("beforeend", text + "\n");
-        Elements.output.scrollTop = Elements.output.scrollHeight;
-        console.log("from  module: " + text);
-    },
-    printErr: (text) => {
-        Elements.log.insertAdjacentText("beforeend", text + "\n");
-        Elements.log.scrollTop = Elements.output.scrollHeight;
-        console.error("from  module: " + text);
-    },
-    onRuntimeInitialized: async () => {
-        console.log("Now setting up UI");
-        await main();
-    }
-};
+function loadWasm() {
+    var canvas = document.getElementById("my-canvas");
+    var status = document.getElementById("my-status");
+    qtLoader = new QtLoader({
+        moduleConfig: {
+            print: (text) => {
+                Elements.output.insertAdjacentHTML("beforeend", text + "\n");
+                Elements.output.scrollTop = Elements.output.scrollHeight;
+                console.log("from  module: " + text);
+            },
+            printErr: (text) => {
+                Elements.log.insertAdjacentText("beforeend", text + "\n");
+                Elements.log.scrollTop = Elements.output.scrollHeight;
+                console.error("from  module: " + text);
+            },
+            onRuntimeInitialized: async () => {
+                console.log("Now setting up UI");
+                await main();
+            }
+        },
+        canvasElements: [canvas],
+        showLoader: function(loaderStatus) {
+          canvas.style.display = 'none';
+          status.style.display = 'block';
+          status.innerHTML = loaderStatus + "...";
+        },
+        showError: function(errorText) {
+          canvas.style.display = 'none';
+          status.style.display = 'block';
+          status.innerHTML = errorText;
+        },
+        showExit: function() {
+          status.innerHTML = "Application exit";
+          if (qtLoader.exitCode !== undefined)
+              status.innerHTML += " with code " + qtLoader.exitCode;
+          if (qtLoader.exitText !== undefined)
+              status.innerHTML += " (" + qtLoader.exitText + ")";
+          canvas.style.display = 'none';
+          status.style.display = 'block';
+        },
+        showCanvas: function() {
+          canvas.style.display = 'block';
+          status.style.display = 'none';
+        },
+        // statusChanged: function(newStatus) {
+        //     switch (newStatus) {
+        //         case "Running":
+        //             main(); // this is an async function so idk itll queue it up in the event queue
+        //             break;
+        //     }
+        // }
+    });
+
+    qtLoader.loadEmscriptenModule("JsSpimbot");
+    return qtLoader;
+}
+
+var Loader;
+
+window.onload = () => {
+    Loader = loadWasm();
+}
+
+// var Module = {
+//     print: (text) => {
+//         Elements.output.insertAdjacentHTML("beforeend", text + "\n");
+//         Elements.output.scrollTop = Elements.output.scrollHeight;
+//         console.log("from  module: " + text);
+//     },
+//     printErr: (text) => {
+//         Elements.log.insertAdjacentText("beforeend", text + "\n");
+//         Elements.log.scrollTop = Elements.output.scrollHeight;
+//         console.error("from  module: " + text);
+//     },
+//     onRuntimeInitialized: async () => {
+//         console.log("Now setting up UI");
+//         await main();
+//     }
+// };
 
 async function main(fileInput = `Tests/${fileList[0]}`, ctx = null) {
     console.log("Running main load");
     if (ctx == null) {
         for (var ctx = 0; ctx < 2; ctx++) {
             let data = await loadData(fileInput);
-            const stream = FS.open('input_'+ctx+'.s', 'w+');
-            FS.write(stream, new Uint8Array(data), 0, data.byteLength, 0);
-            FS.close(stream);
+            const stream = Loader.module().FS.open('input_'+ctx+'.s', 'w+');
+            Loader.module().FS.write(stream, new Uint8Array(data), 0, data.byteLength, 0);
+            Loader.module().FS.close(stream);
         }
         Execution.init();
     } else {
         let data = await loadData(fileInput);
-        const stream = FS.open('input_'+ctx+'.s', 'w+');
-        FS.write(stream, new Uint8Array(data), 0, data.byteLength, 0);
-        FS.close(stream);
+        const stream = Loader.module().FS.open('input_'+ctx+'.s', 'w+');
+        Loader.module().FS.write(stream, new Uint8Array(data), 0, data.byteLength, 0);
+        Loader.module().FS.close(stream);
         Execution.init(false, ctx);
         changeContext(ctx);
         Elements.contextSelector.selectedIndex = ctx;
@@ -99,10 +162,10 @@ async function changeContext(ctx) {
     Execution.ctx = ctx;
     console.log("current ctx: ", Execution.ctx);
 
-    // Module.pause();
+    // Loader.module().pause();
     // Execution.playing = false;
     // Elements.playButton.innerHTML = "Continue";
-    if (Module.lockSimulator(100)) {
+    if (Loader.module().lockSimulator(100)) {
         updateStdOut(Execution.ctx);
         updateStdErr(Execution.ctx);
         // RegisterUtils.update(Execution.ctx);
@@ -111,7 +174,7 @@ async function changeContext(ctx) {
         MemoryUtils.init(Execution.ctx);
         InstructionUtils.update(Execution.ctx);
 
-        Module.unlockSimulator();
+        Loader.module().unlockSimulator();
     }
 
 }

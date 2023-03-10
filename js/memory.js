@@ -127,14 +127,14 @@ class UserData extends DataSegment {
         super();
         this.ctx = ctx;
         this.element = Elements.userData;
-        this.content = Module.getUserData(this.ctx);
+        this.content = Loader.module().getUserData(this.ctx);
         this.startAddress = 0x10000000;
         
     }
 
     update(ctx) {
         this.ctx = ctx;
-        this.content = Module.getUserData(ctx);
+        this.content = Loader.module().getUserData(ctx);
 
         for (let i = 0; i < this.content.length / 16; i++) {
             const addr = this.startAddress + i * 0x10;
@@ -151,13 +151,13 @@ class KernelData extends DataSegment {
         super();
         this.ctx = ctx;
         this.element = Elements.kernelData;
-        this.content = Module.getKernelData(this.ctx);
+        this.content = Loader.module().getKernelData(this.ctx);
         this.startAddress = 0x90000000;
     }
 
     update(ctx) {
         this.ctx = ctx;
-        this.content = Module.getKernelData(ctx);
+        this.content = Loader.module().getKernelData(ctx);
 
         for (let i = 0; i < this.content.length / 16; i++) {
             const addr = this.startAddress + i * 0x10;
@@ -173,7 +173,7 @@ class Stack extends Memory {
     constructor(ctx) {
         super();
         this.ctx = ctx;
-        this.content = Module.getStack(this.ctx);
+        this.content = Loader.module().getStack(this.ctx);
         this.element = Elements.stack;
     }
 
@@ -181,7 +181,7 @@ class Stack extends Memory {
         if (RegisterUtils.getSP() < this.minLineAddress)
             this.addNewLines(this.minLineAddress);
         this.ctx = ctx;
-        this.content = Module.getStack(ctx);
+        this.content = Loader.module().getStack(ctx);
         this.lines.forEach(e => e.updateValues());
     }
 

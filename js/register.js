@@ -12,10 +12,10 @@ class RegisterUtils {
         const floatRegNames = Array(32).fill(0).map((_, i) => `FG${i}`);
         const doubleRegNames = Array(16).fill(0).map((_, i) => `FP${i}`);
 
-        this.specialRegVals = Module.getSpecialRegVals(ctx);
-        this.generalRegVals = Module.getGeneralRegVals(ctx);
-        this.floatRegVals = Module.getFloatRegVals(ctx);
-        this.doubleRegVals = Module.getDoubleRegVals(ctx);
+        this.specialRegVals = Loader.module().getSpecialRegVals(ctx);
+        this.generalRegVals = Loader.module().getGeneralRegVals(ctx);
+        this.floatRegVals = Loader.module().getFloatRegVals(ctx);
+        this.doubleRegVals = Loader.module().getDoubleRegVals(ctx);
 
         this.generalRegs = generalRegNames.map(name => new Register(name));
         this.specialRegs = specialRegNames.map(name => new Register(name));
@@ -41,7 +41,7 @@ class RegisterUtils {
     // original update()
     // static update() {
     //     // values in special registers needs to be refreshed
-    //     this.specialRegVals = Module.getSpecialRegVals(0);
+    //     this.specialRegVals = Loader.module().getSpecialRegVals(0);
     //     this.specialRegs.forEach((reg, i) => reg.updateValue(this.specialRegVals[i]));
 
     //     this.generalRegs.forEach((reg, i) => reg.updateValue(this.generalRegVals[i]));
@@ -51,12 +51,12 @@ class RegisterUtils {
 
     static update(ctx) {
         // values in special registers needs to be refreshed
-        this.specialRegVals = Module.getSpecialRegVals(ctx);
+        this.specialRegVals = Loader.module().getSpecialRegVals(ctx);
 
         this.specialRegs.forEach((reg, i) => reg.updateValue(this.specialRegVals[i]));
-        this.generalRegs.forEach((reg, i) => reg.updateValue(Module.getGeneralRegVals(ctx)[i]));
-        this.floatRegs.forEach((reg, i) => reg.updateValue(Module.getFloatRegVals(ctx)[i]));
-        this.doubleRegs.forEach((reg, i) => reg.updateValue(Module.getDoubleRegVals(ctx)[i]));
+        this.generalRegs.forEach((reg, i) => reg.updateValue(Loader.module().getGeneralRegVals(ctx)[i]));
+        this.floatRegs.forEach((reg, i) => reg.updateValue(Loader.module().getFloatRegVals(ctx)[i]));
+        this.doubleRegs.forEach((reg, i) => reg.updateValue(Loader.module().getDoubleRegVals(ctx)[i]));
     }
 
     static changeRadix(radix) {

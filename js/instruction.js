@@ -7,10 +7,10 @@ class InstructionUtils {
     //     Elements.kernelTextContent.innerHTML = '';
 
     //     const ctx = 0;
-    //     const userText = Module.getUserText(ctx).split("\n").slice(0, -1).map(e => new Instruction(e, ctx));
+    //     const userText = Loader.module().getUserText(ctx).split("\n").slice(0, -1).map(e => new Instruction(e, ctx));
     //     userText.forEach(e => Elements.userTextContent.appendChild(e.element));
 
-    //     const kernelText = Module.getKernelText(ctx).split("\n").slice(0, -1).map(e => new Instruction(e, ctx));
+    //     const kernelText = Loader.module().getKernelText(ctx).split("\n").slice(0, -1).map(e => new Instruction(e, ctx));
     //     kernelText.forEach(e => Elements.kernelTextContent.appendChild(e.element));
 
     //     InstructionUtils.instructionList = [...userText, ...kernelText];
@@ -27,10 +27,10 @@ class InstructionUtils {
         Elements.kernelTextContent.innerHTML = '';
 
         this.ctx = ctx;
-        this.userText = Module.getUserText(this.ctx).split("\n").slice(0, -1).map(e => new Instruction(e, this.ctx));
+        this.userText = Loader.module().getUserText(this.ctx).split("\n").slice(0, -1).map(e => new Instruction(e, this.ctx));
         this.userText.forEach(e => Elements.userTextContent.appendChild(e.element));
 
-        this.kernelText = Module.getKernelText(this.ctx).split("\n").slice(0, -1).map(e => new Instruction(e, this.ctx));
+        this.kernelText = Loader.module().getKernelText(this.ctx).split("\n").slice(0, -1).map(e => new Instruction(e, this.ctx));
         this.kernelText.forEach(e => Elements.kernelTextContent.appendChild(e.element));
 
         InstructionUtils.instructionList = [...this.userText, ...this.kernelText];
@@ -50,10 +50,10 @@ class InstructionUtils {
 
         this.ctx = ctx;
 
-        this.userText = Module.getUserText(this.ctx).split("\n").slice(0, -1).map(e => new Instruction(e, this.ctx));
+        this.userText = Loader.module().getUserText(this.ctx).split("\n").slice(0, -1).map(e => new Instruction(e, this.ctx));
         this.userText.forEach(e => Elements.userTextContent.appendChild(e.element));
 
-        this.kernelText = Module.getKernelText(this.ctx).split("\n").slice(0, -1).map(e => new Instruction(e, this.ctx));
+        this.kernelText = Loader.module().getKernelText(this.ctx).split("\n").slice(0, -1).map(e => new Instruction(e, this.ctx));
         this.kernelText.forEach(e => Elements.kernelTextContent.appendChild(e.element));
 
         InstructionUtils.instructionList = [...this.userText, ...this.kernelText];
@@ -178,11 +178,11 @@ class Instruction {
     toggleBreakpoint() {
         this.isBreakpoint = !this.isBreakpoint;
         if (this.isBreakpoint) {
-            Module.addBreakpoint(this.address, this.ctx);
+            Loader.module().addBreakpoint(this.address, this.ctx);
             this.element.style.fontWeight = "bold";
             InstructionUtils.breakpointAddr[InstructionUtils.ctx].push(this.address);
         } else {
-            Module.deleteBreakpoint(this.address, this.ctx);
+            Loader.module().deleteBreakpoint(this.address, this.ctx);
             this.element.style.fontWeight = null;
             InstructionUtils.breakpointAddr[InstructionUtils.ctx].splice(InstructionUtils.breakpointAddr[InstructionUtils.ctx].indexOf(this.address), 1);
         }

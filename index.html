@@ -259,40 +259,6 @@
 <script type='text/javascript' src="js/memory.js"></script>
 <script type='text/javascript' src="js/register.js"></script>
 <script type='text/javascript' src="js/execution.js"></script>
-<script>
-function init() {
-    var canvas = document.getElementById("my-canvas");
-    var status = document.getElementById("my-status");
-    qtLoader = new QtLoader({
-        canvasElements: [canvas],
-        showLoader: function(loaderStatus) {
-          canvas.style.display = 'none';
-          status.style.display = 'block';
-          status.innerHTML = loaderStatus + "...";
-        },
-        showError: function(errorText) {
-          canvas.style.display = 'none';
-          status.style.display = 'block';
-          status.innerHTML = errorText;
-        },
-        showExit: function() {
-          status.innerHTML = "Application exit";
-          if (qtLoader.exitCode !== undefined)
-              status.innerHTML += " with code " + qtLoader.exitCode;
-          if (qtLoader.exitText !== undefined)
-              status.innerHTML += " (" + qtLoader.exitText + ")";
-          canvas.style.display = 'none';
-          status.style.display = 'block';
-        },
-        showCanvas: function() {
-          canvas.style.display = 'block';
-          status.style.display = 'none';
-        },
-    });
-
-    qtLoader.loadEmscriptenModule("JsSpimbot");
-}
-</script>
 <script async type="text/javascript" src="qtloader.js"></script>
 </body>
 </html>

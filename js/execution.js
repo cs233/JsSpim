@@ -20,8 +20,8 @@ class Execution {
         Elements.output.innerHTML = '';
         Elements.log.innerHTML = '';
 
-        Module.reset(); // 2, [0, 1]);
-        while (!Module.lockSimulator(100));
+        Loader.module().reset(); // 2, [0, 1]);
+        while (!Loader.module().lockSimulator(100));
         RegisterUtils.init(ctx);
         MemoryUtils.init(ctx);
 
@@ -35,7 +35,7 @@ class Execution {
             InstructionUtils.init(ctx);
             InstructionUtils.highlightCurrentInstruction();
         }
-        Module.unlockSimulator();
+        Loader.module().unlockSimulator();
 
         if (Execution.updateDrawTmeId !== undefined)
             window.cancelAnimationFrame(Execution.updateDrawTmeId)
@@ -43,22 +43,22 @@ class Execution {
     }
 
     static step(stepSize = 1) {
-        Module.step(stepSize);
+        Loader.module().step(stepSize);
         Execution.playing = true;
         requestAnimationFrame(Execution.updateUI);
     }
 
     static togglePlay() {
         // if (!Execution.started) { // TODO: REMOVE. TEMPORARY FIX FOR PROOF OF CONCEPT
-        //     Module.run_entire_program();
+        //     Loader.module().run_entire_program();
         // }
         Execution.started = true;
         if (Execution.playing) {
-            Module.pause();
+            Loader.module().pause();
             Execution.playing = false;
             Elements.playButton.innerHTML = "Continue";
         } else {
-            Module.play();
+            Loader.module().play();
             Execution.playing = true;
             Elements.playButton.innerHTML = "Pause";
             if (Execution.updateDrawTmeId !== undefined)
@@ -120,9 +120,9 @@ class Execution {
     }
 
     static forceUpdateUI(_timestamp) {
-        let status = Module.getStatus();
+        let status = Loader.module().getStatus();
         Execution.processStatus(status);
-        if (status != 0 && Module.lockSimulator(100)) { // make this magic number related to the refresh rate of the monitor
+        if (status != 0 && Loader.module().lockSimulator(100)) { // make this magic number related to the refresh rate of the monitor
             // original update()
             // RegisterUtils.update();
             // MemoryUtils.update();
@@ -135,7 +135,7 @@ class Execution {
             // InstructionUtils.update(Execution.ctx);
             InstructionUtils.highlightCurrentInstruction();
 
-            Module.unlockSimulator();
+            Loader.module().unlockSimulator();
         }
     }
 
@@ -214,7 +214,7 @@ class Execution {
 
     static setSpeed(newSpeed) {
         Execution.speed = newSpeed;
-        Module.setDelay(Execution.getCycleDelay(newSpeed));
+        Loader.module().setDelay(Execution.getCycleDelay(newSpeed));
         console.log("Set speed delay to " + Execution.getCycleDelay(newSpeed) + "usec");
         if (Execution.started) return;
         Elements.playButton.innerHTML = (Execution.speed === Execution.maxSpeed) ? "Run" : "Play";
