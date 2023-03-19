@@ -88,7 +88,7 @@
 
 
 
-#define K 1024
+constexpr int K = 1024;
 
 
 #define BYTES_PER_WORD 4	/* On the MIPS processor */
