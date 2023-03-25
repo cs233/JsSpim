@@ -319,7 +319,7 @@ static char scan_escape (MIPSImage &img, char **str);
 
 
 void
-initialize_scanner (FILE *in_file, char *in_file_name)
+initialize_scanner (FILE *in_file, const char *in_file_name)
 {
   if (yyin != in_file)
   {

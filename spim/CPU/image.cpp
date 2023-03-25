@@ -4,9 +4,6 @@
 
 #include <iostream>
 
-static size_t curr_ctx = 0;
-static size_t num_ctx = NUM_CONTEXTS;
-
 MIPSImage::MIPSImage(int ctx) : ctx(ctx), std_out(ctx, std::cout), std_err(ctx, std::cerr) {}
 
 int MIPSImage::get_ctx() const {

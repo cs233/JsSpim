@@ -219,13 +219,13 @@ typedef union {int i; FILE* f;} port;
 /* Exported functions (from spim.c or xspim.c): */
 
 int console_input_available ();
-void error (MIPSImage &img, char *fmt, ...);
-void fatal_error (MIPSImage &img, char *fmt, ...);
+void error (MIPSImage &img, const char *fmt, ...);
+void fatal_error (MIPSImage &img, const char *fmt, ...);
 char get_console_char ();
 void put_console_char (char c);
 void read_input (char *str, int n);
-void run_error (MIPSImage &img, char *fmt, ...);
-void write_output (MIPSImage &img, port, char *fmt, ...);
+void run_error (MIPSImage &img, const char *fmt, ...);
+void write_output (MIPSImage &img, port, const char *fmt, ...);
 
 
 /* Exported variables: */

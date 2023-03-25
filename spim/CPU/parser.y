@@ -515,7 +515,7 @@ static label_list *this_line_labels = NULL; /* List of label for curent line */
 
 static bool noat_flag = 0;	/* => program can use $1 */
 
-static char *input_file_name;	/* Name of file being parsed */
+static const char *input_file_name;	/* Name of file being parsed */
 
 %}
 
@@ -2907,7 +2907,7 @@ store_word_data (MIPSImage &img, int value)
 
 
 void
-initialize_parser (char *file_name)
+initialize_parser (const char *file_name)
 {
   input_file_name = file_name;
   only_id = 0;
