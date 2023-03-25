@@ -102,35 +102,43 @@ async function initModule() {
     console.log("program 0 enabled: ", enable_ctx0);
     console.log("program 1 enabled: ", enable_ctx1);
 
-
+    // TODO: add module reset when
+    const ctx_list = [];
+    if (enable_ctx0) {ctx_list.push(0)};
+    if (enable_ctx1) {ctx_list.push(1)};
+    Module.reset(2, ctx_list);
 
 }
 
 async function changeContext(ctx) {
 
+    var ctx_enabled = false;
+    if (ctx == 0) ctx_enabled = document.getElementById("context-enabler0").checked;
+    else if (ctx == 1) ctx_enabled = document.getElementById("context-enabler1").checked;
 
-    // if (ctx !== "0") {
-    //     // Output 
-    //     Elements.output.innerHTML = "";
-    //     Elements.log.innerHTML = "";
+    // If the ctx is not enabled, clean the front end
+    if (!ctx_enabled) {
+        // Output 
+        Elements.output.innerHTML = "";
+        Elements.log.innerHTML = "";
 
-    //     // Reg
-    //     Elements.generalReg.innerHTML = "";
-    //     Elements.specialReg.innerHTML = "";
-    //     Elements.floatReg.innerHTML = "";
-    //     Elements.doubleReg.innerHTML = "";
+        // Reg
+        Elements.generalReg.innerHTML = "";
+        Elements.specialReg.innerHTML = "";
+        Elements.floatReg.innerHTML = "";
+        Elements.doubleReg.innerHTML = "";
 
-    //     // Insn
-    //     Elements.userTextContent.innerHTML = "";
-    //     Elements.kernelTextContent.innerHTML = "";
-    //     Elements.kernelTextContainer.innerHTML = "";
+        // Insn
+        Elements.userTextContent.innerHTML = "";
+        Elements.kernelTextContent.innerHTML = "";
+        Elements.kernelTextContainer.innerHTML = "";
 
-    //     // Mem
-    //     Elements.userData.innerHTML = "";
-    //     Elements.kernelData.innerHTML = "";
-    //     Elements.kernelDataContainer.innerHTML = "";
-    //     Elements.stack.innerHTML = "";
-    // }
+        // Mem
+        Elements.userData.innerHTML = "";
+        Elements.kernelData.innerHTML = "";
+        Elements.kernelDataContainer.innerHTML = "";
+        Elements.stack.innerHTML = "";
+    }
 
     console.log("change ctx from ", Execution.ctx, " to ", ctx);
     Execution.ctx = ctx;
@@ -139,7 +147,9 @@ async function changeContext(ctx) {
     // Module.pause();
     // Execution.playing = false;
     // Elements.playButton.innerHTML = "Continue";
-    if (Module.lockSimulator(100)) {
+
+
+    if (ctx_enabled && Module.lockSimulator(100)) {
         updateStdOut(Execution.ctx);
         updateStdErr(Execution.ctx);
         // RegisterUtils.update(Execution.ctx);

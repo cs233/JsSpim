@@ -20,8 +20,17 @@ class Execution {
         Elements.output.innerHTML = '';
         Elements.log.innerHTML = '';
 
+
+        let enable_ctx0 = document.getElementById("context-enabler0").checked;
+        let enable_ctx1 = document.getElementById("context-enabler1").checked;
+        const ctx_list = [];
+        if (enable_ctx0) {ctx_list.push(0)};
+        if (enable_ctx1) {ctx_list.push(1)};
+        console.log("enable list: ", ctx_list);
+        Module.reset(2, ctx_list);
+
         // Module.reset(); // 2, [0, 1]);
-        Module.reset(2, [0, 1]);
+        // Module.reset(2, [0, 1]);
         // Module.reset(2, [0]);
         // Module.reset(2, [1]);
 
