@@ -94,6 +94,7 @@ async function loadData(fileInput) {
     }
 }
 
+let prev_ctx_list = [0, 1];
 
 async function initModule() {
 
@@ -103,11 +104,63 @@ async function initModule() {
     console.log("program 1 enabled: ", enable_ctx1);
 
     // TODO: add module reset when
-    const ctx_list = [];
+    const ctx_list = []; // [0]
     if (enable_ctx0) {ctx_list.push(0)};
     if (enable_ctx1) {ctx_list.push(1)};
     Module.reset(2, ctx_list);
 
+
+    
+
+
+    
+    let cur_ctx = document.getElementById("context-selector").value;
+    if (prev_ctx_list.length == ctx_list.length) {
+        // same ctx list, no modification
+
+    } else if (prev_ctx_list.length > ctx_list.length) {
+        // disabled selected ctx, clean frontend
+        let diff_ctx = prev_ctx_list.filter(item => !ctx_list.includes(item))[0];
+        if (diff_ctx == cur_ctx) {
+            // Output 
+            Elements.output.innerHTML = "";
+            Elements.log.innerHTML = "";
+
+            // Reg
+            Elements.generalReg.innerHTML = "";
+            Elements.specialReg.innerHTML = "";
+            Elements.floatReg.innerHTML = "";
+            Elements.doubleReg.innerHTML = "";
+
+            // Insn
+            Elements.userTextContent.innerHTML = "";
+            Elements.kernelTextContent.innerHTML = "";
+            Elements.kernelTextContainer.innerHTML = "";
+
+            // Mem
+            Elements.userData.innerHTML = "";
+            Elements.kernelData.innerHTML = "";
+            Elements.kernelDataContainer.innerHTML = "";
+            Elements.stack.innerHTML = "";            
+        }
+        
+    } else {
+        // enabled selected ctx, update frontend
+        let diff_ctx = ctx_list.filter(item => !prev_ctx_list.includes(item))[0];
+        if (diff_ctx == cur_ctx) {
+            if (Module.lockSimulator(100)) {
+                updateStdOut(cur_ctx);
+                updateStdErr(cur_ctx);
+                RegisterUtils.init(cur_ctx);
+                MemoryUtils.init(cur_ctx);
+                InstructionUtils.update(cur_ctx);
+        
+                Module.unlockSimulator();
+            }
+        }
+
+    }
+    prev_ctx_list = ctx_list.slice();
 }
 
 async function changeContext(ctx) {
