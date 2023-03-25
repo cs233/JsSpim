@@ -53,7 +53,7 @@ class MIPSImage {
      * @param addr The address to read from
      * @returns true if the read was successful, false otherwise
      */
-    virtual bool custom_memory_read(mem_addr addr) { return false; }
+    virtual bool custom_memory_read(mem_addr) { return false; }
 
     /**
      * @brief Override this method to implement custom memory write behavior
@@ -61,7 +61,7 @@ class MIPSImage {
      * @param value The value to write
      * @returns true if the write was successful, false otherwise
      */
-    virtual bool custom_memory_write(mem_addr addr, mem_word value) { return false; }
+    virtual bool custom_memory_write(mem_addr, mem_word) { return false; }
 
     std::streambuf *get_std_out_buf();
     std::streambuf *get_std_err_buf();

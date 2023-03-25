@@ -99,12 +99,12 @@ align_data (MIPSImage &img, int alignment)
   else if (img.reg_image().in_kernel)
     {
       img.reg_image().next_k_data_pc =
-	(img.reg_image().next_k_data_pc + (1 << alignment) - 1) & (-1 << alignment);
+	(img.reg_image().next_k_data_pc + (1 << alignment) - 1) & (0xffffffff << alignment);
       fix_current_label_address (img, img.reg_image().next_k_data_pc);
     }
   else
     {
-      img.reg_image().next_data_pc = (img.reg_image().next_data_pc + (1 << alignment) - 1) & (-1 << alignment);
+      img.reg_image().next_data_pc = (img.reg_image().next_data_pc + (1 << alignment) - 1) & (0xffffffff << alignment);
       fix_current_label_address (img, img.reg_image().next_data_pc);
     }
 }

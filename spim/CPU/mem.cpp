@@ -651,8 +651,10 @@ check_memory_mapped_IO ()
 /* Invoked on a write to the memory-mapped IO area. */
 
 static void
-write_memory_mapped_IO (MIPSImage &img, mem_addr addr, mem_word value)
+write_memory_mapped_IO (MIPSImage &img, mem_addr addr, mem_word)
 {
+  // TODO: Check the blame again
+  void *todo;
   switch (addr) {
     default:
       run_error (img, "Write to unused memory-mapped IO address (0x%x)\n", addr);

@@ -81,15 +81,15 @@ void format_registers (MIPSImage &img, str_stream *ss, int print_gpr_hex, int pr
 void initialize_registers (MIPSImage &img);
 void initialize_stack (MIPSImage &img, const char *command_line);
 void initialize_run_stack (MIPSImage &img, int argc, char **argv);
-void initialize_world (MIPSImage &img, char *exception_file_name, bool print_message);
+void initialize_world (MIPSImage &img, const char *exception_file_name, bool print_message);
 void list_breakpoints (MIPSImage &img);
 name_val_val *map_int_to_name_val_val (name_val_val tbl[], int tbl_len, int num);
 name_val_val *map_string_to_name_val_val (name_val_val tbl[], int tbl_len, char *id);
-bool read_assembly_file (MIPSImage &img, char *fpath);
+bool read_assembly_file (MIPSImage &img, const char *fpath);
 bool step_program (MIPSImage &img, bool display, bool cont_bkpt, bool* continuable);
 bool run_spim_program(std::vector<MIPSImage> &ctxs, int steps, bool display, bool cont_bkpt, bool* continuable, std::timed_mutex &mtx, const unsigned long &delay_usec);
 cycle_result_t run_spim_cycle_multi_ctx(std::map<unsigned int, MIPSImage> &imgs, bool cont_bkpt);
-bool run_spimbot_program (int steps, bool display, bool cont_bkpt, bool* continuable);
+// bool run_spimbot_program (int steps, bool display, bool cont_bkpt, bool* continuable);
 mem_addr starting_address (MIPSImage &img);
 char *str_copy (MIPSImage &img, char *str);
 void write_startup_message (MIPSImage &img);
