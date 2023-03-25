@@ -94,7 +94,44 @@ async function loadData(fileInput) {
     }
 }
 
+
+async function initModule() {
+
+    let enable_ctx0 = document.getElementById("context-enabler0").checked;
+    let enable_ctx1 = document.getElementById("context-enabler1").checked;
+    console.log("program 0 enabled: ", enable_ctx0);
+    console.log("program 1 enabled: ", enable_ctx1);
+
+
+
+}
+
 async function changeContext(ctx) {
+
+
+    // if (ctx !== "0") {
+    //     // Output 
+    //     Elements.output.innerHTML = "";
+    //     Elements.log.innerHTML = "";
+
+    //     // Reg
+    //     Elements.generalReg.innerHTML = "";
+    //     Elements.specialReg.innerHTML = "";
+    //     Elements.floatReg.innerHTML = "";
+    //     Elements.doubleReg.innerHTML = "";
+
+    //     // Insn
+    //     Elements.userTextContent.innerHTML = "";
+    //     Elements.kernelTextContent.innerHTML = "";
+    //     Elements.kernelTextContainer.innerHTML = "";
+
+    //     // Mem
+    //     Elements.userData.innerHTML = "";
+    //     Elements.kernelData.innerHTML = "";
+    //     Elements.kernelDataContainer.innerHTML = "";
+    //     Elements.stack.innerHTML = "";
+    // }
+
     console.log("change ctx from ", Execution.ctx, " to ", ctx);
     Execution.ctx = ctx;
     console.log("current ctx: ", Execution.ctx);

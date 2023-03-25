@@ -20,7 +20,13 @@ class Execution {
         Elements.output.innerHTML = '';
         Elements.log.innerHTML = '';
 
-        Module.reset(); // 2, [0, 1]);
+        // Module.reset(); // 2, [0, 1]);
+        Module.reset(2, [0, 1]);
+        // Module.reset(2, [0]);
+        // Module.reset(2, [1]);
+
+
+
         while (!Module.lockSimulator(100));
         RegisterUtils.init(ctx);
         MemoryUtils.init(ctx);
