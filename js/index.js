@@ -108,13 +108,21 @@ async function initModule() {
     if (enable_ctx0) {ctx_list.push(0)};
     if (enable_ctx1) {ctx_list.push(1)};
     Module.reset(2, ctx_list);
-
-
-    
-
-
     
     let cur_ctx = document.getElementById("context-selector").value;
+
+    // 1. Re-initialize the context selector options (remove disabled ctx)
+
+
+    // 2. switch the option of context selector to enabled one
+
+
+    // 3. switch the context to the enabled one
+
+
+
+
+
     if (prev_ctx_list.length == ctx_list.length) {
         // same ctx list, no modification
 
