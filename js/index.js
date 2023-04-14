@@ -112,24 +112,26 @@ async function initModule() {
     let cur_ctx = document.getElementById("context-selector").value;
 
     // 1. Re-initialize the context selector options (remove disabled ctx)
+    Elements.contextSelector.innerHTML = '';
+    ctx_list.forEach(ctx_idx => {
+        const option = document.createElement("option");
+        if (ctx_idx == 0) programName = "Program1";
+        else if (ctx_idx == 1) programName = "Program2";
 
+        option.text = programName;
+        option.value = ctx_idx;
+        Elements.contextSelector.add(option);
+    });
 
     // 2. switch the option of context selector to enabled one
 
-
-    // 3. switch the context to the enabled one
-
-
-
-
-
-    if (prev_ctx_list.length == ctx_list.length) {
-        // same ctx list, no modification
-
-    } else if (prev_ctx_list.length > ctx_list.length) {
-        // disabled selected ctx, clean frontend
+    // 1) disable a ctx
+    if (prev_ctx_list.length > ctx_list.length) {
         let diff_ctx = prev_ctx_list.filter(item => !ctx_list.includes(item))[0];
-        if (diff_ctx == cur_ctx) {
+        // From 1 => 0
+        if (ctx_list.length == 0) {
+            Elements.contextSelector.selectedIndex = -1;
+            // clean frontend
             // Output 
             Elements.output.innerHTML = "";
             Elements.log.innerHTML = "";
@@ -149,26 +151,105 @@ async function initModule() {
             Elements.userData.innerHTML = "";
             Elements.kernelData.innerHTML = "";
             Elements.kernelDataContainer.innerHTML = "";
-            Elements.stack.innerHTML = "";            
+            Elements.stack.innerHTML = "";              
         }
-        
-    } else {
-        // enabled selected ctx, update frontend
-        let diff_ctx = ctx_list.filter(item => !prev_ctx_list.includes(item))[0];
-        if (diff_ctx == cur_ctx) {
-            if (Module.lockSimulator(100)) {
-                updateStdOut(cur_ctx);
-                updateStdErr(cur_ctx);
-                RegisterUtils.init(cur_ctx);
-                MemoryUtils.init(cur_ctx);
-                InstructionUtils.update(cur_ctx);
-        
-                Module.unlockSimulator();
+        // From 2 => 1
+        else {
+            // diabled = selected => switch ctx to another
+            if (diff_ctx == cur_ctx) {
+                let new_ctx = ctx_list[0];
+                Elements.contextSelector.selectedIndex = new_ctx;
+                Execution.ctx = new_ctx; 
+                if (Module.lockSimulator(100)) {
+                    updateStdOut(new_ctx);
+                    updateStdErr(new_ctx);
+                    RegisterUtils.init(new_ctx);
+                    MemoryUtils.init(new_ctx);
+                    InstructionUtils.update(new_ctx);
+                    Module.unlockSimulator();
+                }
+            }
+            // disable != selected
+            else {
+                // do nothing
             }
         }
 
     }
+    // enable 
+    else if (prev_ctx_list.length < ctx_list.length) {
+        // From 1 => 2
+        let diff_ctx = ctx_list.filter(item => !prev_ctx_list.includes(item))[0];
+        let new_ctx = diff_ctx;
+        Execution.ctx = new_ctx; 
+        console.log("enable ctx, change to new ctx: ", new_ctx);
+        
+        Elements.contextSelector.selectedIndex = new_ctx;
+        if (Module.lockSimulator(100)) {
+            updateStdOut(new_ctx);
+            updateStdErr(new_ctx);
+            RegisterUtils.init(new_ctx);
+            MemoryUtils.init(new_ctx);
+            InstructionUtils.update(new_ctx);
+            Module.unlockSimulator();
+        }
+    }
+
     prev_ctx_list = ctx_list.slice();
+
+
+    // 3. switch the context to the enabled one
+
+
+
+
+
+    // if (prev_ctx_list.length == ctx_list.length) {
+    //     // same ctx list, no modification
+
+    // } else if (prev_ctx_list.length > ctx_list.length) {
+    //     // disabled selected ctx, clean frontend
+    //     let diff_ctx = prev_ctx_list.filter(item => !ctx_list.includes(item))[0];
+    //     if (diff_ctx == cur_ctx) {
+    //         // Output 
+    //         Elements.output.innerHTML = "";
+    //         Elements.log.innerHTML = "";
+
+    //         // Reg
+    //         Elements.generalReg.innerHTML = "";
+    //         Elements.specialReg.innerHTML = "";
+    //         Elements.floatReg.innerHTML = "";
+    //         Elements.doubleReg.innerHTML = "";
+
+    //         // Insn
+    //         Elements.userTextContent.innerHTML = "";
+    //         Elements.kernelTextContent.innerHTML = "";
+    //         Elements.kernelTextContainer.innerHTML = "";
+
+    //         // Mem
+    //         Elements.userData.innerHTML = "";
+    //         Elements.kernelData.innerHTML = "";
+    //         Elements.kernelDataContainer.innerHTML = "";
+    //         Elements.stack.innerHTML = "";            
+    //     }
+        
+    // } else {
+    //     // enabled selected ctx, update frontend
+    //     let diff_ctx = ctx_list.filter(item => !prev_ctx_list.includes(item))[0];
+    //     if (diff_ctx == cur_ctx) {
+    //         if (Module.lockSimulator(100)) {
+    //             updateStdOut(cur_ctx);
+    //             updateStdErr(cur_ctx);
+    //             RegisterUtils.init(cur_ctx);
+    //             MemoryUtils.init(cur_ctx);
+    //             InstructionUtils.update(cur_ctx);
+        
+    //             Module.unlockSimulator();
+    //         }
+    //     }
+
+    // }
+    // prev_ctx_list = ctx_list.slice();
 }
 
 async function changeContext(ctx) {
