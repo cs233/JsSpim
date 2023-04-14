@@ -64,18 +64,35 @@ async function main(fileInput = `Tests/${fileList[0]}`, ctx = null) {
         const stream = FS.open('input_'+ctx+'.s', 'w+');
         FS.write(stream, new Uint8Array(data), 0, data.byteLength, 0);
         FS.close(stream);
-        Execution.init(false, ctx);
-        changeContext(ctx);
-        Elements.contextSelector.selectedIndex = ctx;
-        switch (ctx) {
-            case 0:
-                Elements.fileSelector0.value = fileInput;
-                break;
-            case 1:
-                Elements.fileSelector1.value = fileInput;
-                break;
-            default:
+
+        // when upload file != enabled ctx, not change anything
+        let cur_ctx = document.getElementById("context-selector").value;
+        if (ctx == cur_ctx) {
+            Execution.init(false, ctx);
+            changeContext(ctx);
+
+
+            const ctx_list = []; // [0]
+            if (document.getElementById("context-enabler0").checked) {ctx_list.push(0)};
+            if (document.getElementById("context-enabler1").checked) {ctx_list.push(1)};
+            let new_ctx_idx = 0;
+            for (var i = 0; i < ctx_list.length; i++) {
+                if (ctx == ctx_list[i]) {new_ctx_idx = i; break;}
+            }
+            Elements.contextSelector.selectedIndex = new_ctx_idx;
+
+            // Elements.contextSelector.selectedIndex = ctx;
+            switch (ctx) {
+                case 0:
+                    Elements.fileSelector0.value = fileInput;
+                    break;
+                case 1:
+                    Elements.fileSelector1.value = fileInput;
+                    break;
+                default:
+            }
         }
+
     }
 
     // Execution.init();
@@ -124,6 +141,7 @@ async function initModule() {
     });
 
     // 2. switch the option of context selector to enabled one
+    // and switch the context to the enabled one
 
     // 1) disable a ctx
     if (prev_ctx_list.length > ctx_list.length) {
@@ -158,7 +176,9 @@ async function initModule() {
             // diabled = selected => switch ctx to another
             if (diff_ctx == cur_ctx) {
                 let new_ctx = ctx_list[0];
-                Elements.contextSelector.selectedIndex = new_ctx;
+                // Elements.contextSelector.selectedIndex = new_ctx;
+                Elements.contextSelector.selectedIndex = 0;
+
                 Execution.ctx = new_ctx; 
                 if (Module.lockSimulator(100)) {
                     updateStdOut(new_ctx);
@@ -183,8 +203,12 @@ async function initModule() {
         let new_ctx = diff_ctx;
         Execution.ctx = new_ctx; 
         console.log("enable ctx, change to new ctx: ", new_ctx);
-        
-        Elements.contextSelector.selectedIndex = new_ctx;
+
+        let new_ctx_idx = 0;
+        for (var i = 0; i < ctx_list.length; i++) {
+            if (new_ctx == ctx_list[i]) {new_ctx_idx = i; break;}
+        }
+        Elements.contextSelector.selectedIndex = new_ctx_idx;
         if (Module.lockSimulator(100)) {
             updateStdOut(new_ctx);
             updateStdErr(new_ctx);
@@ -198,7 +222,7 @@ async function initModule() {
     prev_ctx_list = ctx_list.slice();
 
 
-    // 3. switch the context to the enabled one
+    // 3. 
 
 
 
