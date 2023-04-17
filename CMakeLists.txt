@@ -20,11 +20,11 @@ if (EMSCRIPTEN)
     endif ()
 
     set(MIN_VERSION "3.1.14")
-    set(MAX_VERSION "3.1.25")
+    set(MAX_VERSION "3.2.0")
     if (${EMSCRIPTEN_VERSION} VERSION_LESS MIN_VERSION)
         message(FATAL_ERROR "EMSCRIPTEN version looks too old. Was ${EMSCRIPTEN_VERSION}, should be at least ${MIN_VERSION}.")
     endif ()
-    if (${EMSCRIPTEN_VERSION} VERSION_GREATER MAX_VERSION)
+    if (${EMSCRIPTEN_VERSION} VERSION_GREATER_EQUAL MAX_VERSION)
         message(FATAL_ERROR "EMSCRIPTEN version is too new. Was ${EMSCRIPTEN_VERSION}, should be at least ${MAX_VERSION}.")
     endif ()
 
