@@ -51,9 +51,9 @@ class MIPSImage {
     /**
      * @brief Override this method to implement custom memory read behavior
      * @param addr The address to read from
-     * @returns true if the read was successful, false otherwise
+     * @returns The value at the address, or std::nullopt if the read was unsuccessful
      */
-    virtual bool custom_memory_read(mem_addr) { return false; }
+    virtual std::optional<mem_word> custom_memory_read(mem_addr) { return std::nullopt; }
 
     /**
      * @brief Override this method to implement custom memory write behavior

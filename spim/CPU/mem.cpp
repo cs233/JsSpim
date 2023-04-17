@@ -372,6 +372,10 @@ read_mem_inst(MIPSImage &img, mem_addr addr)
 reg_word
 read_mem_byte(MIPSImage &img, mem_addr addr)
 {
+  std::optional<reg_word> custom_read = img.custom_memory_read(addr);
+  if (custom_read.has_value())
+    return custom_read.value();
+
   if ((addr >= DATA_BOT) && (addr < img.mem_image().data_top))
     return img.mem_image().data_seg_b [addr - DATA_BOT];
   else if ((addr >= img.mem_image().stack_bot) && (addr < STACK_TOP))
@@ -388,6 +392,10 @@ read_mem_byte(MIPSImage &img, mem_addr addr)
 reg_word
 read_mem_half(MIPSImage &img, mem_addr addr)
 {
+  std::optional<reg_word> custom_read = img.custom_memory_read(addr);
+  if (custom_read.has_value())
+    return custom_read.value();
+
   if ((addr >= DATA_BOT) && (addr < img.mem_image().data_top) && !(addr & 0x1))
     return img.mem_image().data_seg_h [(addr - DATA_BOT) >> 1];
   else if ((addr >= img.mem_image().stack_bot) && (addr < STACK_TOP) && !(addr & 0x1))
@@ -404,6 +412,10 @@ read_mem_half(MIPSImage &img, mem_addr addr)
 reg_word
 read_mem_word(MIPSImage &img, mem_addr addr)
 {
+  std::optional<reg_word> custom_read = img.custom_memory_read(addr);
+  if (custom_read.has_value())
+    return custom_read.value();
+
   if ((addr >= DATA_BOT) && (addr < img.mem_image().data_top) && !(addr & 0x3))
     return img.mem_image().data_seg [(addr - DATA_BOT) >> 2];
   else if ((addr >= img.mem_image().stack_bot) && (addr < STACK_TOP) && !(addr & 0x3))
@@ -434,6 +446,9 @@ void
 set_mem_byte(MIPSImage &img, mem_addr addr, reg_word value)
 {
   img.mem_image().data_modified = true;
+  if (img.custom_memory_write(addr, value))
+    return;
+
   if ((addr >= DATA_BOT) && (addr < img.mem_image().data_top))
     img.mem_image().data_seg_b [addr - DATA_BOT] = (BYTE_TYPE) value;
   else if ((addr >= img.mem_image().stack_bot) && (addr < STACK_TOP))
@@ -451,6 +466,9 @@ void
 set_mem_half(MIPSImage &img, mem_addr addr, reg_word value)
 {
   img.mem_image().data_modified = true;
+  if (img.custom_memory_write(addr, value))
+    return;
+
   if ((addr >= DATA_BOT) && (addr < img.mem_image().data_top) && !(addr & 0x1))
     img.mem_image().data_seg_h [(addr - DATA_BOT) >> 1] = (short) value;
   else if ((addr >= img.mem_image().stack_bot) && (addr < STACK_TOP) && !(addr & 0x1))
@@ -468,6 +486,9 @@ void
 set_mem_word(MIPSImage &img, mem_addr addr, reg_word value)
 {
   img.mem_image().data_modified = true;
+  if (img.custom_memory_write(addr, value))
+    return;
+
   if ((addr >= DATA_BOT) && (addr < img.mem_image().data_top) && !(addr & 0x3))
     img.mem_image().data_seg [(addr - DATA_BOT) >> 2] = (mem_word) value;
   else if ((addr >= img.mem_image().stack_bot) && (addr < STACK_TOP) && !(addr & 0x3))
