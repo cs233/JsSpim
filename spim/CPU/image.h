@@ -2,6 +2,7 @@
 #define IMAGE_H
 
 #include <unordered_map>
+#include <optional>
 
 #include "image_print_stream.h"
 #include "mem_image.h"
