@@ -705,18 +705,24 @@ zmalloc (MIPSImage &img, int size)
 }
 
 std::string string_vformat(const std::string& format, va_list args) {
+    va_list args_copy;
+    va_copy(args_copy, args);
     int size_s = std::vsnprintf(nullptr, 0, format.c_str(), args) + 1; // Extra space for '\0'
     if( size_s <= 0 ){ throw std::runtime_error( "Error during formatting." ); }
     auto size = static_cast<size_t>(size_s);
     std::unique_ptr<char[]> buf( new char[ size ] );
-    std::vsnprintf(buf.get(), size, format.c_str(), args);
+    std::vsnprintf(buf.get(), size - 1, format.c_str(), args_copy);
+    va_end(args_copy);
     return std::string( buf.get(), buf.get() + size - 1 ); // We don't want the '\0' inside
 }
 
 std::pair<char *, int> vformat_alloc(const char *format, va_list args) {
+    va_list args_copy;
+    va_copy(args_copy, args);
     int size = vsnprintf(NULL, 0, format, args) + 1;
     char *formatted_string = new char[size];
-    vsprintf(formatted_string, format, args);
+    vsnprintf(formatted_string, size - 1, format, args_copy);
+    va_end(args_copy);
     return std::make_pair(formatted_string, size - 1);
 }
 
