@@ -40,15 +40,12 @@
 
 
 
-
-
 /* Local functions: */
 
 static mem_word bad_mem_read (MIPSImage &img, mem_addr addr, int mask);
 static void bad_mem_write (MIPSImage &img, mem_addr addr, mem_word value, int mask);
 static instruction *bad_text_read (MIPSImage &img, mem_addr addr);
 static void bad_text_write (MIPSImage &img, mem_addr addr, instruction *inst);
-static void free_instructions (instruction **inst, int n);
 static mem_word read_memory_mapped_IO (MIPSImage &img, mem_addr addr);
 static void write_memory_mapped_IO (MIPSImage &img, mem_addr addr, mem_word value);
 
@@ -227,7 +224,7 @@ void mem_dump_profile(MIPSImage &img) {
 
 /* Free the storage used by the old instructions in memory. */
 
-static void
+void
 free_instructions (instruction **inst, int n)
 {
   for ( ; n > 0; n --, inst ++)

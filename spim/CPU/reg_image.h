@@ -4,6 +4,8 @@
 #include "types.h"
 #include "instruction.h"
 
+#include <stdlib.h>
+
 typedef int32 /*@alt unsigned int @*/ reg_word;
 typedef uint32 u_reg_word;
 
@@ -38,6 +40,15 @@ typedef struct regimage {
 	mem_addr next_k_data_pc;	/* Location for next datum in kernel */
 	mem_addr next_gp_item_addr;	/* Address of next item accessed off $gp */
 	bool auto_alignment = true;
+
+    ~regimage() {
+        /* if (FPR) */
+        /*     free(FPR); */
+        /* if (FGR) */
+        /*     free(FGR); */
+        if (FWR)
+            free(FWR);
+    }
 } reg_image_t;
 
 #endif

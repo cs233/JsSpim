@@ -1,10 +1,16 @@
+#include "inst.h"
 #include "spim.h"
 #include "spim-utils.h"
 #include "image.h"
+#include "sym-tbl.h"
 
 #include <iostream>
 
 MIPSImage::MIPSImage(int ctx) : ctx(ctx), std_out(ctx, std::cout), std_err(ctx, std::cerr) {}
+
+MIPSImage::~MIPSImage() {
+    initialize_symbol_table(*this);
+}
 
 int MIPSImage::get_ctx() const {
     return ctx;

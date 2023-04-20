@@ -29,13 +29,14 @@ class MIPSImage {
 
     std::unordered_map<mem_addr, breakpoint> bkpt_map;
     // std::unordered_map<mem_addr, label> labels;
-    label *local_labels = NULL;
+    label *local_labels = NULL; // No allocs occur here
     label *label_hash_table[LABEL_HASH_TABLE_SIZE] = {0};
 
     MIPSImagePrintStream std_out;
     MIPSImagePrintStream std_err;
   public:
     MIPSImage(int ctx);
+    ~MIPSImage();
 
     int get_ctx() const;
 
