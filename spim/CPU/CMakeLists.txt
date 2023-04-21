@@ -27,7 +27,7 @@ BISON_TARGET(MyParser parser.y ${CMAKE_CURRENT_BINARY_DIR}/parser_yacc.cpp
 find_package(FLEX 2.6.4 REQUIRED)
 FLEX_TARGET(MyLexxer scanner.l ${CMAKE_CURRENT_BINARY_DIR}/lex.yy.cpp)
 
-add_compile_options(-Wall -pedantic -Wextra -Wunused -Wno-write-strings -Wno-narrowing -x c++)
+add_compile_options(-pthread -Wall -pedantic -Wextra -Wunused -Wno-write-strings -Wno-narrowing -x c++)
 
 include_directories(${CMAKE_CURRENT_BINARY_DIR})
 add_library(spim STATIC ${Spim_SOURCES} ${BISON_MyParser_OUTPUTS} ${FLEX_MyLexxer_OUTPUTS} )
