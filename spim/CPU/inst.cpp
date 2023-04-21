@@ -280,7 +280,9 @@ i_type_inst_full_word (MIPSImage &img, int opcode, int rt, int rs, imm_expr *exp
 		{
 		r_type_inst (img, Y_ADDU_OP, 1, 1, rs);
 		}
-	      i_type_inst_free (img, opcode, rt, 1, lower_bits_of_expr (img, const_imm_expr (img, low)));
+          imm_expr *const_expr = const_imm_expr (img, low);
+	      i_type_inst_free (img, opcode, rt, 1, lower_bits_of_expr (img, const_expr));
+          free(const_expr);
 	    }
 	  else
 	    {
@@ -577,7 +579,9 @@ free_inst (instruction *inst)
     /* Don't free the breakpoint insructions since we only have one. */
     {
       if (EXPR (inst))
-	free (EXPR (inst));
+	    free (EXPR (inst));
+      if (SOURCE(inst))
+        free (SOURCE(inst));
       free (inst);
     }
 }

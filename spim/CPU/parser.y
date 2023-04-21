@@ -651,9 +651,13 @@ ASM_CODE:	LOAD_OPS	DEST	ADDRESS
 		{
 		  int *x = (int *) $3.p;
 
-		  i_type_inst (img, Y_ORI_OP, 1, 0, const_imm_expr (img, *x));
+          imm_expr *const_expr = const_imm_expr (img, *x);
+		  i_type_inst (img, Y_ORI_OP, 1, 0, const_expr);
+          free(const_expr);
 		  r_co_type_inst (img, Y_MTC1_OP, 0, $2.i, 1);
-		  i_type_inst (img, Y_ORI_OP, 1, 0, const_imm_expr (img, *(x+1)));
+          const_expr = const_imm_expr (img, *(x+1));
+		  i_type_inst (img, Y_ORI_OP, 1, 0, const_expr);
+          free(const_expr);
 		  r_co_type_inst (img, Y_MTC1_OP, 0, $2.i + 1, 1);
 		}
 
@@ -663,7 +667,9 @@ ASM_CODE:	LOAD_OPS	DEST	ADDRESS
 		  float x = (float) *((double *) $3.p);
 		  int *y = (int *) &x;
 
-		  i_type_inst (img, Y_ORI_OP, 1, 0, const_imm_expr (img, *y));
+          imm_expr *const_expr = const_imm_expr (img, *y);
+		  i_type_inst (img, Y_ORI_OP, 1, 0,const_expr);
+          free(const_expr);
 		  r_co_type_inst (img, Y_MTC1_OP, 0, $2.i, 1);
 		}
 
@@ -1080,13 +1086,16 @@ ASM_CODE:	LOAD_OPS	DEST	ADDRESS
 
 		  if (bare_machine && !accept_pseudo_insts)
 		    yyerror (img, "Immediate form not allowed in bare machine");
-		  else
+		  else {
+            imm_expr *expr = make_imm_expr (img, -val, NULL, false);
 		    i_type_inst (img, $1.i == Y_SUB_OP ? Y_ADDI_OP
 				 : $1.i == Y_SUBU_OP ? Y_ADDIU_OP
 				 : (fatal_error (img, "Bad SUB_OP\n"), 0),
 				 $2.i,
 				 $3.i,
-				 make_imm_expr (img, -val, NULL, false));
+				 expr);
+            free(expr);
+          }
 		  free ((imm_expr *)$4.p);
 		}
 

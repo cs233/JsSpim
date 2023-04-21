@@ -50,6 +50,8 @@
 #include <unistd.h>
 #endif
 
+#include <memory>
+
 #define YY_NO_UNISTD_H
 
 /* Exported Variables: */
@@ -59,7 +61,7 @@ int line_no;		/* Line number in input file*/
 
 
 /* Local Variables: */
-static char *file_name;   /* The name of the current file */
+static std::shared_ptr<char> file_name;   /* The name of the current file */
 static int file_name_len; /* To avoid recomputing for each source line */
 
 /* Track which line we are reading and where it began in the buffer. */
@@ -342,8 +344,8 @@ initialize_scanner (FILE *in_file, const char *in_file_name)
   current_line = NULL;
   line_returned = 0;
   eof_returned = 0;
-  file_name = strdup(in_file_name); /* will leak some memory */
-  file_name_len = strlen(file_name);
+  file_name = std::shared_ptr<char>(strdup(in_file_name), [](char *p) { free(p); });
+  file_name_len = strlen(file_name.get());
 }
 
 void
@@ -725,7 +727,7 @@ source_line (MIPSImage &img)
       *eol1 = '\0';
 
       r = (char *) xmalloc (img, eol1 - current_line + 11 + file_name_len);
-      sprintf (r, "%s:%d: %s", file_name, current_line_no, current_line);
+      sprintf (r, "%s:%d: %s", file_name.get(), current_line_no, current_line);
 
       /* Restore end-of-line character and, if necessary, yylex's null byte. */
       *eol1 = c1;

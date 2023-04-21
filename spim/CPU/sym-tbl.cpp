@@ -31,6 +31,7 @@
 */
 
 
+#include "label.h"
 #include "spim.h"
 #include "string-stream.h"
 #include "spim-utils.h"
@@ -78,6 +79,14 @@ initialize_symbol_table (MIPSImage &img)
     for (x = img.get_label_hash_table()[i]; x != NULL; x = n)
     {
       free (x->name);
+      label_use *next_use;
+      for (label_use *curr = x->uses; curr != NULL; curr = next_use) {
+        next_use = curr->next;
+        if (data_dir && curr->inst) {
+          free_inst(curr->inst);
+        }
+        free(curr);
+      }
       n = x->next;
       free (x);
     }
