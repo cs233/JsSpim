@@ -132,8 +132,8 @@ async function initModule() {
     Elements.contextSelector.innerHTML = '';
     ctx_list.forEach(ctx_idx => {
         const option = document.createElement("option");
-        if (ctx_idx == 0) programName = "Program1";
-        else if (ctx_idx == 1) programName = "Program2";
+        if (ctx_idx == 0) programName = "Program 1";
+        else if (ctx_idx == 1) programName = "Program 2";
 
         option.text = programName;
         option.value = ctx_idx;
@@ -191,7 +191,15 @@ async function initModule() {
             }
             // disable != selected
             else {
-                // do nothing
+                Execution.ctx = cur_ctx; 
+                if (Module.lockSimulator(100)) {
+                    updateStdOut(cur_ctx);
+                    updateStdErr(cur_ctx);
+                    RegisterUtils.init(cur_ctx);
+                    MemoryUtils.init(cur_ctx);
+                    InstructionUtils.update(cur_ctx);
+                    Module.unlockSimulator();
+                }
             }
         }
 

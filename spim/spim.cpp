@@ -259,30 +259,16 @@ val getSpecialRegVals(int ctx) {
   return val(typed_memory_view(9, specialRegs));
 }
 
-// void reset_sim() { // unsigned int max_contexts, val active_contexts) {
-//     /* std::vector<unsigned int> arr = emscripten::vecFromJSArray<unsigned int>(active_contexts); */
-//     /* std::set<unsigned int> s(arr.begin(), arr.end()); */
-//     /* std::set<unsigned int> s({0, 1}); */
-
-//     /* reset(2, s); */
-//     start_simulator(2, std::set<unsigned int>{0, 1});
-// }
 
 
 void reset_sim(unsigned int max_contexts, const emscripten::val& arr) { // unsigned int max_contexts, val active_contexts) {
-    /* std::vector<unsigned int> arr = emscripten::vecFromJSArray<unsigned int>(active_contexts); */
-    /* std::set<unsigned int> s(arr.begin(), arr.end()); */
-    /* std::set<unsigned int> s({0, 1}); */
     std::set<unsigned int> ctx_set;
 
     for (size_t i = 0; i < arr["length"].as<size_t>(); i++) {
         ctx_set.insert(arr[i].as<unsigned int>());
     }
 
-    /* reset(2, s); */
-    // start_simulator(max_contexts, std::set<unsigned int>{0, 1});
     start_simulator(max_contexts, ctx_set);
-
 }
 
 EMSCRIPTEN_BINDINGS(simulationSettings) { function("setDelay", &setDelay); }
