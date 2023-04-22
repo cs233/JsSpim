@@ -1198,7 +1198,7 @@ make_addr_expr (MIPSImage &img, int offs, char *sym, int reg_no)
   else
     {
       expr->reg_no = (unsigned char)reg_no;
-      expr->imm = make_imm_expr (img, offs, (sym ? str_copy (img, sym) : sym), false);
+      expr->imm = make_imm_expr (img, offs, sym, false);
     }
   return (expr);
 }
