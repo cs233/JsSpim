@@ -228,60 +228,6 @@ async function initModule() {
     }
 
     prev_ctx_list = ctx_list.slice();
-
-
-    // 3. 
-
-
-
-
-
-    // if (prev_ctx_list.length == ctx_list.length) {
-    //     // same ctx list, no modification
-
-    // } else if (prev_ctx_list.length > ctx_list.length) {
-    //     // disabled selected ctx, clean frontend
-    //     let diff_ctx = prev_ctx_list.filter(item => !ctx_list.includes(item))[0];
-    //     if (diff_ctx == cur_ctx) {
-    //         // Output 
-    //         Elements.output.innerHTML = "";
-    //         Elements.log.innerHTML = "";
-
-    //         // Reg
-    //         Elements.generalReg.innerHTML = "";
-    //         Elements.specialReg.innerHTML = "";
-    //         Elements.floatReg.innerHTML = "";
-    //         Elements.doubleReg.innerHTML = "";
-
-    //         // Insn
-    //         Elements.userTextContent.innerHTML = "";
-    //         Elements.kernelTextContent.innerHTML = "";
-    //         Elements.kernelTextContainer.innerHTML = "";
-
-    //         // Mem
-    //         Elements.userData.innerHTML = "";
-    //         Elements.kernelData.innerHTML = "";
-    //         Elements.kernelDataContainer.innerHTML = "";
-    //         Elements.stack.innerHTML = "";            
-    //     }
-        
-    // } else {
-    //     // enabled selected ctx, update frontend
-    //     let diff_ctx = ctx_list.filter(item => !prev_ctx_list.includes(item))[0];
-    //     if (diff_ctx == cur_ctx) {
-    //         if (Module.lockSimulator(100)) {
-    //             updateStdOut(cur_ctx);
-    //             updateStdErr(cur_ctx);
-    //             RegisterUtils.init(cur_ctx);
-    //             MemoryUtils.init(cur_ctx);
-    //             InstructionUtils.update(cur_ctx);
-        
-    //             Module.unlockSimulator();
-    //         }
-    //     }
-
-    // }
-    // prev_ctx_list = ctx_list.slice();
 }
 
 async function changeContext(ctx) {
