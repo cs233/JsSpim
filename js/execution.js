@@ -45,7 +45,8 @@ class Execution {
             InstructionUtils.init(ctx);
             InstructionUtils.highlightCurrentInstruction();
             // Elements.contextSelector.selectedIndex = ctx;
-
+            stdout[ctx] = "";
+            stderr[ctx] = "";
         } else {
             InstructionUtils.init(ctx);
             InstructionUtils.highlightCurrentInstruction();
