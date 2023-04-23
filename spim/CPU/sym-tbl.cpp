@@ -427,6 +427,7 @@ flush_local_labels (MIPSImage &img, int issue_undef_warnings)
 	      error (img, "Warning: local symbol %s was not defined\n",
 		     entry->name);
 	    /* Can't free label since IMM_EXPR's still reference it */
+        img.push_label_to_free_vector(lab);
 	    break;
 	  }
     }

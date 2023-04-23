@@ -31,6 +31,7 @@ class MIPSImage {
     // std::unordered_map<mem_addr, label> labels;
     label *local_labels = NULL; // No allocs occur here
     label *label_hash_table[LABEL_HASH_TABLE_SIZE] = {0};
+    std::vector<label *> labels_to_free;
 
     MIPSImagePrintStream std_out;
     MIPSImagePrintStream std_err;
@@ -44,6 +45,7 @@ class MIPSImage {
     reg_image_t &reg_image();
     label **get_label_hash_table();
     label *get_local_labels();
+    void push_label_to_free_vector(label *);
     void set_local_labels(label *);
     const mem_image_t &memview_image() const;
     const reg_image_t &regview_image() const;
