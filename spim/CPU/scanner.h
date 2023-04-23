@@ -46,6 +46,8 @@ char *source_line (MIPSImage &img);
 		int yylex(MIPSImage& img)
 extern YY_DECL;
 
+int yylex_destroy(void);
+
 /* Exported Variables: */
 
 /* This flag tells the scanner to treat the next sequence of letters

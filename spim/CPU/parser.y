@@ -2647,6 +2647,7 @@ FACTOR:         Y_INT
 	|	ID
 		{
 		  label *l = lookup_label (img, (char*)$1.p);
+          free((char *) $1.p);
   		  if (l->addr == 0)
                     {
                       record_data_uses_symbol (img, current_data_pc (img), l);

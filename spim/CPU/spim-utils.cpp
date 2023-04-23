@@ -157,6 +157,7 @@ initialize_world (MIPSImage &img, const char *exception_files, bool print_messag
 	(void)record_label (img, "main", 0, 0);
       }
     }
+  yylex_destroy();
   initialize_scanner (stdin, "");
   delete_all_breakpoints (img); // bruh TODO: this function is meant to be contextual-based and then we have THIS here?!?!
 }
@@ -223,6 +224,7 @@ read_assembly_file (MIPSImage &img, const char *fpath)
       file_name = strrchr(fpath, '/');
       file_name = file_name == NULL ? fpath : file_name + 1;
     
+      yylex_destroy();
       initialize_scanner (file, file_name);
       initialize_parser (fpath);
 
