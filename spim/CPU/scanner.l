@@ -556,8 +556,6 @@ erroneous_line (MIPSImage &img)
   int i, c;
   str_stream ss;
 
-  ss_init (&ss);
-
   if (current_line == NULL) return ss_to_string (img, &ss);
 
   /* Print part of line that has been consumed. */

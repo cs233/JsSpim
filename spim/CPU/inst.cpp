@@ -668,7 +668,6 @@ inst_to_string(MIPSImage &img, mem_addr addr)
       return "";
     }
 
-  ss_init (&ss);
   format_an_inst (img, &ss, inst, addr);
   return ss_to_string (img, &ss);
 }

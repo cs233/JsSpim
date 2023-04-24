@@ -35,16 +35,31 @@
 
 #include "image.h"
 
+#ifndef SS_BUF_LENGTH
+/* Initialize length of buffer */
+#define SS_BUF_LENGTH 256
+#endif
+
 typedef struct str_stm
 {
   char* buf;			/* Buffer containing output */
   int max_length;		/* Length of buffer */
   int empty_pos;		/* Index  of empty char in stream*/
   int initialized;		/* Stream initialized? */
+
+  str_stm() {
+    buf = (char *) malloc (SS_BUF_LENGTH);
+    max_length = SS_BUF_LENGTH;
+    empty_pos = 0;
+    initialized = 1;
+  }
+
+  ~str_stm() {
+    free(buf);
+  }
 } str_stream;
 
 
-void ss_init (str_stream* ss);
 void ss_clear (str_stream* ss);
 void ss_erase (str_stream* ss, int n);
 int ss_length (str_stream* ss);

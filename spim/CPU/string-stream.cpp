@@ -39,12 +39,6 @@
 #include "string-stream.h"
 
 
-#ifndef SS_BUF_LENGTH
-/* Initialize length of buffer */
-#define SS_BUF_LENGTH 256
-#endif
-
-
 void
 ss_init (str_stream* ss)
 {
@@ -98,7 +92,7 @@ ss_to_string (MIPSImage &img, str_stream* ss)
     }
   ss->buf[ss->empty_pos] = '\0'; /* Null terminate string */
   ss->empty_pos += 1;
-  return ss->buf;
+  return strdup(ss->buf);
 }
 
 

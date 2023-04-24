@@ -172,7 +172,7 @@ void mem_dump_profile(MIPSImage &img) {
   mem_image_t &mem_image = img.mem_image();
 
   str_stream ss;
-  ss_init(&ss);
+
   FILE *file = NULL;
 
   // TODO: need to standardize this for multiple contexts
