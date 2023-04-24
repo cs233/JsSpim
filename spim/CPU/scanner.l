@@ -196,7 +196,7 @@ static char scan_escape (MIPSImage &img, char **str);
 			  else
 			    {
 			      /* Not-yet defined label */
-			      yylval.p = (char*) str_copy (img, yytext);
+			      yylval.s = std::shared_ptr<char>((char*) str_copy (img, yytext), [] (auto p) { free(p); });
 			      return (Y_ID);
 			    }
 			}
@@ -238,7 +238,7 @@ static char scan_escape (MIPSImage &img, char **str);
 				}
 			      else
 				{
-				  yylval.p = (char*) str_copy (img, yytext);
+				  yylval.s = std::shared_ptr<char>((char*) str_copy (img, yytext), [] (auto p) { free(p); });
 				  return (Y_ID);
 				}
 			    }
@@ -270,7 +270,7 @@ static char scan_escape (MIPSImage &img, char **str);
 			      current_line_no = line_no;
 			      current_line = yytext;
 			    }
-			  yylval.p = (char*) str_copy (img, yytext);
+			  yylval.s = std::shared_ptr<char>((char*) str_copy (img, yytext), [] (auto p) { free(p); });
 			  /* For top level */
 			  return (Y_ID);
 			}
@@ -282,7 +282,7 @@ static char scan_escape (MIPSImage &img, char **str);
 			      current_line_no = line_no;
 			      current_line = yytext;
 			    }
-			  yylval.p = (char*) copy_str (img, yytext + 1, 1);
+			  yylval.s = std::shared_ptr<char>((char*) copy_str (img, yytext + 1, 1), [] (auto p) { free(p); });
 			  return (Y_STR);
 			}
 
