@@ -1,13 +1,20 @@
+#include "inst.h"
 #include "spim.h"
 #include "spim-utils.h"
 #include "image.h"
+#include "sym-tbl.h"
 
 #include <iostream>
 
-static size_t curr_ctx = 0;
-static size_t num_ctx = NUM_CONTEXTS;
-
 MIPSImage::MIPSImage(int ctx) : ctx(ctx), std_out(ctx, std::cout), std_err(ctx, std::cerr) {}
+
+MIPSImage::~MIPSImage() {
+    initialize_symbol_table(*this);
+    for (auto it = labels_to_free.begin(); it != labels_to_free.end(); it ++) {
+        free((*it)->name);
+        free(*it);
+    }
+}
 
 int MIPSImage::get_ctx() const {
     return ctx;
@@ -23,6 +30,10 @@ reg_image_t &MIPSImage::reg_image() {
 
 label **MIPSImage::get_label_hash_table() {
     return label_hash_table;
+}
+
+void MIPSImage::push_label_to_free_vector(label *label) {
+    labels_to_free.push_back(label);
 }
 
 label *MIPSImage::get_local_labels() {

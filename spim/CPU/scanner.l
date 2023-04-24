@@ -50,6 +50,8 @@
 #include <unistd.h>
 #endif
 
+#include <memory>
+
 #define YY_NO_UNISTD_H
 
 /* Exported Variables: */
@@ -59,7 +61,7 @@ int line_no;		/* Line number in input file*/
 
 
 /* Local Variables: */
-static char *file_name;   /* The name of the current file */
+static std::shared_ptr<char> file_name;   /* The name of the current file */
 static int file_name_len; /* To avoid recomputing for each source line */
 
 /* Track which line we are reading and where it began in the buffer. */
@@ -194,7 +196,7 @@ static char scan_escape (MIPSImage &img, char **str);
 			  else
 			    {
 			      /* Not-yet defined label */
-			      yylval.p = (char*) str_copy (img, yytext);
+			      yylval.s = std::shared_ptr<char>((char*) str_copy (img, yytext), [] (auto p) { free(p); });
 			      return (Y_ID);
 			    }
 			}
@@ -236,7 +238,7 @@ static char scan_escape (MIPSImage &img, char **str);
 				}
 			      else
 				{
-				  yylval.p = (char*) str_copy (img, yytext);
+				  yylval.s = std::shared_ptr<char>((char*) str_copy (img, yytext), [] (auto p) { free(p); });
 				  return (Y_ID);
 				}
 			    }
@@ -268,7 +270,7 @@ static char scan_escape (MIPSImage &img, char **str);
 			      current_line_no = line_no;
 			      current_line = yytext;
 			    }
-			  yylval.p = (char*) str_copy (img, yytext);
+			  yylval.s = std::shared_ptr<char>((char*) str_copy (img, yytext), [] (auto p) { free(p); });
 			  /* For top level */
 			  return (Y_ID);
 			}
@@ -280,7 +282,7 @@ static char scan_escape (MIPSImage &img, char **str);
 			      current_line_no = line_no;
 			      current_line = yytext;
 			    }
-			  yylval.p = (char*) copy_str (img, yytext + 1, 1);
+			  yylval.s = std::shared_ptr<char>((char*) copy_str (img, yytext + 1, 1), [] (auto p) { free(p); });
 			  return (Y_STR);
 			}
 
@@ -319,7 +321,7 @@ static char scan_escape (MIPSImage &img, char **str);
 
 
 void
-initialize_scanner (FILE *in_file, char *in_file_name)
+initialize_scanner (FILE *in_file, const char *in_file_name)
 {
   if (yyin != in_file)
   {
@@ -342,8 +344,8 @@ initialize_scanner (FILE *in_file, char *in_file_name)
   current_line = NULL;
   line_returned = 0;
   eof_returned = 0;
-  file_name = strdup(in_file_name); /* will leak some memory */
-  file_name_len = strlen(file_name);
+  file_name = std::shared_ptr<char>(strdup(in_file_name), [](char *p) { free(p); });
+  file_name_len = strlen(file_name.get());
 }
 
 void
@@ -554,8 +556,6 @@ erroneous_line (MIPSImage &img)
   int i, c;
   str_stream ss;
 
-  ss_init (&ss);
-
   if (current_line == NULL) return ss_to_string (img, &ss);
 
   /* Print part of line that has been consumed. */
@@ -725,7 +725,7 @@ source_line (MIPSImage &img)
       *eol1 = '\0';
 
       r = (char *) xmalloc (img, eol1 - current_line + 11 + file_name_len);
-      sprintf (r, "%s:%d: %s", file_name, current_line_no, current_line);
+      sprintf (r, "%s:%d: %s", file_name.get(), current_line_no, current_line);
 
       /* Restore end-of-line character and, if necessary, yylex's null byte. */
       *eol1 = c1;

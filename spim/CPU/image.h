@@ -29,13 +29,15 @@ class MIPSImage {
 
     std::unordered_map<mem_addr, breakpoint> bkpt_map;
     // std::unordered_map<mem_addr, label> labels;
-    label *local_labels = NULL;
+    label *local_labels = NULL; // No allocs occur here
     label *label_hash_table[LABEL_HASH_TABLE_SIZE] = {0};
+    std::vector<label *> labels_to_free;
 
     MIPSImagePrintStream std_out;
     MIPSImagePrintStream std_err;
   public:
     MIPSImage(int ctx);
+    ~MIPSImage();
 
     int get_ctx() const;
 
@@ -43,6 +45,7 @@ class MIPSImage {
     reg_image_t &reg_image();
     label **get_label_hash_table();
     label *get_local_labels();
+    void push_label_to_free_vector(label *);
     void set_local_labels(label *);
     const mem_image_t &memview_image() const;
     const reg_image_t &regview_image() const;
@@ -53,7 +56,7 @@ class MIPSImage {
      * @param addr The address to read from
      * @returns true if the read was successful, false otherwise
      */
-    virtual bool custom_memory_read(mem_addr addr) { return false; }
+    virtual bool custom_memory_read(mem_addr) { return false; }
 
     /**
      * @brief Override this method to implement custom memory write behavior
@@ -61,7 +64,7 @@ class MIPSImage {
      * @param value The value to write
      * @returns true if the write was successful, false otherwise
      */
-    virtual bool custom_memory_write(mem_addr addr, mem_word value) { return false; }
+    virtual bool custom_memory_write(mem_addr, mem_word) { return false; }
 
     std::streambuf *get_std_out_buf();
     std::streambuf *get_std_err_buf();

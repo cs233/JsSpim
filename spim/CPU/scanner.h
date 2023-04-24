@@ -34,7 +34,7 @@
 
 /* Exported functions (besides yylex): */
 
-void initialize_scanner (FILE *in_file, char *in_file_name);
+void initialize_scanner (FILE *in_file, const char *in_file_name);
 void push_scanner (FILE *in_file);
 void pop_scanner ();
 char* erroneous_line (MIPSImage &img);
@@ -42,15 +42,11 @@ void scanner_start_line ();
 int register_name_to_number (char *name);
 char *source_line (MIPSImage &img);
 
-// #define YY_DECL \
-// 		int yylex(MIPSImage& img)
-
-// extern YY_DECL;
-// int yylex(MIPSImage &img);
-
 #define YY_DECL \
 		int yylex(MIPSImage& img)
 extern YY_DECL;
+
+int yylex_destroy(void);
 
 /* Exported Variables: */
 

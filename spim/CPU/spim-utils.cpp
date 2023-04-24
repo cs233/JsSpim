@@ -100,7 +100,7 @@ mem_addr initial_k_data_limit = K_DATA_LIMIT;
 /* Initialize or reinitialize the state of the machine. */
 
 void
-initialize_world (MIPSImage &img, char *exception_files, bool print_message)
+initialize_world (MIPSImage &img, const char *exception_files, bool print_message)
 {
   img.reg_image().auto_alignment = 1;
   
@@ -157,6 +157,7 @@ initialize_world (MIPSImage &img, char *exception_files, bool print_message)
 	(void)record_label (img, "main", 0, 0);
       }
     }
+  yylex_destroy();
   initialize_scanner (stdin, "");
   delete_all_breakpoints (img); // bruh TODO: this function is meant to be contextual-based and then we have THIS here?!?!
 }
@@ -208,7 +209,7 @@ initialize_registers (MIPSImage &img)
    successful and false otherwise. */
 
 bool
-read_assembly_file (MIPSImage &img, char *fpath)
+read_assembly_file (MIPSImage &img, const char *fpath)
 {
   FILE *file = fopen (fpath, "rt");
 
@@ -219,10 +220,11 @@ read_assembly_file (MIPSImage &img, char *fpath)
     }
   else
     {
-      char *file_name;
+      const char *file_name;
       file_name = strrchr(fpath, '/');
       file_name = file_name == NULL ? fpath : file_name + 1;
     
+      yylex_destroy();
       initialize_scanner (file, file_name);
       initialize_parser (fpath);
 
@@ -364,7 +366,7 @@ copy_int_to_stack (MIPSImage &img, int n)
    execution can continue. Return true if breakpoint is encountered. */
 
 bool
-step_program (MIPSImage &img, bool display, bool cont_bkpt, bool* continuable)
+step_program (MIPSImage &img, bool display, bool /* cont_bkpt */, bool* continuable)
 {
     img.reg_image().exception_occurred = false;
     *continuable = spim_step(img, display);
@@ -457,11 +459,12 @@ cycle_result_t run_spim_cycle_multi_ctx(std::map<unsigned int, MIPSImage> &imgs,
     return result;
 }
 
+/*
 bool
 run_spimbot_program (int steps, bool display, bool cont_bkpt, bool* continuable) {
-  /*if (map_click && !spimbot_tournament) {
+  if (map_click && !spimbot_tournament) {
     return true;
-  }*/
+  }
 
   // for (int i = 0; i < steps; ++i, ctx_switch(0)) {
   //   for (size_t j = 0; j < NUM_CONTEXTS; ++j, ctx_increment()) {
@@ -481,7 +484,7 @@ run_spimbot_program (int steps, bool display, bool cont_bkpt, bool* continuable)
   // }
 
 }
-
+*/
 
 /* Set a breakpoint at memory location ADDR. */
 
@@ -704,24 +707,30 @@ zmalloc (MIPSImage &img, int size)
 }
 
 std::string string_vformat(const std::string& format, va_list args) {
+    va_list args_copy;
+    va_copy(args_copy, args);
     int size_s = std::vsnprintf(nullptr, 0, format.c_str(), args) + 1; // Extra space for '\0'
     if( size_s <= 0 ){ throw std::runtime_error( "Error during formatting." ); }
     auto size = static_cast<size_t>(size_s);
     std::unique_ptr<char[]> buf( new char[ size ] );
-    std::vsnprintf(buf.get(), size, format.c_str(), args);
-    return std::string( buf.get(), buf.get() + size - 1 ); // We don't want the '\0' inside
+    std::vsnprintf(buf.get(), size, format.c_str(), args_copy);
+    va_end(args_copy);
+    return std::string( buf.get(), buf.get() + size - 1); // We don't want the '\0' inside
 }
 
-std::pair<char *, int> vformat_alloc(char *format, va_list args) {
+std::pair<char *, int> vformat_alloc(const char *format, va_list args) {
+    va_list args_copy;
+    va_copy(args_copy, args);
     int size = vsnprintf(NULL, 0, format, args) + 1;
     char *formatted_string = new char[size];
-    vsprintf(formatted_string, format, args);
+    vsnprintf(formatted_string, size, format, args_copy);
+    va_end(args_copy);
     return std::make_pair(formatted_string, size - 1);
 }
 
 /* Print an error message. */
 
-void error(MIPSImage &img, char *fmt, ...) {
+void error(MIPSImage &img, const char *fmt, ...) {
     va_list args;
     va_start(args, fmt);
     std::ostream os(img.get_std_err_buf());
@@ -736,7 +745,7 @@ void error(MIPSImage &img, char *fmt, ...) {
 
 /* Print the error message then exit. */
 
-void fatal_error(MIPSImage &img, char *fmt, ...) {
+void fatal_error(MIPSImage &img, const char *fmt, ...) {
     va_list args;
     va_start(args, fmt);
     fmt = va_arg(args, char *);
@@ -752,7 +761,7 @@ void fatal_error(MIPSImage &img, char *fmt, ...) {
 
 /* Print an error message and return to top level. */
 
-void run_error(MIPSImage &img, char *fmt, ...) {
+void run_error(MIPSImage &img, const char *fmt, ...) {
     va_list args;
     va_start(args, fmt);
     std::ostream os(img.get_std_err_buf());
@@ -766,7 +775,7 @@ void run_error(MIPSImage &img, char *fmt, ...) {
 
 /* IO facilities: */
 
-void write_output(MIPSImage &img, port fp, char *fmt, ...) {
+void write_output(MIPSImage &img, port /* fp */, const char *fmt, ...) {
     va_list args;
     va_start(args, fmt);
     std::ostream os(img.get_std_out_buf());

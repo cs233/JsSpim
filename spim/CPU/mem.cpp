@@ -40,15 +40,12 @@
 
 
 
-
-
 /* Local functions: */
 
 static mem_word bad_mem_read (MIPSImage &img, mem_addr addr, int mask);
 static void bad_mem_write (MIPSImage &img, mem_addr addr, mem_word value, int mask);
 static instruction *bad_text_read (MIPSImage &img, mem_addr addr);
 static void bad_text_write (MIPSImage &img, mem_addr addr, instruction *inst);
-static void free_instructions (instruction **inst, int n);
 static mem_word read_memory_mapped_IO (MIPSImage &img, mem_addr addr);
 static void write_memory_mapped_IO (MIPSImage &img, mem_addr addr, mem_word value);
 
@@ -175,7 +172,7 @@ void mem_dump_profile(MIPSImage &img) {
   mem_image_t &mem_image = img.mem_image();
 
   str_stream ss;
-  ss_init(&ss);
+
   FILE *file = NULL;
 
   // TODO: need to standardize this for multiple contexts
@@ -227,7 +224,7 @@ void mem_dump_profile(MIPSImage &img) {
 
 /* Free the storage used by the old instructions in memory. */
 
-static void
+void
 free_instructions (instruction **inst, int n)
 {
   for ( ; n > 0; n --, inst ++)
@@ -421,10 +418,17 @@ void
 set_mem_inst(MIPSImage &img, mem_addr addr, instruction* inst)
 {
   img.mem_image().text_modified = true;
-  if ((addr >= TEXT_BOT) && (addr < img.mem_image().text_top) && !(addr & 0x3))
+  if ((addr >= TEXT_BOT) && (addr < img.mem_image().text_top) && !(addr & 0x3)) {
+    if (img.mem_image().text_seg [(addr - TEXT_BOT) >> 2]) {
+        free_inst(img.mem_image().text_seg [(addr - TEXT_BOT) >> 2]);
+    }
     img.mem_image().text_seg [(addr - TEXT_BOT) >> 2] = inst;
-  else if ((addr >= K_TEXT_BOT) && (addr < img.mem_image().k_text_top) && !(addr & 0x3))
+  } else if ((addr >= K_TEXT_BOT) && (addr < img.mem_image().k_text_top) && !(addr & 0x3)) {
+    if (img.mem_image().k_text_seg [(addr - K_TEXT_BOT) >> 2]) {
+        free_inst(img.mem_image().k_text_seg [(addr - K_TEXT_BOT) >> 2]);
+    }
     img.mem_image().k_text_seg [(addr - K_TEXT_BOT) >> 2] = inst;
+  }
   else
     bad_text_write (img, addr, inst);
 }
@@ -651,8 +655,10 @@ check_memory_mapped_IO ()
 /* Invoked on a write to the memory-mapped IO area. */
 
 static void
-write_memory_mapped_IO (MIPSImage &img, mem_addr addr, mem_word value)
+write_memory_mapped_IO (MIPSImage &img, mem_addr addr, mem_word)
 {
+  // TODO: Check the blame again
+  void *todo;
   switch (addr) {
     default:
       run_error (img, "Write to unused memory-mapped IO address (0x%x)\n", addr);
