@@ -1106,7 +1106,7 @@ ASM_CODE:	LOAD_OPS	DEST	ADDRESS
 		  if (bare_machine && !accept_pseudo_insts)
 		    yyerror (img, "Immediate form not allowed in bare machine");
 		  else
-		    i_type_inst (img, $1.i == Y_SUB_OP ? Y_ADDI_OP
+		    i_type_inst_free (img, $1.i == Y_SUB_OP ? Y_ADDI_OP
 				 : $1.i == Y_SUBU_OP ? Y_ADDIU_OP
 				 : (fatal_error (img, "Bad SUB_OP\n"), 0),
 				 $2.i,
@@ -2983,7 +2983,9 @@ yyerror (MIPSImage &img, char *s)
 void
 yywarn (MIPSImage &img, char *s)
 {
-  error (img, "spim: (parser) %s on line %d of file %s\n%s", s, line_no, input_file_name, erroneous_line (img));
+  char *line = erroneous_line(img);
+  error (img, "spim: (parser) %s on line %d of file %s\n%s", s, line_no, input_file_name, line);
+  free(line);
 }
 
 
