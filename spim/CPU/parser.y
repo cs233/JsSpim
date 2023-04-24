@@ -533,15 +533,17 @@ LBL_CMD:	OPT_LBL CMD
 OPT_LBL: ID ':' {
 		  /* Call outside of cons_label, since an error sets that variable to NULL. */
 		  label* l = record_label (img,
-		  			   std::get<std::shared_ptr<char>>($1).get(),
+		  			   (char*)$1.p,
 					   text_dir ? current_text_pc (img) : current_data_pc (img),
 					   0);
 		  this_line_labels = cons_label (l, this_line_labels);
+		  free ((char*)$1.p);
 		}
 
 	|	ID '=' EXPR
 		{
-		  label *l = record_label (img, std::get<std::shared_ptr<char>>($1).get(), (mem_addr)std::get<int>($3), 1);
+		  label *l = record_label (img, (char*)$1.p, (mem_addr)$3.i, 1);
+		  free ((char*)$1.p);
 
 		  l->const_flag = 1;
 		  clear_labels (img);
@@ -582,117 +584,117 @@ TERM:		Y_NL
 ASM_CODE:	LOAD_OPS	DEST	ADDRESS
 		{
 		  i_type_inst (img,
-		  		   std::get<int>($1) == Y_LD_POP ? Y_LW_OP : std::get<int>($1),
-			       std::get<int>($2),
-			       addr_expr_reg (std::get<addr_expr *>($3)),
-			       addr_expr_imm (std::get<addr_expr *>($3)));
-		  if (std::get<int>($1) == Y_LD_POP)
+		  		   $1.i == Y_LD_POP ? Y_LW_OP : $1.i,
+			       $2.i,
+			       addr_expr_reg ((addr_expr *)$3.p),
+			       addr_expr_imm ((addr_expr *)$3.p));
+		  if ($1.i == Y_LD_POP)
 		    i_type_inst_free (img,
 					  Y_LW_OP,
-				      std::get<int>($2) + 1,
-				      addr_expr_reg (std::get<addr_expr *>($3)),
-				      incr_expr_offset (img, addr_expr_imm (std::get<addr_expr *>($3)),
+				      $2.i + 1,
+				      addr_expr_reg ((addr_expr *)$3.p),
+				      incr_expr_offset (img, addr_expr_imm ((addr_expr *)$3.p),
 							4));
-		  free ((std::get<addr_expr *>($3))->imm);
-		  free (std::get<addr_expr *>($3));
+		  free (((addr_expr *)$3.p)->imm);
+		  free ((addr_expr *)$3.p);
 		}
 
 	|	LOADC_OPS	COP_REG	ADDRESS
 		{
 		  i_type_inst (img,
-		  		   std::get<int>($1),
-			       std::get<int>($2),
-			       addr_expr_reg (std::get<addr_expr *>($3)),
-			       addr_expr_imm (std::get<addr_expr *>($3)));
-		  free ((std::get<addr_expr *>($3))->imm);
-		  free (std::get<addr_expr *>($3));
+		  		   $1.i,
+			       $2.i,
+			       addr_expr_reg ((addr_expr *)$3.p),
+			       addr_expr_imm ((addr_expr *)$3.p));
+		  free (((addr_expr *)$3.p)->imm);
+		  free ((addr_expr *)$3.p);
 		}
 
 	|	LOADFP_OPS	F_SRC1	ADDRESS
 		{
 		  i_type_inst (img,
-		  		   std::get<int>($1),
-			       std::get<int>($2),
-			       addr_expr_reg (std::get<addr_expr *>($3)),
-			       addr_expr_imm (std::get<addr_expr *>($3)));
-		  free ((std::get<addr_expr *>($3))->imm);
-		  free (std::get<addr_expr *>($3));
+		  		   $1.i,
+			       $2.i,
+			       addr_expr_reg ((addr_expr *)$3.p),
+			       addr_expr_imm ((addr_expr *)$3.p));
+		  free (((addr_expr *)$3.p)->imm);
+		  free ((addr_expr *)$3.p);
 		}
 
 	|	LOADI_OPS	DEST	UIMM16
 		{
-		  i_type_inst_free (img, std::get<int>($1), std::get<int>($2), 0, std::get<imm_expr *>($3));
+		  i_type_inst_free (img, $1.i, $2.i, 0, (imm_expr *)$3.p);
 		}
 
 
 	|	Y_LA_POP	DEST	ADDRESS
 		{
-		  if (addr_expr_reg (std::get<addr_expr *>($3)))
-		    i_type_inst (img, Y_ADDI_OP, std::get<int>($2),
-				 addr_expr_reg (std::get<addr_expr *>($3)),
-				 addr_expr_imm (std::get<addr_expr *>($3)));
+		  if (addr_expr_reg ((addr_expr *)$3.p))
+		    i_type_inst (img, Y_ADDI_OP, $2.i,
+				 addr_expr_reg ((addr_expr *)$3.p),
+				 addr_expr_imm ((addr_expr *)$3.p));
 		  else
-		    i_type_inst (img, Y_ORI_OP, std::get<int>($2), 0,
-				 addr_expr_imm (std::get<addr_expr *>($3)));
-		  free ((std::get<addr_expr *>($3))->imm);
-		  free (std::get<addr_expr *>($3));
+		    i_type_inst (img, Y_ORI_OP, $2.i, 0,
+				 addr_expr_imm ((addr_expr *)$3.p));
+		  free (((addr_expr *)$3.p)->imm);
+		  free ((addr_expr *)$3.p);
 		}
 
 
 	|	Y_LI_POP	DEST	IMM32
 		{
-		  i_type_inst_free (img, Y_ORI_OP, std::get<int>($2), 0, std::get<imm_expr *>($3));
+		  i_type_inst_free (img, Y_ORI_OP, $2.i, 0, (imm_expr *)$3.p);
 		}
 
 
 	|	Y_LI_D_POP	F_DEST	Y_FP
 		{
-		  int *x = (int *) std::get<void *>($3);
+		  int *x = (int *) $3.p;
 
           imm_expr *const_expr = const_imm_expr (img, *x);
 		  i_type_inst (img, Y_ORI_OP, 1, 0, const_expr);
           free(const_expr);
-		  r_co_type_inst (img, Y_MTC1_OP, 0, std::get<int>($2), 1);
+		  r_co_type_inst (img, Y_MTC1_OP, 0, $2.i, 1);
           const_expr = const_imm_expr (img, *(x+1));
 		  i_type_inst (img, Y_ORI_OP, 1, 0, const_expr);
           free(const_expr);
-		  r_co_type_inst (img, Y_MTC1_OP, 0, std::get<int>($2) + 1, 1);
+		  r_co_type_inst (img, Y_MTC1_OP, 0, $2.i + 1, 1);
 		}
 
 
 	|	Y_LI_S_POP	F_DEST	Y_FP
 		{
-		  float x = (float) *((double *) std::get<void *>($3));
+		  float x = (float) *((double *) $3.p);
 		  int *y = (int *) &x;
 
           imm_expr *const_expr = const_imm_expr (img, *y);
 		  i_type_inst (img, Y_ORI_OP, 1, 0,const_expr);
           free(const_expr);
-		  r_co_type_inst (img, Y_MTC1_OP, 0, std::get<int>($2), 1);
+		  r_co_type_inst (img, Y_MTC1_OP, 0, $2.i, 1);
 		}
 
 
 	|	Y_ULW_POP	DEST	ADDRESS
 		{
 #ifdef SPIM_BIGENDIAN
-		  i_type_inst (img,Y_LWL_OP, std::get<int>($2),
-			       addr_expr_reg (std::get<addr_expr *>($3)),
-			       addr_expr_imm (std::get<addr_expr *>($3)));
-		  i_type_inst_free (img, Y_LWR_OP, std::get<int>($2),
-				    addr_expr_reg (std::get<addr_expr *>($3)),
-				    incr_expr_offset (img, addr_expr_imm (std::get<addr_expr *>($3)),
+		  i_type_inst (img,Y_LWL_OP, $2.i,
+			       addr_expr_reg ((addr_expr *)$3.p),
+			       addr_expr_imm ((addr_expr *)$3.p));
+		  i_type_inst_free (img, Y_LWR_OP, $2.i,
+				    addr_expr_reg ((addr_expr *)$3.p),
+				    incr_expr_offset (img, addr_expr_imm ((addr_expr *)$3.p),
 						      3));
 #else
-		  i_type_inst_free (img, Y_LWL_OP, std::get<int>($2),
-				    addr_expr_reg (std::get<addr_expr *>($3)),
-				    incr_expr_offset (img, addr_expr_imm (std::get<addr_expr *>($3)),
+		  i_type_inst_free (img, Y_LWL_OP, $2.i,
+				    addr_expr_reg ((addr_expr *)$3.p),
+				    incr_expr_offset (img, addr_expr_imm ((addr_expr *)$3.p),
 						      3));
-		  i_type_inst (img, Y_LWR_OP, std::get<int>($2),
-			       addr_expr_reg (std::get<addr_expr *>($3)),
-			       addr_expr_imm (std::get<addr_expr *>($3)));
+		  i_type_inst (img, Y_LWR_OP, $2.i,
+			       addr_expr_reg ((addr_expr *)$3.p),
+			       addr_expr_imm ((addr_expr *)$3.p));
 #endif
-		  free ((std::get<addr_expr *>($3))->imm);
-		  free (std::get<addr_expr *>($3));
+		  free (((addr_expr *)$3.p)->imm);
+		  free ((addr_expr *)$3.p);
 		}
 
 
@@ -700,29 +702,29 @@ ASM_CODE:	LOAD_OPS	DEST	ADDRESS
 		{
 #ifdef SPIM_BIGENDIAN
 		  i_type_inst (img,
-		  		   (std::get<int>($1) == Y_ULH_POP ? Y_LB_OP : Y_LBU_OP),
-			       std::get<int>($2),
-			       addr_expr_reg (std::get<addr_expr *>($3)),
-			       addr_expr_imm (std::get<addr_expr *>($3)));
+		  		   ($1.i == Y_ULH_POP ? Y_LB_OP : Y_LBU_OP),
+			       $2.i,
+			       addr_expr_reg ((addr_expr *)$3.p),
+			       addr_expr_imm ((addr_expr *)$3.p));
 		  i_type_inst_free (img, Y_LBU_OP, 1,
-				    addr_expr_reg (std::get<addr_expr *>($3)),
-				    incr_expr_offset (img, addr_expr_imm (std::get<addr_expr *>($3)),
+				    addr_expr_reg ((addr_expr *)$3.p),
+				    incr_expr_offset (img, addr_expr_imm ((addr_expr *)$3.p),
 						      1));
 #else
 		  i_type_inst_free (img,
-		  			(std::get<int>($1) == Y_ULH_POP ? Y_LB_OP : Y_LBU_OP),
-				    std::get<int>($2),
-				    addr_expr_reg (std::get<addr_expr *>($3)),
-				    incr_expr_offset (img, addr_expr_imm (std::get<addr_expr *>($3)),
+		  			($1.i == Y_ULH_POP ? Y_LB_OP : Y_LBU_OP),
+				    $2.i,
+				    addr_expr_reg ((addr_expr *)$3.p),
+				    incr_expr_offset (img, addr_expr_imm ((addr_expr *)$3.p),
 						      1));
 		  i_type_inst (img, Y_LBU_OP, 1,
-			       addr_expr_reg (std::get<addr_expr *>($3)),
-			       addr_expr_imm (std::get<addr_expr *>($3)));
+			       addr_expr_reg ((addr_expr *)$3.p),
+			       addr_expr_imm ((addr_expr *)$3.p));
 #endif
-		  r_sh_type_inst (img, Y_SLL_OP, std::get<int>($2), std::get<int>($2), 8);
-		  r_type_inst (img, Y_OR_OP, std::get<int>($2), std::get<int>($2), 1);
-		  free ((std::get<addr_expr *>($3))->imm);
-		  free (std::get<addr_expr *>($3));
+		  r_sh_type_inst (img, Y_SLL_OP, $2.i, $2.i, 8);
+		  r_type_inst (img, Y_OR_OP, $2.i, $2.i, 1);
+		  free (((addr_expr *)$3.p)->imm);
+		  free ((addr_expr *)$3.p);
 		}
 
 
@@ -734,29 +736,29 @@ ASM_CODE:	LOAD_OPS	DEST	ADDRESS
 
 	|	STORE_OPS	SRC1	ADDRESS
 		{
-		  i_type_inst (img, std::get<int>($1) == Y_SD_POP ? Y_SW_OP : std::get<int>($1),
-			       std::get<int>($2),
-			       addr_expr_reg (std::get<addr_expr *>($3)),
-			       addr_expr_imm (std::get<addr_expr *>($3)));
-		  if (std::get<int>($1) == Y_SD_POP)
-		    i_type_inst_free (img, Y_SW_OP, std::get<int>($2) + 1,
-				      addr_expr_reg (std::get<addr_expr *>($3)),
-				      incr_expr_offset (img, addr_expr_imm (std::get<addr_expr *>($3)),
+		  i_type_inst (img, $1.i == Y_SD_POP ? Y_SW_OP : $1.i,
+			       $2.i,
+			       addr_expr_reg ((addr_expr *)$3.p),
+			       addr_expr_imm ((addr_expr *)$3.p));
+		  if ($1.i == Y_SD_POP)
+		    i_type_inst_free (img, Y_SW_OP, $2.i + 1,
+				      addr_expr_reg ((addr_expr *)$3.p),
+				      incr_expr_offset (img, addr_expr_imm ((addr_expr *)$3.p),
 							4));
-		  free ((std::get<addr_expr *>($3))->imm);
-		  free (std::get<addr_expr *>($3));
+		  free (((addr_expr *)$3.p)->imm);
+		  free ((addr_expr *)$3.p);
 		}
 
 
 	|	STOREC_OPS	COP_REG	ADDRESS
 		{
 		  i_type_inst (img,
-		  		   std::get<int>($1),
-			       std::get<int>($2),
-			       addr_expr_reg (std::get<addr_expr *>($3)),
-			       addr_expr_imm (std::get<addr_expr *>($3)));
-		  free ((std::get<addr_expr *>($3))->imm);
-		  free (std::get<addr_expr *>($3));
+		  		   $1.i,
+			       $2.i,
+			       addr_expr_reg ((addr_expr *)$3.p),
+			       addr_expr_imm ((addr_expr *)$3.p));
+		  free (((addr_expr *)$3.p)->imm);
+		  free ((addr_expr *)$3.p);
 		}
 
 
@@ -764,63 +766,63 @@ ASM_CODE:	LOAD_OPS	DEST	ADDRESS
 		{
 #ifdef SPIM_BIGENDIAN
 		  i_type_inst (img,
-		  		   Y_SWL_OP, std::get<int>($2),
-			       addr_expr_reg (std::get<addr_expr *>($3)),
-			       addr_expr_imm (std::get<addr_expr *>($3)));
-		  i_type_inst_free (img, Y_SWR_OP, std::get<int>($2),
-				    addr_expr_reg (std::get<addr_expr *>($3)),
-				    incr_expr_offset (img, addr_expr_imm (std::get<addr_expr *>($3)),
+		  		   Y_SWL_OP, $2.i,
+			       addr_expr_reg ((addr_expr *)$3.p),
+			       addr_expr_imm ((addr_expr *)$3.p));
+		  i_type_inst_free (img, Y_SWR_OP, $2.i,
+				    addr_expr_reg ((addr_expr *)$3.p),
+				    incr_expr_offset (img, addr_expr_imm ((addr_expr *)$3.p),
 						      3));
 #else
-		  i_type_inst_free (img, Y_SWL_OP, std::get<int>($2),
-				    addr_expr_reg (std::get<addr_expr *>($3)),
-				    incr_expr_offset (img, addr_expr_imm (std::get<addr_expr *>($3)),
+		  i_type_inst_free (img, Y_SWL_OP, $2.i,
+				    addr_expr_reg ((addr_expr *)$3.p),
+				    incr_expr_offset (img, addr_expr_imm ((addr_expr *)$3.p),
 						      3));
 		  i_type_inst (img,
-		  		   Y_SWR_OP, std::get<int>($2),
-			       addr_expr_reg (std::get<addr_expr *>($3)),
-			       addr_expr_imm (std::get<addr_expr *>($3)));
+		  		   Y_SWR_OP, $2.i,
+			       addr_expr_reg ((addr_expr *)$3.p),
+			       addr_expr_imm ((addr_expr *)$3.p));
 #endif
-		  free ((std::get<addr_expr *>($3))->imm);
-		  free (std::get<addr_expr *>($3));
+		  free (((addr_expr *)$3.p)->imm);
+		  free ((addr_expr *)$3.p);
 		}
 
 
 	|	Y_USH_POP	SRC1	ADDRESS
 		{
 		  i_type_inst (img,
-		  		   Y_SB_OP, std::get<int>($2),
-			       addr_expr_reg (std::get<addr_expr *>($3)),
-			       addr_expr_imm (std::get<addr_expr *>($3)));
+		  		   Y_SB_OP, $2.i,
+			       addr_expr_reg ((addr_expr *)$3.p),
+			       addr_expr_imm ((addr_expr *)$3.p));
 
 		  /* ROL SRC, SRC, 8 */
-		  r_sh_type_inst (img, Y_SLL_OP, 1, std::get<int>($2), 24);
-		  r_sh_type_inst (img, Y_SRL_OP, std::get<int>($2), std::get<int>($2), 8);
-		  r_type_inst (img, Y_OR_OP, std::get<int>($2), std::get<int>($2), 1);
+		  r_sh_type_inst (img, Y_SLL_OP, 1, $2.i, 24);
+		  r_sh_type_inst (img, Y_SRL_OP, $2.i, $2.i, 8);
+		  r_type_inst (img, Y_OR_OP, $2.i, $2.i, 1);
 
-		  i_type_inst_free (img, Y_SB_OP, std::get<int>($2),
-				    addr_expr_reg (std::get<addr_expr *>($3)),
-				    incr_expr_offset (img, addr_expr_imm (std::get<addr_expr *>($3)),
+		  i_type_inst_free (img, Y_SB_OP, $2.i,
+				    addr_expr_reg ((addr_expr *)$3.p),
+				    incr_expr_offset (img, addr_expr_imm ((addr_expr *)$3.p),
 						      1));
 		  /* ROR SRC, SRC, 8 */
-		  r_sh_type_inst (img, Y_SRL_OP, 1, std::get<int>($2), 24);
-		  r_sh_type_inst (img, Y_SLL_OP, std::get<int>($2), std::get<int>($2), 8);
-		  r_type_inst (img, Y_OR_OP, std::get<int>($2), std::get<int>($2), 1);
+		  r_sh_type_inst (img, Y_SRL_OP, 1, $2.i, 24);
+		  r_sh_type_inst (img, Y_SLL_OP, $2.i, $2.i, 8);
+		  r_type_inst (img, Y_OR_OP, $2.i, $2.i, 1);
 
-		  free ((std::get<addr_expr *>($3))->imm);
-		  free (std::get<addr_expr *>($3));
+		  free (((addr_expr *)$3.p)->imm);
+		  free ((addr_expr *)$3.p);
 		}
 
 
 	|	STOREFP_OPS	F_SRC1	ADDRESS
 		{
 		  i_type_inst (img,
-		  		   std::get<int>($1),
-			       std::get<int>($2),
-			       addr_expr_reg (std::get<addr_expr *>($3)),
-			       addr_expr_imm (std::get<addr_expr *>($3)));
-		  free ((std::get<addr_expr *>($3))->imm);
-		  free (std::get<addr_expr *>($3));
+		  		   $1.i,
+			       $2.i,
+			       addr_expr_reg ((addr_expr *)$3.p),
+			       addr_expr_imm ((addr_expr *)$3.p));
+		  free (((addr_expr *)$3.p)->imm);
+		  free ((addr_expr *)$3.p);
 		}
 
 
@@ -832,7 +834,7 @@ ASM_CODE:	LOAD_OPS	DEST	ADDRESS
 
 	|	SYS_OPS
 		{
-		  r_type_inst (img, std::get<int>($1), 0, 0, 0);
+		  r_type_inst (img, $1.i, 0, 0, 0);
 		}
 
 
@@ -844,32 +846,32 @@ ASM_CODE:	LOAD_OPS	DEST	ADDRESS
 
 	|	CACHE_OPS	Y_INT	ADDRESS
 		{
-		  i_type_inst_free (img, std::get<int>($1), std::get<int>($2), 0, std::get<imm_expr *>($3));
+		  i_type_inst_free (img, $1.i, $2.i, 0, (imm_expr *)$3.p);
 		}
 
 
 	|	TLB_OPS
 		{
-		  r_type_inst (img, std::get<int>($1), 0, 0, 0);
+		  r_type_inst (img, $1.i, 0, 0, 0);
 		}
 
 
 	|	Y_SYNC_OP
 		{
-		  r_type_inst (img, std::get<int>($1), 0, 0, 0);
+		  r_type_inst (img, $1.i, 0, 0, 0);
 		}
 
 	|	Y_SYNC_OP	Y_INT
 		{
-		  r_type_inst (img, std::get<int>($1), std::get<int>($2), 0, 0);
+		  r_type_inst (img, $1.i, $2.i, 0, 0);
 		}
 
 
 	|	Y_BREAK_OP	Y_INT
 		{
-		  if (std::get<int>($2) == 1)
+		  if ($2.i == 1)
 		    yyerror (img, "Breakpoint 1 is reserved for debugger");
-		  r_type_inst (img, std::get<int>($1), std::get<int>($2), 0, 0);
+		  r_type_inst (img, $1.i, $2.i, 0, 0);
 		}
 
 
@@ -887,41 +889,41 @@ ASM_CODE:	LOAD_OPS	DEST	ADDRESS
 
 	|	Y_ABS_POP	DEST	SRC1
 		{
-		  if (std::get<int>($2) != std::get<int>($3))
-		    r_type_inst (img, Y_ADDU_OP, std::get<int>($2), 0, std::get<int>($3));
+		  if ($2.i != $3.i)
+		    r_type_inst (img, Y_ADDU_OP, $2.i, 0, $3.i);
 
-		  i_type_inst_free (img, Y_BGEZ_OP, 0, std::get<int>($3), branch_offset (img, 2));
-		  r_type_inst (img, Y_SUB_OP, std::get<int>($2), 0, std::get<int>($3));
+		  i_type_inst_free (img, Y_BGEZ_OP, 0, $3.i, branch_offset (img, 2));
+		  r_type_inst (img, Y_SUB_OP, $2.i, 0, $3.i);
 		}
 
 
 	|	Y_NEG_POP	DEST	SRC1
 		{
-		  r_type_inst (img, Y_SUB_OP, std::get<int>($2), 0, std::get<int>($3));
+		  r_type_inst (img, Y_SUB_OP, $2.i, 0, $3.i);
 		}
 
 
 	|	Y_NEGU_POP	DEST	SRC1
 		{
-		  r_type_inst (img, Y_SUBU_OP, std::get<int>($2), 0, std::get<int>($3));
+		  r_type_inst (img, Y_SUBU_OP, $2.i, 0, $3.i);
 		}
 
 
 	|	Y_NOT_POP	DEST	SRC1
 		{
-		  r_type_inst (img, Y_NOR_OP, std::get<int>($2), std::get<int>($3), 0);
+		  r_type_inst (img, Y_NOR_OP, $2.i, $3.i, 0);
 		}
 
 
 	|	Y_MOVE_POP	DEST	SRC1
 		{
-		  r_type_inst (img, Y_ADDU_OP, std::get<int>($2), 0, std::get<int>($3));
+		  r_type_inst (img, Y_ADDU_OP, $2.i, 0, $3.i);
 		}
 
 
 	|	NULLARY_OPS
 		{
-		  r_type_inst (img, std::get<int>($1), 0, 0, 0);
+		  r_type_inst (img, $1.i, 0, 0, 0);
 		}
 
 
@@ -934,7 +936,7 @@ ASM_CODE:	LOAD_OPS	DEST	ADDRESS
 	|	COUNT_LEADING_OPS DEST	SRC1
 		{
 		  /* RT must be equal to RD */
-		  r_type_inst (img, std::get<int>($1), std::get<int>($2), std::get<int>($3), std::get<int>($2));
+		  r_type_inst (img, $1.i, $2.i, $3.i, $2.i);
 		}
 
 
@@ -946,70 +948,70 @@ ASM_CODE:	LOAD_OPS	DEST	ADDRESS
 
 	|	BINARYI_OPS	DEST	SRC1	SRC2
 		{
-		  r_type_inst (img, std::get<int>($1), std::get<int>($2), std::get<int>($3), std::get<int>($4));
+		  r_type_inst (img, $1.i, $2.i, $3.i, $4.i);
 		}
 
 	|	BINARYI_OPS	DEST	SRC1	IMM32
 		{
-		  i_type_inst_free (img, op_to_imm_op (img, std::get<int>($1)), std::get<int>($2), std::get<int>($3),
-				    std::get<imm_expr *>($4));
+		  i_type_inst_free (img, op_to_imm_op (img, $1.i), $2.i, $3.i,
+				    (imm_expr *)$4.p);
 		}
 
 	|	BINARYI_OPS	DEST	IMM32
 		{
-		  i_type_inst_free (img, op_to_imm_op (img, std::get<int>($1)), std::get<int>($2), std::get<int>($2),
-				    std::get<imm_expr *>($3));
+		  i_type_inst_free (img, op_to_imm_op (img, $1.i), $2.i, $2.i,
+				    (imm_expr *)$3.p);
 		}
 
 
 	|	BINARYIR_OPS	DEST	SRC1	SRC2
 		{
-		  r_type_inst (img, std::get<int>($1), std::get<int>($2), std::get<int>($4), std::get<int>($3));
+		  r_type_inst (img, $1.i, $2.i, $4.i, $3.i);
 		}
 
 	|	BINARYIR_OPS	DEST	SRC1	Y_INT
 		{
-		  r_sh_type_inst (img, op_to_imm_op (img, std::get<int>($1)), std::get<int>($2), std::get<int>($3), std::get<int>($4));
+		  r_sh_type_inst (img, op_to_imm_op (img, $1.i), $2.i, $3.i, $4.i);
 		}
 
 	|	BINARYIR_OPS	DEST	Y_INT
 		{
-		  r_sh_type_inst (img, op_to_imm_op (img, std::get<int>($1)), std::get<int>($2), std::get<int>($2), std::get<int>($3));
+		  r_sh_type_inst (img, op_to_imm_op (img, $1.i), $2.i, $2.i, $3.i);
 		}
 
 
 	|	BINARY_ARITHI_OPS DEST	SRC1	IMM16
 		{
-		  i_type_inst_free (img, std::get<int>($1), std::get<int>($2), std::get<int>($3), std::get<imm_expr *>($4));
+		  i_type_inst_free (img, $1.i, $2.i, $3.i, (imm_expr *)$4.p);
 		}
 
 	|	BINARY_ARITHI_OPS DEST	IMM16
 		{
-		  i_type_inst_free (img, std::get<int>($1), std::get<int>($2), std::get<int>($2), std::get<imm_expr *>($3));
+		  i_type_inst_free (img, $1.i, $2.i, $2.i, (imm_expr *)$3.p);
 		}
 
 
 	|	BINARY_LOGICALI_OPS DEST	SRC1	UIMM16
 		{
-		  i_type_inst_free (img, std::get<int>($1), std::get<int>($2), std::get<int>($3), std::get<imm_expr *>($4));
+		  i_type_inst_free (img, $1.i, $2.i, $3.i, (imm_expr *)$4.p);
 		}
 
 	|	BINARY_LOGICALI_OPS DEST	UIMM16
 		{
-		  i_type_inst_free (img, std::get<int>($1), std::get<int>($2), std::get<int>($2), std::get<imm_expr *>($3));
+		  i_type_inst_free (img, $1.i, $2.i, $2.i, (imm_expr *)$3.p);
 		}
 
 
 	|	SHIFT_OPS	DEST	SRC1	Y_INT
 		{
-		  if ((std::get<int>($4) < 0) || (31 < std::get<int>($4)))
+		  if (($4.i < 0) || (31 < $4.i))
 		    yywarn (img, "Shift distance can only be in the range 0..31");
-		  r_sh_type_inst (img, std::get<int>($1), std::get<int>($2), std::get<int>($3), std::get<int>($4));
+		  r_sh_type_inst (img, $1.i, $2.i, $3.i, $4.i);
 		}
 
 	|	SHIFT_OPS	DEST	SRC1	SRC2
 		{
-		  r_type_inst (img, imm_op_to_op (img, std::get<int>($1)), std::get<int>($2), std::get<int>($4), std::get<int>($3));
+		  r_type_inst (img, imm_op_to_op (img, $1.i), $2.i, $4.i, $3.i);
 		}
 
 
@@ -1026,7 +1028,7 @@ ASM_CODE:	LOAD_OPS	DEST	ADDRESS
 
 	|	BINARY_OPS	DEST	SRC1	SRC2
 		{
-		  r_type_inst (img, std::get<int>($1), std::get<int>($2), std::get<int>($3), std::get<int>($4));
+		  r_type_inst (img, $1.i, $2.i, $3.i, $4.i);
 		}
 
 	|	BINARY_OPS	DEST	SRC1	IMM32
@@ -1035,35 +1037,35 @@ ASM_CODE:	LOAD_OPS	DEST	ADDRESS
 		    yyerror (img, "Immediate form not allowed in bare machine");
 		  else
 		    {
-		      if (!is_zero_imm (std::get<imm_expr *>($4)))
+		      if (!is_zero_imm ((imm_expr *)$4.p))
 			/* Use $at */
-			i_type_inst (img, Y_ORI_OP, 1, 0, std::get<imm_expr *>($4));
+			i_type_inst (img, Y_ORI_OP, 1, 0, (imm_expr *)$4.p);
 		      r_type_inst (img,
-			  	   std::get<int>($1),
-				   std::get<int>($2),
-				   std::get<int>($3),
-				   (is_zero_imm (std::get<imm_expr *>($4)) ? 0 : 1));
+			  	   $1.i,
+				   $2.i,
+				   $3.i,
+				   (is_zero_imm ((imm_expr *)$4.p) ? 0 : 1));
 		    }
-		  free (std::get<imm_expr *>($4));
+		  free ((imm_expr *)$4.p);
 		}
 
 	|	BINARY_OPS	DEST	IMM32
 		{
-		  check_uimm_range (img, std::get<imm_expr *>($3), UIMM_MIN, UIMM_MAX);
+		  check_uimm_range (img, (imm_expr *)$3.p, UIMM_MIN, UIMM_MAX);
 		  if (bare_machine && !accept_pseudo_insts)
 		    yyerror (img, "Immediate form not allowed in bare machine");
 		  else
 		    {
-		      if (!is_zero_imm (std::get<imm_expr *>($3)))
+		      if (!is_zero_imm ((imm_expr *)$3.p))
 			/* Use $at */
-			i_type_inst (img, Y_ORI_OP, 1, 0, std::get<imm_expr *>($3));
+			i_type_inst (img, Y_ORI_OP, 1, 0, (imm_expr *)$3.p);
 		      r_type_inst (img,
-				   std::get<int>($1),
-				   std::get<int>($2),
-				   std::get<int>($2),
-				   (is_zero_imm (std::get<imm_expr *>($3)) ? 0 : 1));
+				   $1.i,
+				   $2.i,
+				   $2.i,
+				   (is_zero_imm ((imm_expr *)$3.p) ? 0 : 1));
 		    }
-		  free (std::get<imm_expr *>($3));
+		  free ((imm_expr *)$3.p);
 		}
 
 
@@ -1075,151 +1077,151 @@ ASM_CODE:	LOAD_OPS	DEST	ADDRESS
 
 	|	SUB_OPS		DEST	SRC1	SRC2
 		{
-		  r_type_inst (img, std::get<int>($1), std::get<int>($2), std::get<int>($3), std::get<int>($4));
+		  r_type_inst (img, $1.i, $2.i, $3.i, $4.i);
 		}
 
 	|	SUB_OPS		DEST	SRC1	IMM32
 		{
-		  int val = eval_imm_expr (img, std::get<imm_expr *>($4));
+		  int val = eval_imm_expr (img, (imm_expr *)$4.p);
 
 		  if (bare_machine && !accept_pseudo_insts)
 		    yyerror (img, "Immediate form not allowed in bare machine");
 		  else {
             imm_expr *expr = make_imm_expr (img, -val, NULL, false);
-		    i_type_inst (img, std::get<int>($1) == Y_SUB_OP ? Y_ADDI_OP
-				 : std::get<int>($1) == Y_SUBU_OP ? Y_ADDIU_OP
+		    i_type_inst (img, $1.i == Y_SUB_OP ? Y_ADDI_OP
+				 : $1.i == Y_SUBU_OP ? Y_ADDIU_OP
 				 : (fatal_error (img, "Bad SUB_OP\n"), 0),
-				 std::get<int>($2),
-				 std::get<int>($3),
+				 $2.i,
+				 $3.i,
 				 expr);
             free(expr);
           }
-		  free (std::get<imm_expr *>($4));
+		  free ((imm_expr *)$4.p);
 		}
 
 	|	SUB_OPS		DEST	IMM32
 		{
-		  int val = eval_imm_expr (img, std::get<imm_expr *>($3));
+		  int val = eval_imm_expr (img, (imm_expr *)$3.p);
 
 		  if (bare_machine && !accept_pseudo_insts)
 		    yyerror (img, "Immediate form not allowed in bare machine");
 		  else
-		    i_type_inst_free (img, std::get<int>($1) == Y_SUB_OP ? Y_ADDI_OP
-				 : std::get<int>($1) == Y_SUBU_OP ? Y_ADDIU_OP
+		    i_type_inst_free (img, $1.i == Y_SUB_OP ? Y_ADDI_OP
+				 : $1.i == Y_SUBU_OP ? Y_ADDIU_OP
 				 : (fatal_error (img, "Bad SUB_OP\n"), 0),
-				 std::get<int>($2),
-				 std::get<int>($2),
+				 $2.i,
+				 $2.i,
 				 make_imm_expr (img, -val, NULL, false));
-		  free (std::get<imm_expr *>($3));
+		  free ((imm_expr *)$3.p);
 		}
 
 
 	|	DIV_POPS	DEST	SRC1
 		{
 		  /* The hardware divide operation (ignore 1st arg) */
-		  if (std::get<int>($1) != Y_DIV_OP && std::get<int>($1) != Y_DIVU_OP)
+		  if ($1.i != Y_DIV_OP && $1.i != Y_DIVU_OP)
 		    yyerror (img, "REM requires 3 arguments");
 		  else
-		    r_type_inst (img, std::get<int>($1), 0, std::get<int>($2), std::get<int>($3));
+		    r_type_inst (img, $1.i, 0, $2.i, $3.i);
 		}
 
 	|	DIV_POPS	DEST	SRC1	SRC2
 		{
 		  /* Pseudo divide operations */
-		  div_inst (img, std::get<int>($1), std::get<int>($2), std::get<int>($3), std::get<int>($4), 0);
+		  div_inst (img, $1.i, $2.i, $3.i, $4.i, 0);
 		}
 
 	|	DIV_POPS	DEST	SRC1	IMM32
 		{
-		  if (is_zero_imm (std::get<imm_expr *>($4)))
+		  if (is_zero_imm ((imm_expr *)$4.p))
 		    yyerror (img, "Divide by zero");
 		  else
 		    {
 		      /* Use $at */
-		      i_type_inst_free (img, Y_ORI_OP, 1, 0, std::get<imm_expr *>($4));
-		      div_inst (img, std::get<int>($1), std::get<int>($2), std::get<int>($3), 1, 1);
+		      i_type_inst_free (img, Y_ORI_OP, 1, 0, (imm_expr *)$4.p);
+		      div_inst (img, $1.i, $2.i, $3.i, 1, 1);
 		    }
 		}
 
 
 	|	MUL_POPS	DEST	SRC1	SRC2
 		{
-		  mult_inst (img, std::get<int>($1), std::get<int>($2), std::get<int>($3), std::get<int>($4));
+		  mult_inst (img, $1.i, $2.i, $3.i, $4.i);
 		}
 
 	|	MUL_POPS	DEST	SRC1	IMM32
 		{
-		  if (is_zero_imm (std::get<imm_expr *>($4)))
+		  if (is_zero_imm ((imm_expr *)$4.p))
 		    /* Optimize: n * 0 == 0 */
-		    i_type_inst_free (img, Y_ORI_OP, std::get<int>($2), 0, std::get<imm_expr *>($4));
+		    i_type_inst_free (img, Y_ORI_OP, $2.i, 0, (imm_expr *)$4.p);
 		  else
 		    {
 		      /* Use $at */
-		      i_type_inst_free (img, Y_ORI_OP, 1, 0, std::get<imm_expr *>($4));
-		      mult_inst (img, std::get<int>($1), std::get<int>($2), std::get<int>($3), 1);
+		      i_type_inst_free (img, Y_ORI_OP, 1, 0, (imm_expr *)$4.p);
+		      mult_inst (img, $1.i, $2.i, $3.i, 1);
 		    }
 		}
 
 
 	|	MULT_OPS	SRC1	SRC2
 		{
-		  r_type_inst (img, std::get<int>($1), 0, std::get<int>($2), std::get<int>($3));
+		  r_type_inst (img, $1.i, 0, $2.i, $3.i);
 		}
 
 
 	|	MULT_OPS3	DEST	SRC1	SRC2
 		{
-		  r_type_inst (img, std::get<int>($1), std::get<int>($2), std::get<int>($3), std::get<int>($4));
+		  r_type_inst (img, $1.i, $2.i, $3.i, $4.i);
 		}
 
 	|	MULT_OPS3	DEST	SRC1	IMM32
 		{
 		  /* Special case, for backward compatibility with pseudo-op
 		     MULT instruction */
-		  i_type_inst_free (img, Y_ORI_OP, 1, 0, std::get<imm_expr *>($4)); /* Use $at */
-		  r_type_inst (img, std::get<int>($1), std::get<int>($2), std::get<int>($3), 1);
+		  i_type_inst_free (img, Y_ORI_OP, 1, 0, (imm_expr *)$4.p); /* Use $at */
+		  r_type_inst (img, $1.i, $2.i, $3.i, 1);
 		}
 
 
 	|	Y_ROR_POP	DEST	SRC1	SRC2
 		{
-		  r_type_inst (img, Y_SUBU_OP, 1, 0, std::get<int>($4));
-		  r_type_inst (img, Y_SLLV_OP, 1, 1, std::get<int>($3));
-		  r_type_inst (img, Y_SRLV_OP, std::get<int>($2), std::get<int>($4), std::get<int>($3));
-		  r_type_inst (img, Y_OR_OP, std::get<int>($2), std::get<int>($2), 1);
+		  r_type_inst (img, Y_SUBU_OP, 1, 0, $4.i);
+		  r_type_inst (img, Y_SLLV_OP, 1, 1, $3.i);
+		  r_type_inst (img, Y_SRLV_OP, $2.i, $4.i, $3.i);
+		  r_type_inst (img, Y_OR_OP, $2.i, $2.i, 1);
 		}
 
 
 	|	Y_ROL_POP	DEST	SRC1	SRC2
 		{
-		  r_type_inst (img, Y_SUBU_OP, 1, 0, std::get<int>($4));
-		  r_type_inst (img, Y_SRLV_OP, 1, 1, std::get<int>($3));
-		  r_type_inst (img, Y_SLLV_OP, std::get<int>($2), std::get<int>($4), std::get<int>($3));
-		  r_type_inst (img, Y_OR_OP, std::get<int>($2), std::get<int>($2), 1);
+		  r_type_inst (img, Y_SUBU_OP, 1, 0, $4.i);
+		  r_type_inst (img, Y_SRLV_OP, 1, 1, $3.i);
+		  r_type_inst (img, Y_SLLV_OP, $2.i, $4.i, $3.i);
+		  r_type_inst (img, Y_OR_OP, $2.i, $2.i, 1);
 		}
 
 
 	|	Y_ROR_POP	DEST	SRC1	IMM32
 		{
-		  long dist = eval_imm_expr (img, std::get<imm_expr *>($4));
+		  long dist = eval_imm_expr (img, (imm_expr *)$4.p);
 
-		  check_imm_range (img, std::get<imm_expr *>($4), 0, 31);
-		  r_sh_type_inst (img, Y_SLL_OP, 1, std::get<int>($3), -dist);
-		  r_sh_type_inst (img, Y_SRL_OP, std::get<int>($2), std::get<int>($3), dist);
-		  r_type_inst (img, Y_OR_OP, std::get<int>($2), std::get<int>($2), 1);
-		  free (std::get<imm_expr *>($4));
+		  check_imm_range (img, (imm_expr *)$4.p, 0, 31);
+		  r_sh_type_inst (img, Y_SLL_OP, 1, $3.i, -dist);
+		  r_sh_type_inst (img, Y_SRL_OP, $2.i, $3.i, dist);
+		  r_type_inst (img, Y_OR_OP, $2.i, $2.i, 1);
+		  free ((imm_expr *)$4.p);
 		}
 
 
 	|	Y_ROL_POP	DEST	SRC1	IMM32
 		{
-		  long dist = eval_imm_expr (img, std::get<imm_expr *>($4));
+		  long dist = eval_imm_expr (img, (imm_expr *)$4.p);
 
-		  check_imm_range (img, std::get<imm_expr *>($4), 0, 31);
-		  r_sh_type_inst (img, Y_SRL_OP, 1, std::get<int>($3), -dist);
-		  r_sh_type_inst (img, Y_SLL_OP, std::get<int>($2), std::get<int>($3), dist);
-		  r_type_inst (img, Y_OR_OP, std::get<int>($2), std::get<int>($2), 1);
-		  free (std::get<imm_expr *>($4));
+		  check_imm_range (img, (imm_expr *)$4.p, 0, 31);
+		  r_sh_type_inst (img, Y_SRL_OP, 1, $3.i, -dist);
+		  r_sh_type_inst (img, Y_SLL_OP, $2.i, $3.i, dist);
+		  r_type_inst (img, Y_OR_OP, $2.i, $2.i, 1);
+		  free ((imm_expr *)$4.p);
 		}
 
 
@@ -1231,110 +1233,110 @@ ASM_CODE:	LOAD_OPS	DEST	ADDRESS
 
 	|	SET_LE_POPS	DEST	SRC1	SRC2
 		{
-		  set_le_inst (img, std::get<int>($1), std::get<int>($2), std::get<int>($3), std::get<int>($4));
+		  set_le_inst (img, $1.i, $2.i, $3.i, $4.i);
 		}
 
 	|	SET_LE_POPS	DEST	SRC1	IMM32
 		{
-		  if (!is_zero_imm (std::get<imm_expr *>($4)))
+		  if (!is_zero_imm ((imm_expr *)$4.p))
 		    /* Use $at */
-		    i_type_inst (img, Y_ORI_OP, 1, 0, std::get<imm_expr *>($4));
-		  set_le_inst (img, std::get<int>($1), std::get<int>($2), std::get<int>($3),
-			       (is_zero_imm (std::get<imm_expr *>($4)) ? 0 : 1));
-		  free (std::get<imm_expr *>($4));
+		    i_type_inst (img, Y_ORI_OP, 1, 0, (imm_expr *)$4.p);
+		  set_le_inst (img, $1.i, $2.i, $3.i,
+			       (is_zero_imm ((imm_expr *)$4.p) ? 0 : 1));
+		  free ((imm_expr *)$4.p);
 		}
 
 
 	|	SET_GT_POPS	DEST	SRC1	SRC2
 		{
-		  set_gt_inst (img, std::get<int>($1), std::get<int>($2), std::get<int>($3), std::get<int>($4));
+		  set_gt_inst (img, $1.i, $2.i, $3.i, $4.i);
 		}
 
 	|	SET_GT_POPS	DEST	SRC1	IMM32
 		{
-		  if (!is_zero_imm (std::get<imm_expr *>($4)))
+		  if (!is_zero_imm ((imm_expr *)$4.p))
 		    /* Use $at */
-		    i_type_inst (img, Y_ORI_OP, 1, 0, std::get<imm_expr *>($4));
-		  set_gt_inst (img, std::get<int>($1), std::get<int>($2), std::get<int>($3),
-			       (is_zero_imm (std::get<imm_expr *>($4)) ? 0 : 1));
-		  free (std::get<imm_expr *>($4));
+		    i_type_inst (img, Y_ORI_OP, 1, 0, (imm_expr *)$4.p);
+		  set_gt_inst (img, $1.i, $2.i, $3.i,
+			       (is_zero_imm ((imm_expr *)$4.p) ? 0 : 1));
+		  free ((imm_expr *)$4.p);
 		}
 
 
 
 	|	SET_GE_POPS	DEST	SRC1	SRC2
 		{
-		  set_ge_inst (img, std::get<int>($1), std::get<int>($2), std::get<int>($3), std::get<int>($4));
+		  set_ge_inst (img, $1.i, $2.i, $3.i, $4.i);
 		}
 
 	|	SET_GE_POPS	DEST	SRC1	IMM32
 		{
-		  if (!is_zero_imm (std::get<imm_expr *>($4)))
+		  if (!is_zero_imm ((imm_expr *)$4.p))
 		    /* Use $at */
-		    i_type_inst (img, Y_ORI_OP, 1, 0, std::get<imm_expr *>($4));
-		  set_ge_inst (img, std::get<int>($1), std::get<int>($2), std::get<int>($3),
-			       (is_zero_imm (std::get<imm_expr *>($4)) ? 0 : 1));
-		  free (std::get<imm_expr *>($4));
+		    i_type_inst (img, Y_ORI_OP, 1, 0, (imm_expr *)$4.p);
+		  set_ge_inst (img, $1.i, $2.i, $3.i,
+			       (is_zero_imm ((imm_expr *)$4.p) ? 0 : 1));
+		  free ((imm_expr *)$4.p);
 		}
 
 
 	|	SET_EQ_POPS	DEST	SRC1	SRC2
 		{
-		  set_eq_inst (img, std::get<int>($1), std::get<int>($2), std::get<int>($3), std::get<int>($4));
+		  set_eq_inst (img, $1.i, $2.i, $3.i, $4.i);
 		}
 
 	|	SET_EQ_POPS	DEST	SRC1	IMM32
 		{
-		  if (!is_zero_imm (std::get<imm_expr *>($4)))
+		  if (!is_zero_imm ((imm_expr *)$4.p))
 		    /* Use $at */
-		    i_type_inst (img, Y_ORI_OP, 1, 0, std::get<imm_expr *>($4));
-		  set_eq_inst (img, std::get<int>($1), std::get<int>($2), std::get<int>($3),
-			       (is_zero_imm (std::get<imm_expr *>($4)) ? 0 : 1));
-		  free (std::get<imm_expr *>($4));
+		    i_type_inst (img, Y_ORI_OP, 1, 0, (imm_expr *)$4.p);
+		  set_eq_inst (img, $1.i, $2.i, $3.i,
+			       (is_zero_imm ((imm_expr *)$4.p) ? 0 : 1));
+		  free ((imm_expr *)$4.p);
 		}
 
 
 	|	BR_COP_OPS	LABEL
 		{
 		  /* RS and RT fields contain information on test */
-                  int nd = opcode_is_nullified_branch (std::get<int>($1)) ? 1 : 0;
-                  int tf = opcode_is_true_branch (std::get<int>($1)) ? 1 : 0;
+                  int nd = opcode_is_nullified_branch ($1.i) ? 1 : 0;
+                  int tf = opcode_is_true_branch ($1.i) ? 1 : 0;
 		  i_type_inst_free (img,
-		  			std::get<int>($1),
+		  			$1.i,
 				    cc_to_rt (0, nd, tf),
-				    BIN_RS (std::get<int>($1)),
-				    std::get<imm_expr *>($2));
+				    BIN_RS ($1.i),
+				    (imm_expr *)$2.p);
 		}
 
 	|	BR_COP_OPS	CC_REG	LABEL
 		{
 		  /* RS and RT fields contain information on test */
-                  int nd = opcode_is_nullified_branch (std::get<int>($1)) ? 1 : 0;
-                  int tf = opcode_is_true_branch (std::get<int>($1)) ? 1 : 0;
+                  int nd = opcode_is_nullified_branch ($1.i) ? 1 : 0;
+                  int tf = opcode_is_true_branch ($1.i) ? 1 : 0;
 		  i_type_inst_free (img,
-		  			std::get<int>($1),
-				    cc_to_rt (std::get<int>($2), nd, tf),
-				    BIN_RS (std::get<int>($1)),
-				    std::get<imm_expr *>($3));
+		  			$1.i,
+				    cc_to_rt ($2.i, nd, tf),
+				    BIN_RS ($1.i),
+				    (imm_expr *)$3.p);
 		}
 
 
 	|	UNARY_BR_OPS	SRC1	LABEL
 		{
-		  i_type_inst_free (img, std::get<int>($1), 0, std::get<int>($2), std::get<imm_expr *>($3));
+		  i_type_inst_free (img, $1.i, 0, $2.i, (imm_expr *)$3.p);
 		}
 
 
 	|	UNARY_BR_POPS	SRC1	LABEL
 		{
-		  i_type_inst_free (img, std::get<int>($1) == Y_BEQZ_POP ? Y_BEQ_OP : Y_BNE_OP,
-			       0, std::get<int>($2), std::get<imm_expr *>($3));
+		  i_type_inst_free (img, $1.i == Y_BEQZ_POP ? Y_BEQ_OP : Y_BNE_OP,
+			       0, $2.i, (imm_expr *)$3.p);
 		}
 
 
 	|	BINARY_BR_OPS	SRC1	SRC2	LABEL
 		{
-		  i_type_inst_free (img, std::get<int>($1), std::get<int>($3), std::get<int>($2), std::get<imm_expr *>($4));
+		  i_type_inst_free (img, $1.i, $3.i, $2.i, (imm_expr *)$4.p);
 		}
 
 	|	BINARY_BR_OPS	SRC1	BR_IMM32	LABEL
@@ -1343,164 +1345,164 @@ ASM_CODE:	LOAD_OPS	DEST	ADDRESS
 		    yyerror (img, "Immediate form not allowed in bare machine");
 		  else
 		    {
-		      if (is_zero_imm (std::get<imm_expr *>($3)))
-			i_type_inst (img,std::get<int>($1), std::get<int>($2),
-				     (is_zero_imm (std::get<imm_expr *>($3)) ? 0 : 1),
-				     std::get<imm_expr *>($4));
+		      if (is_zero_imm ((imm_expr *)$3.p))
+			i_type_inst (img,$1.i, $2.i,
+				     (is_zero_imm ((imm_expr *)$3.p) ? 0 : 1),
+				     (imm_expr *)$4.p);
 		      else
 			{
 			  /* Use $at */
-			  i_type_inst (img, Y_ORI_OP, 1, 0, std::get<imm_expr *>($3));
-			  i_type_inst (img, std::get<int>($1), std::get<int>($2),
-				       (is_zero_imm (std::get<imm_expr *>($3)) ? 0 : 1),
-				       std::get<imm_expr *>($4));
+			  i_type_inst (img, Y_ORI_OP, 1, 0, (imm_expr *)$3.p);
+			  i_type_inst (img, $1.i, $2.i,
+				       (is_zero_imm ((imm_expr *)$3.p) ? 0 : 1),
+				       (imm_expr *)$4.p);
 			}
 		    }
-		  free (std::get<imm_expr *>($3));
-		  free (std::get<imm_expr *>($4));
+		  free ((imm_expr *)$3.p);
+		  free ((imm_expr *)$4.p);
 		}
 
 
 	|	BR_GT_POPS	SRC1	SRC2	LABEL
 		{
-		  r_type_inst (img, std::get<int>($1) == Y_BGT_POP ? Y_SLT_OP : Y_SLTU_OP,
-			       1, std::get<int>($3), std::get<int>($2)); /* Use $at */
-		  i_type_inst_free (img, Y_BNE_OP, 0, 1, std::get<imm_expr *>($4));
+		  r_type_inst (img, $1.i == Y_BGT_POP ? Y_SLT_OP : Y_SLTU_OP,
+			       1, $3.i, $2.i); /* Use $at */
+		  i_type_inst_free (img, Y_BNE_OP, 0, 1, (imm_expr *)$4.p);
 		}
 
 	|	BR_GT_POPS	SRC1	BR_IMM32	LABEL
 		{
-		  if (std::get<int>($1) == Y_BGT_POP)
+		  if ($1.i == Y_BGT_POP)
 		    {
 		      /* Use $at */
-		      i_type_inst_free (img, Y_SLTI_OP, 1, std::get<int>($2),
-					incr_expr_offset (img, std::get<imm_expr *>($3), 1));
-		      i_type_inst (img, Y_BEQ_OP, 0, 1, std::get<imm_expr *>($4));
+		      i_type_inst_free (img, Y_SLTI_OP, 1, $2.i,
+					incr_expr_offset (img, (imm_expr *)$3.p, 1));
+		      i_type_inst (img, Y_BEQ_OP, 0, 1, (imm_expr *)$4.p);
 		    }
 		  else
 		    {
 		      /* Use $at */
 		      /* Can't add 1 to immediate since 0xffffffff+1 = 0 < 1 */
-		      i_type_inst (img, Y_ORI_OP, 1, 0, std::get<imm_expr *>($3));
-		      i_type_inst_free (img, Y_BEQ_OP, std::get<int>($2), 1, branch_offset (img, 3));
-		      r_type_inst (img, Y_SLTU_OP, 1, std::get<int>($2), 1);
-		      i_type_inst (img, Y_BEQ_OP, 0, 1, std::get<imm_expr *>($4));
+		      i_type_inst (img, Y_ORI_OP, 1, 0, (imm_expr *)$3.p);
+		      i_type_inst_free (img, Y_BEQ_OP, $2.i, 1, branch_offset (img, 3));
+		      r_type_inst (img, Y_SLTU_OP, 1, $2.i, 1);
+		      i_type_inst (img, Y_BEQ_OP, 0, 1, (imm_expr *)$4.p);
 		    }
-		  free (std::get<imm_expr *>($3));
-		  free (std::get<imm_expr *>($4));
+		  free ((imm_expr *)$3.p);
+		  free ((imm_expr *)$4.p);
 		}
 
 
 	|	BR_GE_POPS	SRC1	SRC2	LABEL
 		{
-		  r_type_inst (img, std::get<int>($1) == Y_BGE_POP ? Y_SLT_OP : Y_SLTU_OP,
-			       1, std::get<int>($2), std::get<int>($3)); /* Use $at */
-		  i_type_inst_free (img, Y_BEQ_OP, 0, 1, std::get<imm_expr *>($4));
+		  r_type_inst (img, $1.i == Y_BGE_POP ? Y_SLT_OP : Y_SLTU_OP,
+			       1, $2.i, $3.i); /* Use $at */
+		  i_type_inst_free (img, Y_BEQ_OP, 0, 1, (imm_expr *)$4.p);
 		}
 
 	|	BR_GE_POPS	SRC1	BR_IMM32	LABEL
 		{
-		  i_type_inst (img, std::get<int>($1) == Y_BGE_POP ? Y_SLTI_OP : Y_SLTIU_OP,
-			       1, std::get<int>($2), std::get<imm_expr *>($3)); /* Use $at */
-		  i_type_inst_free (img, Y_BEQ_OP, 0, 1, std::get<imm_expr *>($4));
-		  free (std::get<imm_expr *>($3));
+		  i_type_inst (img, $1.i == Y_BGE_POP ? Y_SLTI_OP : Y_SLTIU_OP,
+			       1, $2.i, (imm_expr *)$3.p); /* Use $at */
+		  i_type_inst_free (img, Y_BEQ_OP, 0, 1, (imm_expr *)$4.p);
+		  free ((imm_expr *)$3.p);
 		}
 
 
 	|	BR_LT_POPS	SRC1	SRC2	LABEL
 		{
-		  r_type_inst (img, std::get<int>($1) == Y_BLT_POP ? Y_SLT_OP : Y_SLTU_OP,
-			       1, std::get<int>($2), std::get<int>($3)); /* Use $at */
-		  i_type_inst_free (img, Y_BNE_OP, 0, 1, std::get<imm_expr *>($4));
+		  r_type_inst (img, $1.i == Y_BLT_POP ? Y_SLT_OP : Y_SLTU_OP,
+			       1, $2.i, $3.i); /* Use $at */
+		  i_type_inst_free (img, Y_BNE_OP, 0, 1, (imm_expr *)$4.p);
 		}
 
 	|	BR_LT_POPS	SRC1	BR_IMM32	LABEL
 		{
-		  i_type_inst (img, std::get<int>($1) == Y_BLT_POP ? Y_SLTI_OP : Y_SLTIU_OP,
-			       1, std::get<int>($2), std::get<imm_expr *>($3)); /* Use $at */
-		  i_type_inst_free (img, Y_BNE_OP, 0, 1, std::get<imm_expr *>($4));
-		  free (std::get<imm_expr *>($3));
+		  i_type_inst (img, $1.i == Y_BLT_POP ? Y_SLTI_OP : Y_SLTIU_OP,
+			       1, $2.i, (imm_expr *)$3.p); /* Use $at */
+		  i_type_inst_free (img, Y_BNE_OP, 0, 1, (imm_expr *)$4.p);
+		  free ((imm_expr *)$3.p);
 		}
 
 
 	|	BR_LE_POPS	SRC1	SRC2	LABEL
 		{
-		  r_type_inst (img, std::get<int>($1) == Y_BLE_POP ? Y_SLT_OP : Y_SLTU_OP,
-			       1, std::get<int>($3), std::get<int>($2)); /* Use $at */
-		  i_type_inst_free (img, Y_BEQ_OP, 0, 1, std::get<imm_expr *>($4));
+		  r_type_inst (img, $1.i == Y_BLE_POP ? Y_SLT_OP : Y_SLTU_OP,
+			       1, $3.i, $2.i); /* Use $at */
+		  i_type_inst_free (img, Y_BEQ_OP, 0, 1, (imm_expr *)$4.p);
 		}
 
 	|	BR_LE_POPS	SRC1	BR_IMM32	LABEL
 		{
-		  if (std::get<int>($1) == Y_BLE_POP)
+		  if ($1.i == Y_BLE_POP)
 		    {
 		      /* Use $at */
-		      i_type_inst_free (img, Y_SLTI_OP, 1, std::get<int>($2),
-					incr_expr_offset (img, std::get<imm_expr *>($3), 1));
-		      i_type_inst (img, Y_BNE_OP, 0, 1, std::get<imm_expr *>($4));
+		      i_type_inst_free (img, Y_SLTI_OP, 1, $2.i,
+					incr_expr_offset (img, (imm_expr *)$3.p, 1));
+		      i_type_inst (img, Y_BNE_OP, 0, 1, (imm_expr *)$4.p);
 		    }
 		  else
 		    {
 		      /* Use $at */
 		      /* Can't add 1 to immediate since 0xffffffff+1 = 0 < 1 */
-		      i_type_inst (img, Y_ORI_OP, 1, 0, std::get<imm_expr *>($3));
-		      i_type_inst (img, Y_BEQ_OP, std::get<int>($2), 1, std::get<imm_expr *>($4));
-		      r_type_inst (img, Y_SLTU_OP, 1, std::get<int>($2), 1);
-		      i_type_inst (img, Y_BNE_OP, 0, 1, std::get<imm_expr *>($4));
+		      i_type_inst (img, Y_ORI_OP, 1, 0, (imm_expr *)$3.p);
+		      i_type_inst (img, Y_BEQ_OP, $2.i, 1, (imm_expr *)$4.p);
+		      r_type_inst (img, Y_SLTU_OP, 1, $2.i, 1);
+		      i_type_inst (img, Y_BNE_OP, 0, 1, (imm_expr *)$4.p);
 		    }
-		  free (std::get<imm_expr *>($3));
-		  free (std::get<imm_expr *>($4));
+		  free ((imm_expr *)$3.p);
+		  free ((imm_expr *)$4.p);
 		}
 
 
 	|	J_OPS		LABEL
 		{
-		  if ((std::get<int>($1) == Y_J_OP) || (std::get<int>($1) == Y_JR_OP))
-		    j_type_inst (img, Y_J_OP, std::get<imm_expr *>($2));
-		  else if ((std::get<int>($1) == Y_JAL_OP) || (std::get<int>($1) == Y_JALR_OP))
-		    j_type_inst (img, Y_JAL_OP, std::get<imm_expr *>($2));
-		  free (std::get<imm_expr *>($2));
+		  if (($1.i == Y_J_OP) || ($1.i == Y_JR_OP))
+		    j_type_inst (img, Y_J_OP, (imm_expr *)$2.p);
+		  else if (($1.i == Y_JAL_OP) || ($1.i == Y_JALR_OP))
+		    j_type_inst (img, Y_JAL_OP, (imm_expr *)$2.p);
+		  free ((imm_expr *)$2.p);
 		}
 
 	|	J_OPS		SRC1
 		{
-		  if ((std::get<int>($1) == Y_J_OP) || (std::get<int>($1) == Y_JR_OP))
-		    r_type_inst (img, Y_JR_OP, 0, std::get<int>($2), 0);
-		  else if ((std::get<int>($1) == Y_JAL_OP) || (std::get<int>($1) == Y_JALR_OP))
-		    r_type_inst (img, Y_JALR_OP, 31, std::get<int>($2), 0);
+		  if (($1.i == Y_J_OP) || ($1.i == Y_JR_OP))
+		    r_type_inst (img, Y_JR_OP, 0, $2.i, 0);
+		  else if (($1.i == Y_JAL_OP) || ($1.i == Y_JALR_OP))
+		    r_type_inst (img, Y_JALR_OP, 31, $2.i, 0);
 		}
 
 	|	J_OPS		DEST	SRC1
 		{
-		  if ((std::get<int>($1) == Y_J_OP) || (std::get<int>($1) == Y_JR_OP))
-		    r_type_inst (img, Y_JR_OP, 0, std::get<int>($3), 0);
-		  else if ((std::get<int>($1) == Y_JAL_OP) || (std::get<int>($1) == Y_JALR_OP))
-		    r_type_inst (img, Y_JALR_OP, std::get<int>($2), std::get<int>($3), 0);
+		  if (($1.i == Y_J_OP) || ($1.i == Y_JR_OP))
+		    r_type_inst (img, Y_JR_OP, 0, $3.i, 0);
+		  else if (($1.i == Y_JAL_OP) || ($1.i == Y_JALR_OP))
+		    r_type_inst (img, Y_JALR_OP, $2.i, $3.i, 0);
 		}
 
 
 	|	B_OPS		LABEL
 		{
-		  i_type_inst_free (img, (std::get<int>($1) == Y_BAL_POP ? Y_BGEZAL_OP : Y_BGEZ_OP),
-				    0, 0, std::get<imm_expr *>($2));
+		  i_type_inst_free (img, ($1.i == Y_BAL_POP ? Y_BGEZAL_OP : Y_BGEZ_OP),
+				    0, 0, (imm_expr *)$2.p);
 		}
 
 
 	|	BINARYI_TRAP_OPS	SRC1	IMM16
 		{
-		  i_type_inst_free (img, std::get<int>($1), 0, std::get<int>($2), std::get<imm_expr *>($3));
+		  i_type_inst_free (img, $1.i, 0, $2.i, (imm_expr *)$3.p);
 		}
 
 
 	|	BINARY_TRAP_OPS	SRC1	SRC2
 		{
-		  r_type_inst (img, std::get<int>($1), 0, std::get<int>($2), std::get<int>($3));
+		  r_type_inst (img, $1.i, 0, $2.i, $3.i);
 		}
 
 
 	|	FP_MOVE_OPS	F_DEST	F_SRC1
 		{
-		  r_co_type_inst (img, std::get<int>($1), std::get<int>($2), std::get<int>($3), 0);
+		  r_co_type_inst (img, $1.i, $2.i, $3.i, 0);
 		}
 
 
@@ -1512,23 +1514,23 @@ ASM_CODE:	LOAD_OPS	DEST	ADDRESS
 
 	|	MOVEC_OPS	DEST	SRC1	REG
 		{
-		  r_type_inst (img, std::get<int>($1), std::get<int>($2), std::get<int>($3), std::get<int>($4));
+		  r_type_inst (img, $1.i, $2.i, $3.i, $4.i);
 		}
 
 
 	|	MOVECC_OPS	DEST	SRC1	Y_INT
 		{
                     r_type_inst (img,
-								 std::get<int>($1),
-                                 std::get<int>($2),
-                                 std::get<int>($3),
-                                 ((std::get<int>($4) & 0x7) << 2));
+								 $1.i,
+                                 $2.i,
+                                 $3.i,
+                                 (($4.i & 0x7) << 2));
 		}
 
 
 	|	FP_MOVEC_OPS	F_DEST	F_SRC1	REG
 		{
-		  r_co_type_inst (img, std::get<int>($1), std::get<int>($2), std::get<int>($3), std::get<int>($4));
+		  r_co_type_inst (img, $1.i, $2.i, $3.i, $4.i);
 		}
 
 
@@ -1540,13 +1542,13 @@ ASM_CODE:	LOAD_OPS	DEST	ADDRESS
 
 	|	FP_MOVECC_OPS	F_DEST	F_SRC1
 		{
-		  r_co_type_inst (img, std::get<int>($1), std::get<int>($2), std::get<int>($3), cc_to_rt (0, 0, 0));
+		  r_co_type_inst (img, $1.i, $2.i, $3.i, cc_to_rt (0, 0, 0));
 		}
 
 
 	|	FP_MOVECC_OPS	F_DEST	F_SRC1	CC_REG
 		{
-		  r_co_type_inst (img, std::get<int>($1), std::get<int>($2), std::get<int>($3), cc_to_rt (std::get<int>($4), 0, 0));
+		  r_co_type_inst (img, $1.i, $2.i, $3.i, cc_to_rt ($4.i, 0, 0));
 		}
 
 
@@ -1558,31 +1560,31 @@ ASM_CODE:	LOAD_OPS	DEST	ADDRESS
 
 	|	MOVE_FROM_HILO_OPS REG
 		{
-		  r_type_inst (img, std::get<int>($1), std::get<int>($2), 0, 0);
+		  r_type_inst (img, $1.i, $2.i, 0, 0);
 		}
 
 
 	|	MOVE_TO_HILO_OPS REG
 		{
-		  r_type_inst (img, std::get<int>($1), 0, std::get<int>($2), 0);
+		  r_type_inst (img, $1.i, 0, $2.i, 0);
 		}
 
 
 
 	|	MOVE_COP_OPS	REG	COP_REG
 		{
-		  if (std::get<int>($1) == Y_MFC1_D_POP)
+		  if ($1.i == Y_MFC1_D_POP)
 		    {
-		      r_co_type_inst (img, Y_MFC1_OP, 0, std::get<int>($3), std::get<int>($2));
-		      r_co_type_inst (img, Y_MFC1_OP, 0, std::get<int>($3) + 1, std::get<int>($2) + 1);
+		      r_co_type_inst (img, Y_MFC1_OP, 0, $3.i, $2.i);
+		      r_co_type_inst (img, Y_MFC1_OP, 0, $3.i + 1, $2.i + 1);
 		    }
-		  else if (std::get<int>($1) == Y_MTC1_D_POP)
+		  else if ($1.i == Y_MTC1_D_POP)
 		    {
-		      r_co_type_inst (img, Y_MTC1_OP, 0, std::get<int>($3), std::get<int>($2));
-		      r_co_type_inst (img, Y_MTC1_OP, 0, std::get<int>($3) + 1, std::get<int>($2) + 1);
+		      r_co_type_inst (img, Y_MTC1_OP, 0, $3.i, $2.i);
+		      r_co_type_inst (img, Y_MTC1_OP, 0, $3.i + 1, $2.i + 1);
 		    }
 		  else
-		    r_co_type_inst (img, std::get<int>($1), 0, std::get<int>($3), std::get<int>($2));
+		    r_co_type_inst (img, $1.i, 0, $3.i, $2.i);
 		}
 
 
@@ -1594,13 +1596,13 @@ ASM_CODE:	LOAD_OPS	DEST	ADDRESS
 
 	|	CTL_COP_OPS	REG	COP_REG
 		{
-		  r_co_type_inst (img, std::get<int>($1), 0, std::get<int>($3), std::get<int>($2));
+		  r_co_type_inst (img, $1.i, 0, $3.i, $2.i);
 		}
 
 
 	|	FP_UNARY_OPS	F_DEST	F_SRC2
 		{
-		  r_co_type_inst (img, std::get<int>($1), std::get<int>($2), std::get<int>($3), 0);
+		  r_co_type_inst (img, $1.i, $2.i, $3.i, 0);
 		}
 
 
@@ -1612,7 +1614,7 @@ ASM_CODE:	LOAD_OPS	DEST	ADDRESS
 
 	|	FP_BINARY_OPS	F_DEST	F_SRC1	F_SRC2
 		{
-		  r_co_type_inst (img, std::get<int>($1), std::get<int>($2), std::get<int>($3), std::get<int>($4));
+		  r_co_type_inst (img, $1.i, $2.i, $3.i, $4.i);
 		}
 
 
@@ -1630,13 +1632,13 @@ ASM_CODE:	LOAD_OPS	DEST	ADDRESS
 
 	|	FP_CMP_OPS	F_SRC1	F_SRC2
 		{
-		  r_cond_type_inst (img, std::get<int>($1), std::get<int>($2), std::get<int>($3), 0);
+		  r_cond_type_inst (img, $1.i, $2.i, $3.i, 0);
 		}
 
 
 	|	FP_CMP_OPS	CC_REG	F_SRC1	F_SRC2
 		{
-		  r_cond_type_inst (img, std::get<int>($1), std::get<int>($3), std::get<int>($4), std::get<int>($2));
+		  r_cond_type_inst (img, $1.i, $3.i, $4.i, $2.i);
 		}
 
 
@@ -1648,7 +1650,7 @@ ASM_CODE:	LOAD_OPS	DEST	ADDRESS
 
 	|	Y_COP2_OP	IMM32
 		{
-		  i_type_inst_free (img, std::get<int>($1), 0, 0, std::get<imm_expr *>($2));
+		  i_type_inst_free (img, $1.i, 0, 0, (imm_expr *)$2.p);
 		}
 	;
 
@@ -1679,8 +1681,8 @@ LOADC_OPS:	Y_LDC2_OP
 
 LOADFP_OPS:	Y_LDC1_OP
 	|	Y_LWC1_OP
-	|	Y_L_D_POP { $$ = Y_LDC1_OP; }
-	|	Y_L_S_POP { $$ = Y_LWC1_OP; }
+	|	Y_L_D_POP { $$.i = Y_LDC1_OP; }
+	|	Y_L_S_POP { $$.i = Y_LWC1_OP; }
 	;
 
 LOADFP_INDEX_OPS:	Y_LDXC1_OP
@@ -1699,8 +1701,8 @@ STORE_OPS:	Y_SB_OP
 
 STOREC_OPS:	Y_SWC2_OP
 	|	Y_SDC2_OP
-	|	Y_S_D_POP { $$ = Y_SDC1_OP; }
-	|	Y_S_S_POP { $$ = Y_SWC1_OP; }
+	|	Y_S_D_POP { $$.i = Y_SDC1_OP; }
+	|	Y_S_S_POP { $$.i = Y_SWC1_OP; }
 	;
 
 STOREFP_OPS:	Y_SWC1_OP
@@ -2138,7 +2140,7 @@ ASM_DIRECTIVE:	Y_ALIAS_DIR	Y_REG	Y_REG
 
 	|	Y_ALIGN_DIR	EXPR
 		{
-		  align_data (img, std::get<int>($2));
+		  align_data (img, $2.i);
 		}
 
 	|	Y_ASCII_DIR {null_term = false;}	STR_LST
@@ -2171,11 +2173,12 @@ ASM_DIRECTIVE:	Y_ALIAS_DIR	Y_REG	Y_REG
 	|	Y_COMM_DIR	ID	EXPR
 		{
 		  align_data (img, 2);
-		  if (lookup_label (img, std::get<std::shared_ptr<char>>($2).get())->addr == 0)
+		  if (lookup_label (img, (char*)$2.p)->addr == 0)
 		  {
-		    (void)record_label (img, std::get<std::shared_ptr<char>>($2).get(), current_data_pc (img), 1);
+		    (void)record_label (img, (char*)$2.p, current_data_pc (img), 1);
+		    free ((char*)$2.p);
 		  }
-		  increment_data_pc (img, std::get<int>($3));
+		  increment_data_pc (img, $3.i);
 		}
 
 
@@ -2190,7 +2193,7 @@ ASM_DIRECTIVE:	Y_ALIAS_DIR	Y_REG	Y_REG
 		  user_kernel_data_segment (img, false);
 		  data_dir = true; text_dir = false;
 		  enable_data_alignment (img);
-		  set_data_pc (img, std::get<int>($2));
+		  set_data_pc (img, $2.i);
 		}
 
 
@@ -2206,7 +2209,7 @@ ASM_DIRECTIVE:	Y_ALIAS_DIR	Y_REG	Y_REG
                     user_kernel_data_segment (img, true);
 		  data_dir = true; text_dir = false;
 		  enable_data_alignment (img);
-		  set_data_pc (img, std::get<int>($2));
+		  set_data_pc (img, $2.i);
 		}
 
 
@@ -2235,7 +2238,8 @@ ASM_DIRECTIVE:	Y_ALIAS_DIR	Y_REG	Y_REG
 
 	|	Y_EXTERN_DIR	ID	EXPR
 		{
-		  extern_directive (img, std::get<std::shared_ptr<char>>($2).get(), std::get<int>($3));
+		  extern_directive (img, (char*)$2.p, $3.i);
+          free((char *) $2.p);
 		}
 
 
@@ -2267,7 +2271,8 @@ ASM_DIRECTIVE:	Y_ALIAS_DIR	Y_REG	Y_REG
 
 	|	Y_GLOBAL_DIR	ID
 		{
-		  (void)make_label_global (img, std::get<std::shared_ptr<char>>($2).get());
+		  (void)make_label_global (img, (char*)$2.p);
+		  free ((char*)$2.p);
 		}
 
 
@@ -2286,15 +2291,17 @@ ASM_DIRECTIVE:	Y_ALIAS_DIR	Y_REG	Y_REG
 	|	Y_LABEL_DIR	ID
 		{
 		  (void)record_label (img,
-		  			  std::get<std::shared_ptr<char>>($2).get(),
+		  			  (char*)$2.p,
 				      text_dir ? current_text_pc (img) : current_data_pc (img),
 				      1);
+		  free ((char*)$2.p);
 		}
 
 
 	|	Y_LCOMM_DIR	ID	EXPR
 		{
-		  lcomm_directive (img, std::get<std::shared_ptr<char>>($2).get(), std::get<int>($3));
+		  lcomm_directive (img, (char*)$2.p, $3.i);
+          free((char *) $2.p);
 		}
 
 
@@ -2328,7 +2335,7 @@ ASM_DIRECTIVE:	Y_ALIAS_DIR	Y_REG	Y_REG
 		  user_kernel_data_segment (img, false);
 		  data_dir = true; text_dir = false;
 		  enable_data_alignment (img);
-		  set_data_pc (img, std::get<int>($2));
+		  set_data_pc (img, $2.i);
 		}
 
 
@@ -2344,25 +2351,26 @@ ASM_DIRECTIVE:	Y_ALIAS_DIR	Y_REG	Y_REG
 		  user_kernel_data_segment (img, false);
 		  data_dir = true; text_dir = false;
 		  enable_data_alignment (img);
-		  set_data_pc (img, std::get<int>($2));
+		  set_data_pc (img, $2.i);
 		}
 
 
 	|	Y_SET_DIR	ID
 		{
-		  if (streq (std::get<std::shared_ptr<char>>($2).get(), "noat"))
+		  if (streq ((char*)$2.p, "noat"))
 		    noat_flag = true;
-		  else if (streq (std::get<std::shared_ptr<char>>($2).get(), "at"))
+		  else if (streq ((char*)$2.p, "at"))
 		    noat_flag = false;
+          free((char*) $2.p);
 		}
 
 
 	|	Y_SPACE_DIR	EXPR
 		{
 		  if (data_dir)
-		    increment_data_pc (img, std::get<int>($2));
+		    increment_data_pc (img, $2.i);
 		  else if (text_dir)
-		    increment_text_pc (img, std::get<int>($2));
+		    increment_text_pc (img, $2.i);
 		}
 
 
@@ -2384,7 +2392,7 @@ ASM_DIRECTIVE:	Y_ALIAS_DIR	Y_REG	Y_REG
 		  user_kernel_text_segment (img, false);
 		  data_dir = false; text_dir = true;
 		  enable_data_alignment (img);
-		  set_text_pc (img, std::get<int>($2));
+		  set_text_pc (img, $2.i);
 		}
 
 
@@ -2400,7 +2408,7 @@ ASM_DIRECTIVE:	Y_ALIAS_DIR	Y_REG	Y_REG
 		  user_kernel_text_segment (img, true);
 		  data_dir = false; text_dir = true;
 		  enable_data_alignment (img);
-		  set_text_pc (img, std::get<int>($2));
+		  set_text_pc (img, $2.i);
 		}
 
 
@@ -2424,52 +2432,59 @@ ADDRESS:	{only_id = 1;} ADDR {only_id = 0; $$ = $2;}
 
 ADDR:		'(' REGISTER ')'
 		{
-		  $$ = make_addr_expr (img, 0, NULL, std::get<int>($2));
+		  $$.p = make_addr_expr (img, 0, NULL, $2.i);
 		}
 
 	|	ABS_ADDR
 		{
-		  $$ = make_addr_expr (img, std::get<int>($1), NULL, 0);
+		  $$.p = make_addr_expr (img, $1.i, NULL, 0);
 		}
 
 	|	ABS_ADDR '(' REGISTER ')'
 		{
-		  $$ = make_addr_expr (img, std::get<int>($1), NULL, std::get<int>($3));
+		  $$.p = make_addr_expr (img, $1.i, NULL, $3.i);
 		}
 
 	|	Y_ID
 		{
-		  $$ = make_addr_expr (img, 0, std::get<std::shared_ptr<char>>($1).get(), 0);
+		  $$.p = make_addr_expr (img, 0, (char*)$1.p, 0);
+		  free ((char*)$1.p);
 		}
 
 	|	Y_ID '(' REGISTER ')'
 		{
-		  $$ = make_addr_expr (img, 0, std::get<std::shared_ptr<char>>($1).get(), std::get<int>($3));
+		  $$.p = make_addr_expr (img, 0, (char*)$1.p, $3.i);
+		  free ((char*)$1.p);
 		}
 
 	|	Y_ID '+' ABS_ADDR
 		{
-		  $$ = make_addr_expr (img, std::get<int>($3), std::get<std::shared_ptr<char>>($1).get(), 0);
+		  $$.p = make_addr_expr (img, $3.i, (char*)$1.p, 0);
+		  free ((char*)$1.p);
 		}
 
 	|	ABS_ADDR '+' ID
 		{
-		  $$ = make_addr_expr (img, std::get<int>($1), std::get<std::shared_ptr<char>>($3).get(), 0);
+		  $$.p = make_addr_expr (img, $1.i, (char*)$3.p, 0);
+          free((char *) $3.p);
 		}
 
 	|	Y_ID '-' ABS_ADDR
 		{
-		  $$ = make_addr_expr (img, - std::get<int>($3), std::get<std::shared_ptr<char>>($1).get(), 0);
+		  $$.p = make_addr_expr (img, - $3.i, (char*)$1.p, 0);
+		  free ((char*)$1.p);
 		}
 
 	|	Y_ID '+' ABS_ADDR '(' REGISTER ')'
 		{
-		  $$ = make_addr_expr (img, std::get<int>($3), std::get<std::shared_ptr<char>>($1).get(), std::get<int>($5));
+		  $$.p = make_addr_expr (img, $3.i, (char*)$1.p, $5.i);
+		  free ((char*)$1.p);
 		}
 
 	|	Y_ID '-' ABS_ADDR '(' REGISTER ')'
 		{
-		  $$ = make_addr_expr (img, - std::get<int>($3), std::get<std::shared_ptr<char>>($1).get(), std::get<int>($5));
+		  $$.p = make_addr_expr (img, - $3.i, (char*)$1.p, $5.i);
+		  free ((char*)$1.p);
 		}
 	;
 
@@ -2478,40 +2493,43 @@ BR_IMM32:	{only_id = 1;} IMM32 {only_id = 0; $$ = $2;}
 
 IMM16:	IMM32
 		{
-                  check_imm_range (img, std::get<imm_expr *>($1), IMM_MIN, IMM_MAX);
+                  check_imm_range (img, (imm_expr*)$1.p, IMM_MIN, IMM_MAX);
 		  $$ = $1;
 		}
 
 UIMM16:	IMM32
 		{
-                  check_uimm_range (img, std::get<imm_expr *>($1), UIMM_MIN, UIMM_MAX);
+                  check_uimm_range (img, (imm_expr*)$1.p, UIMM_MIN, UIMM_MAX);
 		  $$ = $1;
 		}
 
 
 IMM32:		ABS_ADDR
 		{
-		  $$ = make_imm_expr (img, std::get<int>($1), NULL, false);
+		  $$.p = make_imm_expr (img, $1.i, NULL, false);
 		}
 
 	|	'(' ABS_ADDR ')' '>' '>' Y_INT
 		{
-		  $$ = make_imm_expr (img, std::get<int>($2) >> std::get<int>($6), NULL, false);
+		  $$.p = make_imm_expr (img, $2.i >> $6.i, NULL, false);
 		}
 
 	|	ID
 		{
-		  $$ = make_imm_expr (img, 0, std::get<std::shared_ptr<char>>($1).get(), false);
+		  $$.p = make_imm_expr (img, 0, (char*)$1.p, false);
+          free((char *) $1.p);
 		}
 
 	|	Y_ID '+' ABS_ADDR
 		{
-		  $$ = make_imm_expr (img, std::get<int>($3), std::get<std::shared_ptr<char>>($1).get(), false);
+		  $$.p = make_imm_expr (img, $3.i, (char*)$1.p, false);
+		  free ((char*)$1.p);
 		}
 
 	|	Y_ID '-' ABS_ADDR
 		{
-		  $$ = make_imm_expr (img, - std::get<int>($3), std::get<std::shared_ptr<char>>($1).get(), false);
+		  $$.p = make_imm_expr (img, - $3.i, (char*)$1.p, false);
+		  free ((char*)$1.p);
 		}
 	;
 
@@ -2519,15 +2537,15 @@ IMM32:		ABS_ADDR
 ABS_ADDR:	Y_INT
 
 	|	Y_INT '+' Y_INT
-		{$$ = std::get<int>($1) + std::get<int>($3);}
+		{$$.i = $1.i + $3.i;}
 
 	|	Y_INT Y_INT
 		{
 		  /* This is actually: Y_INT '-' Y_INT, since the binary
 		     subtract operator gets scanned as a unary negation
 		     operator. */
-		  if (std::get<int>($2) >= 0) yyerror (img, "Syntax error");
-		  $$ = std::get<int>($1) - -std::get<int>($2);
+		  if ($2.i >= 0) yyerror (img, "Syntax error");
+		  $$.i = $1.i - -$2.i;
 		}
 	;
 
@@ -2541,9 +2559,9 @@ REG:		REGISTER ;
 
 REGISTER:	Y_REG
 		{
-		  if (std::get<int>($1) < 0 || std::get<int>($1) > 31)
+		  if ($1.i < 0 || $1.i > 31)
 		    yyerror (img, "Register number out of range");
-		  if (std::get<int>($1) == 1 && !bare_machine && !noat_flag)
+		  if ($1.i == 1 && !bare_machine && !noat_flag)
 		    yyerror (img, "Register 1 is reserved for assembler");
 		  $$ = $1;
 		}
@@ -2556,7 +2574,7 @@ F_SRC2:		FP_REGISTER ;
 
 FP_REGISTER:	Y_FP_REG
 		{
-		  if (std::get<int>($1) < 0 || std::get<int>($1) > 31)
+		  if ($1.i < 0 || $1.i > 31)
 		    yyerror (img, "FP register number out of range");
 		  $$ = $1;
 		}
@@ -2564,7 +2582,7 @@ FP_REGISTER:	Y_FP_REG
 
 CC_REG:	       Y_INT
 		{
-		  if (std::get<int>($1) < 0 || std::get<int>($1) > 7)
+		  if ($1.i < 0 || $1.i > 7)
 		    yyerror (img, "CC register number out of range");
 		  $$ = $1;
 		}
@@ -2579,7 +2597,8 @@ COP_REG:	Y_REG
 
 LABEL:		ID
 		{
-		  $$ = make_imm_expr (img, -(int)current_text_pc (img), std::get<std::shared_ptr<char>>($1).get(), true);
+		  $$.p = make_imm_expr (img, -(int)current_text_pc (img), (char*)$1.p, true);
+          free((char *)$1.p);
 		}
 
 
@@ -2590,14 +2609,16 @@ STR_LST:	STR_LST STR
 
 STR:		Y_STR
 		{
-		  store_string (img, std::get<std::shared_ptr<char>>($1).get(), strlen(std::get<std::shared_ptr<char>>($1).get()), null_term);
+		  store_string (img, (char*)$1.p, strlen((char*)$1.p), null_term);
+		  free ((char*)$1.p);
 		}
 	|	Y_STR ':' Y_INT
 		{
 		  int i;
 
-		  for (i = 0; i < std::get<int>($3); i ++)
-		    store_string (img, std::get<std::shared_ptr<char>>($1).get(), strlen(std::get<std::shared_ptr<char>>($1).get()), null_term);
+		  for (i = 0; i < $3.i; i ++)
+		    store_string (img, (char*)$1.p, strlen((char*)$1.p), null_term);
+		  free ((char*)$1.p);
 		}
 	;
 
@@ -2608,65 +2629,66 @@ EXPR:
                 TRM
         |
                 EXPR '+' TRM
-                { $$ =  std::get<int>($1) + std::get<int>($3); }
+                { $$.i =  $1.i + $3.i; }
         |
                 EXPR '-' TRM
-                { $$ =  std::get<int>($1) - std::get<int>($3); }
+                { $$.i =  $1.i - $3.i; }
         ;
 
 TRM:
                 FACTOR
         |
                 TRM '*' FACTOR
-                { $$ = std::get<int>($1) * std::get<int>($3); }
+                { $$.i = $1.i * $3.i; }
         |
                 TRM '/' FACTOR
-                { $$ = std::get<int>($1) / std::get<int>($3); }
+                { $$.i = $1.i / $3.i; }
         ;
 
 FACTOR:         Y_INT
 
         |       '(' EXPR ')'
-                { $$ = std::get<int>($2); }
+                { $$.i = $2.i; }
 
 	|	ID
 		{
-		  label *l = lookup_label (img, std::get<std::shared_ptr<char>>($1).get());
+		  label *l = lookup_label (img, (char*)$1.p);
+          free((char *) $1.p);
   		  if (l->addr == 0)
                     {
                       record_data_uses_symbol (img, current_data_pc (img), l);
-                      $$ = (void *) NULL;
+                      $$.p = NULL;
                     }
                   else
-                    $$ = (int) l->addr;
+                    $$.i = l->addr;
 		}
 
 
 EXPR_LST:	EXPR_LST	EXPRESSION
 		{
-		  store_op (img, std::get<int>($2));
+		  store_op (img, $2.i);
 		}
 	|	EXPRESSION
 		{
-		  store_op (img, std::get<int>($1));
+		  store_op (img, $1.i);
 		}
 	|	EXPRESSION ':' EXPR
 		{
 		  int i;
 
-		  for (i = 0; i < std::get<int>($3); i ++)
-		    store_op (img, std::get<int>($1));
+		  for (i = 0; i < $3.i; i ++)
+		    store_op (img, $1.i);
 		}
 	;
 
 
 FP_EXPR_LST:	FP_EXPR_LST Y_FP
 		{
-		  store_fp_op (img, (double *)std::get<void *>($2));
+		  store_fp_op (img, (double*)$2.p);
 		}
 	|	Y_FP
 		{
-		  store_fp_op (img, (double *)std::get<void *>($1));
+		  store_fp_op (img, (double*)$1.p);
 		}
 	;
 
@@ -2674,7 +2696,7 @@ FP_EXPR_LST:	FP_EXPR_LST Y_FP
 OPTIONAL_ID:	{only_id = 1;} OPT_ID {only_id = 0; $$ = $2;}
 
 OPT_ID:		ID
-	|	{$$ = (void*)NULL;}
+	|	{$$.p = (void*)NULL;}
 	;
 
 

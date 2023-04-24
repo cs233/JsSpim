@@ -127,7 +127,7 @@ static char scan_escape (MIPSImage &img, char **str);
 			     current_line_no = line_no;
 			     current_line = yytext;
 			   }
-			 yylval = atoi (yytext);
+			 yylval.i = atoi (yytext);
 			 return (Y_INT);
 			}
 
@@ -140,12 +140,12 @@ static char scan_escape (MIPSImage &img, char **str);
 			    }
 			  if (*yytext == '-')
 			    {
-			      sscanf(yytext+3, "%x", (unsigned int*)&(std::get<int>(yylval)));
-			      yylval = - std::get<int>(yylval);
+			      sscanf(yytext+3, "%x", (unsigned int*)&(yylval.i));
+			      yylval.i = -yylval.i;
 			    }
 			  else
 			    {
-			      sscanf(yytext+2, "%x", (unsigned int*)&(std::get<int>(yylval)));
+			      sscanf(yytext+2, "%x", (unsigned int*)&(yylval.i));
 			    }
 			  return (Y_INT);
 			}
@@ -158,7 +158,7 @@ static char scan_escape (MIPSImage &img, char **str);
 			      current_line = yytext;
 			    }
 			  scan_float = atof (yytext);
-			  yylval = (double*) &scan_float;
+			  yylval.p = (double*) &scan_float;
 			  return (Y_FP);
 			}
 
@@ -178,7 +178,7 @@ static char scan_escape (MIPSImage &img, char **str);
 			  if (!only_id && token != 0)
 			    {
 			      /* Keyword */
-			      yylval = token;
+			      yylval.i = token;
 			      current_line = yytext;
 			      return (token);
 			    }
@@ -190,13 +190,13 @@ static char scan_escape (MIPSImage &img, char **str);
 			      && l->const_flag)
 			    {
 			      /* Defined label */
-			      yylval = (int) l->addr;
+			      yylval.i = (int) l->addr;
 			      return (Y_INT);
 			    }
 			  else
 			    {
 			      /* Not-yet defined label */
-			      yylval = std::shared_ptr<char>((char*) str_copy (img, yytext), [](auto p) { free(p); });
+			      yylval.p = (char*) str_copy (img, yytext);
 			      return (Y_ID);
 			    }
 			}
@@ -216,14 +216,14 @@ static char scan_escape (MIPSImage &img, char **str);
 			      && *(yytext + 2) != 'p')
 			    {
 			      /* Floating point register ($f0) */
-			      yylval = reg_no;
+			      yylval.i = reg_no;
 			      return (Y_FP_REG);
 			    }
 
 			  if (0 <= reg_no && reg_no < R_LENGTH)
 			    {
 			      /* Register ($r0) */
-			      yylval = reg_no;
+			      yylval.i = reg_no;
 			      return (Y_REG);
 			    }
 			  else
@@ -233,12 +233,12 @@ static char scan_escape (MIPSImage &img, char **str);
 
 			      if (l != NULL && l->const_flag)
 				{
-				  yylval = (int) l->addr;
+				  yylval.i = (int) l->addr;
 				  return (Y_INT);
 				}
 			      else
 				{
-				  yylval = std::shared_ptr<char>((char*) str_copy (img, yytext), [] (auto p) { free(p); });
+				  yylval.p = (char*) str_copy (img, yytext);
 				  return (Y_ID);
 				}
 			    }
@@ -270,7 +270,7 @@ static char scan_escape (MIPSImage &img, char **str);
 			      current_line_no = line_no;
 			      current_line = yytext;
 			    }
-			  yylval = std::shared_ptr<char>((char*) str_copy (img, yytext), [] (auto p) { free(p); });
+			  yylval.p = (char*) str_copy (img, yytext);
 			  /* For top level */
 			  return (Y_ID);
 			}
@@ -282,7 +282,7 @@ static char scan_escape (MIPSImage &img, char **str);
 			      current_line_no = line_no;
 			      current_line = yytext;
 			    }
-			  yylval = std::shared_ptr<char>((char*) copy_str (img, yytext + 1, 1), [] (auto p) { free(p); });
+			  yylval.p = (char*) copy_str (img, yytext + 1, 1);
 			  return (Y_STR);
 			}
 
@@ -296,11 +296,11 @@ static char scan_escape (MIPSImage &img, char **str);
 			  if (*(yytext + 1) == '\\')
 			    {
 			      char *escape = yytext + 2;
-			      yylval = (int) scan_escape (img, &escape);
+			      yylval.i = (int) scan_escape (img, &escape);
 			    }
 			  else
 			    {
-			      yylval = (int) *(yytext + 1);
+			      yylval.i = (int) *(yytext + 1);
 			    }
 
 			  return (Y_INT);
