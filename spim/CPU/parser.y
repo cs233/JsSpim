@@ -2359,6 +2359,7 @@ ASM_DIRECTIVE:	Y_ALIAS_DIR	Y_REG	Y_REG
 		    noat_flag = true;
 		  else if (streq ((char*)$2.p, "at"))
 		    noat_flag = false;
+          free((char*) $2.p);
 		}
 
 
