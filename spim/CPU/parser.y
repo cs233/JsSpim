@@ -2239,6 +2239,7 @@ ASM_DIRECTIVE:	Y_ALIAS_DIR	Y_REG	Y_REG
 	|	Y_EXTERN_DIR	ID	EXPR
 		{
 		  extern_directive (img, (char*)$2.p, $3.i);
+          free((char *) $2.p);
 		}
 
 
@@ -2300,6 +2301,7 @@ ASM_DIRECTIVE:	Y_ALIAS_DIR	Y_REG	Y_REG
 	|	Y_LCOMM_DIR	ID	EXPR
 		{
 		  lcomm_directive (img, (char*)$2.p, $3.i);
+          free((char *) $2.p);
 		}
 
 
@@ -2464,6 +2466,7 @@ ADDR:		'(' REGISTER ')'
 	|	ABS_ADDR '+' ID
 		{
 		  $$.p = make_addr_expr (img, $1.i, (char*)$3.p, 0);
+          free((char *) $3.p);
 		}
 
 	|	Y_ID '-' ABS_ADDR
@@ -2514,6 +2517,7 @@ IMM32:		ABS_ADDR
 	|	ID
 		{
 		  $$.p = make_imm_expr (img, 0, (char*)$1.p, false);
+          free((char *) $1.p);
 		}
 
 	|	Y_ID '+' ABS_ADDR
@@ -2594,6 +2598,7 @@ COP_REG:	Y_REG
 LABEL:		ID
 		{
 		  $$.p = make_imm_expr (img, -(int)current_text_pc (img), (char*)$1.p, true);
+          free((char *)$1.p);
 		}
 
 
