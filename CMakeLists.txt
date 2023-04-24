@@ -76,11 +76,11 @@ add_subdirectory(spim/CPU)
 
 target_link_libraries(wasm spim)
 
-target_compile_options(wasm PRIVATE -I. -I$CPU -Wall -pedantic -Wextra -Wunused -Wno-write-strings -x c++)
+target_compile_options(wasm PRIVATE -pthread -I. -I$CPU -Wall -pedantic -Wextra -Wunused -Wno-write-strings -x c++)
+target_link_options(wasm PRIVATE -pthread)
 
 if (EMSCRIPTEN)
     target_link_options(wasm PRIVATE
-        -pthread
         -lm
         -lembind
         "SHELL:-s EXIT_RUNTIME=0"
@@ -108,7 +108,6 @@ if (EMSCRIPTEN)
     endif()
 
     target_compile_options(wasm PRIVATE
-        -pthread
         "SHELL:-s NO_DISABLE_EXCEPTION_CATCHING"
     )
 
@@ -117,7 +116,6 @@ if (EMSCRIPTEN)
         COMMAND mv wasm.* ../${DIST_DIR}/
     )
 else()
-    target_link_options(wasm PRIVATE "-pthread")
     if (CMAKE_BUILD_TYPE IN_LIST DEBUG_PROFILES)
         target_link_options(wasm PRIVATE "${EXTRA_DEBUG_LINKER_FLAGS}")
     endif()

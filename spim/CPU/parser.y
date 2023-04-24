@@ -533,17 +533,15 @@ LBL_CMD:	OPT_LBL CMD
 OPT_LBL: ID ':' {
 		  /* Call outside of cons_label, since an error sets that variable to NULL. */
 		  label* l = record_label (img,
-		  			   (char*)$1.p,
+		  			   $1.s.get(),
 					   text_dir ? current_text_pc (img) : current_data_pc (img),
 					   0);
 		  this_line_labels = cons_label (l, this_line_labels);
-		  free ((char*)$1.p);
 		}
 
 	|	ID '=' EXPR
 		{
-		  label *l = record_label (img, (char*)$1.p, (mem_addr)$3.i, 1);
-		  free ((char*)$1.p);
+		  label *l = record_label (img, $1.s.get(), (mem_addr)$3.i, 1);
 
 		  l->const_flag = 1;
 		  clear_labels (img);
@@ -651,9 +649,13 @@ ASM_CODE:	LOAD_OPS	DEST	ADDRESS
 		{
 		  int *x = (int *) $3.p;
 
-		  i_type_inst (img, Y_ORI_OP, 1, 0, const_imm_expr (img, *x));
+          imm_expr *const_expr = const_imm_expr (img, *x);
+		  i_type_inst (img, Y_ORI_OP, 1, 0, const_expr);
+          free(const_expr);
 		  r_co_type_inst (img, Y_MTC1_OP, 0, $2.i, 1);
-		  i_type_inst (img, Y_ORI_OP, 1, 0, const_imm_expr (img, *(x+1)));
+          const_expr = const_imm_expr (img, *(x+1));
+		  i_type_inst (img, Y_ORI_OP, 1, 0, const_expr);
+          free(const_expr);
 		  r_co_type_inst (img, Y_MTC1_OP, 0, $2.i + 1, 1);
 		}
 
@@ -663,7 +665,9 @@ ASM_CODE:	LOAD_OPS	DEST	ADDRESS
 		  float x = (float) *((double *) $3.p);
 		  int *y = (int *) &x;
 
-		  i_type_inst (img, Y_ORI_OP, 1, 0, const_imm_expr (img, *y));
+          imm_expr *const_expr = const_imm_expr (img, *y);
+		  i_type_inst (img, Y_ORI_OP, 1, 0,const_expr);
+          free(const_expr);
 		  r_co_type_inst (img, Y_MTC1_OP, 0, $2.i, 1);
 		}
 
@@ -1080,13 +1084,16 @@ ASM_CODE:	LOAD_OPS	DEST	ADDRESS
 
 		  if (bare_machine && !accept_pseudo_insts)
 		    yyerror (img, "Immediate form not allowed in bare machine");
-		  else
+		  else {
+            imm_expr *expr = make_imm_expr (img, -val, NULL, false);
 		    i_type_inst (img, $1.i == Y_SUB_OP ? Y_ADDI_OP
 				 : $1.i == Y_SUBU_OP ? Y_ADDIU_OP
 				 : (fatal_error (img, "Bad SUB_OP\n"), 0),
 				 $2.i,
 				 $3.i,
-				 make_imm_expr (img, -val, NULL, false));
+				 expr);
+            free(expr);
+          }
 		  free ((imm_expr *)$4.p);
 		}
 
@@ -1097,7 +1104,7 @@ ASM_CODE:	LOAD_OPS	DEST	ADDRESS
 		  if (bare_machine && !accept_pseudo_insts)
 		    yyerror (img, "Immediate form not allowed in bare machine");
 		  else
-		    i_type_inst (img, $1.i == Y_SUB_OP ? Y_ADDI_OP
+		    i_type_inst_free (img, $1.i == Y_SUB_OP ? Y_ADDI_OP
 				 : $1.i == Y_SUBU_OP ? Y_ADDIU_OP
 				 : (fatal_error (img, "Bad SUB_OP\n"), 0),
 				 $2.i,
@@ -2164,10 +2171,9 @@ ASM_DIRECTIVE:	Y_ALIAS_DIR	Y_REG	Y_REG
 	|	Y_COMM_DIR	ID	EXPR
 		{
 		  align_data (img, 2);
-		  if (lookup_label (img, (char*)$2.p)->addr == 0)
+		  if (lookup_label (img, $2.s.get())->addr == 0)
 		  {
-		    (void)record_label (img, (char*)$2.p, current_data_pc (img), 1);
-		    free ((char*)$2.p);
+		    (void)record_label (img, $2.s.get(), current_data_pc (img), 1);
 		  }
 		  increment_data_pc (img, $3.i);
 		}
@@ -2229,7 +2235,7 @@ ASM_DIRECTIVE:	Y_ALIAS_DIR	Y_REG	Y_REG
 
 	|	Y_EXTERN_DIR	ID	EXPR
 		{
-		  extern_directive (img, (char*)$2.p, $3.i);
+		  extern_directive (img, $2.s.get(), $3.i);
 		}
 
 
@@ -2261,8 +2267,7 @@ ASM_DIRECTIVE:	Y_ALIAS_DIR	Y_REG	Y_REG
 
 	|	Y_GLOBAL_DIR	ID
 		{
-		  (void)make_label_global (img, (char*)$2.p);
-		  free ((char*)$2.p);
+		  (void)make_label_global (img, $2.s.get());
 		}
 
 
@@ -2281,16 +2286,16 @@ ASM_DIRECTIVE:	Y_ALIAS_DIR	Y_REG	Y_REG
 	|	Y_LABEL_DIR	ID
 		{
 		  (void)record_label (img,
-		  			  (char*)$2.p,
+		  			  $2.s.get(),
 				      text_dir ? current_text_pc (img) : current_data_pc (img),
 				      1);
-		  free ((char*)$2.p);
 		}
 
 
 	|	Y_LCOMM_DIR	ID	EXPR
 		{
-		  lcomm_directive (img, (char*)$2.p, $3.i);
+		  lcomm_directive (img, $2.s.get(), $3.i);
+          free((char *) $2.p);
 		}
 
 
@@ -2346,9 +2351,9 @@ ASM_DIRECTIVE:	Y_ALIAS_DIR	Y_REG	Y_REG
 
 	|	Y_SET_DIR	ID
 		{
-		  if (streq ((char*)$2.p, "noat"))
+		  if (streq ($2.s.get(), "noat"))
 		    noat_flag = true;
-		  else if (streq ((char*)$2.p, "at"))
+		  else if (streq ($2.s.get(), "at"))
 		    noat_flag = false;
 		}
 
@@ -2435,43 +2440,37 @@ ADDR:		'(' REGISTER ')'
 
 	|	Y_ID
 		{
-		  $$.p = make_addr_expr (img, 0, (char*)$1.p, 0);
-		  free ((char*)$1.p);
+		  $$.p = make_addr_expr (img, 0, $1.s.get(), 0);
 		}
 
 	|	Y_ID '(' REGISTER ')'
 		{
-		  $$.p = make_addr_expr (img, 0, (char*)$1.p, $3.i);
-		  free ((char*)$1.p);
+		  $$.p = make_addr_expr (img, 0, $1.s.get(), $3.i);
 		}
 
 	|	Y_ID '+' ABS_ADDR
 		{
-		  $$.p = make_addr_expr (img, $3.i, (char*)$1.p, 0);
-		  free ((char*)$1.p);
+		  $$.p = make_addr_expr (img, $3.i, $1.s.get(), 0);
 		}
 
 	|	ABS_ADDR '+' ID
 		{
-		  $$.p = make_addr_expr (img, $1.i, (char*)$3.p, 0);
+		  $$.p = make_addr_expr (img, $1.i, $3.s.get(), 0);
 		}
 
 	|	Y_ID '-' ABS_ADDR
 		{
-		  $$.p = make_addr_expr (img, - $3.i, (char*)$1.p, 0);
-		  free ((char*)$1.p);
+		  $$.p = make_addr_expr (img, - $3.i, $1.s.get(), 0);
 		}
 
 	|	Y_ID '+' ABS_ADDR '(' REGISTER ')'
 		{
-		  $$.p = make_addr_expr (img, $3.i, (char*)$1.p, $5.i);
-		  free ((char*)$1.p);
+		  $$.p = make_addr_expr (img, $3.i, $1.s.get(), $5.i);
 		}
 
 	|	Y_ID '-' ABS_ADDR '(' REGISTER ')'
 		{
-		  $$.p = make_addr_expr (img, - $3.i, (char*)$1.p, $5.i);
-		  free ((char*)$1.p);
+		  $$.p = make_addr_expr (img, - $3.i, $1.s.get(), $5.i);
 		}
 	;
 
@@ -2503,19 +2502,17 @@ IMM32:		ABS_ADDR
 
 	|	ID
 		{
-		  $$.p = make_imm_expr (img, 0, (char*)$1.p, false);
+		  $$.p = make_imm_expr (img, 0, $1.s.get(), false);
 		}
 
 	|	Y_ID '+' ABS_ADDR
 		{
-		  $$.p = make_imm_expr (img, $3.i, (char*)$1.p, false);
-		  free ((char*)$1.p);
+		  $$.p = make_imm_expr (img, $3.i, $1.s.get(), false);
 		}
 
 	|	Y_ID '-' ABS_ADDR
 		{
-		  $$.p = make_imm_expr (img, - $3.i, (char*)$1.p, false);
-		  free ((char*)$1.p);
+		  $$.p = make_imm_expr (img, - $3.i, $1.s.get(), false);
 		}
 	;
 
@@ -2583,7 +2580,7 @@ COP_REG:	Y_REG
 
 LABEL:		ID
 		{
-		  $$.p = make_imm_expr (img, -(int)current_text_pc (img), (char*)$1.p, true);
+		  $$.p = make_imm_expr (img, -(int)current_text_pc (img), $1.s.get(), true);
 		}
 
 
@@ -2594,16 +2591,14 @@ STR_LST:	STR_LST STR
 
 STR:		Y_STR
 		{
-		  store_string (img, (char*)$1.p, strlen((char*)$1.p), null_term);
-		  free ((char*)$1.p);
+		  store_string (img, $1.s.get(), strlen($1.s.get()), null_term);
 		}
 	|	Y_STR ':' Y_INT
 		{
 		  int i;
 
 		  for (i = 0; i < $3.i; i ++)
-		    store_string (img, (char*)$1.p, strlen((char*)$1.p), null_term);
-		  free ((char*)$1.p);
+		    store_string (img, $1.s.get(), strlen($1.s.get()), null_term);
 		}
 	;
 
@@ -2637,7 +2632,7 @@ FACTOR:         Y_INT
 
 	|	ID
 		{
-		  label *l = lookup_label (img, (char*)$1.p);
+		  label *l = lookup_label (img, $1.s.get());
   		  if (l->addr == 0)
                     {
                       record_data_uses_symbol (img, current_data_pc (img), l);
@@ -2967,7 +2962,9 @@ yyerror (MIPSImage &img, char *s)
 void
 yywarn (MIPSImage &img, char *s)
 {
-  error (img, "spim: (parser) %s on line %d of file %s\n%s", s, line_no, input_file_name, erroneous_line (img));
+  char *line = erroneous_line(img);
+  error (img, "spim: (parser) %s on line %d of file %s\n%s", s, line_no, input_file_name, line);
+  free(line);
 }
 
 

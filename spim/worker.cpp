@@ -5,6 +5,7 @@
 #include <thread>
 #include <condition_variable>
 
+#include "CPU/scanner.h"
 #include "CPU/spim-utils.h"
 #include "CPU/spim.h"
 
@@ -81,6 +82,7 @@ void reset(unsigned int max_contexts, std::set<unsigned int> &active_ctxs) {
         } else {
             ctxs.erase(i);
         }
+        yylex_destroy();
     }
     finished = false;
     steps_left = 0;

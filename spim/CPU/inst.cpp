@@ -280,7 +280,9 @@ i_type_inst_full_word (MIPSImage &img, int opcode, int rt, int rs, imm_expr *exp
 		{
 		r_type_inst (img, Y_ADDU_OP, 1, 1, rs);
 		}
-	      i_type_inst_free (img, opcode, rt, 1, lower_bits_of_expr (img, const_imm_expr (img, low)));
+          imm_expr *const_expr = const_imm_expr (img, low);
+	      i_type_inst_free (img, opcode, rt, 1, lower_bits_of_expr (img, const_expr));
+          free(const_expr);
 	    }
 	  else
 	    {
@@ -577,7 +579,9 @@ free_inst (instruction *inst)
     /* Don't free the breakpoint insructions since we only have one. */
     {
       if (EXPR (inst))
-	free (EXPR (inst));
+	    free (EXPR (inst));
+      if (SOURCE(inst))
+        free (SOURCE(inst));
       free (inst);
     }
 }
@@ -664,7 +668,6 @@ inst_to_string(MIPSImage &img, mem_addr addr)
       return "";
     }
 
-  ss_init (&ss);
   format_an_inst (img, &ss, inst, addr);
   return ss_to_string (img, &ss);
 }
@@ -1194,7 +1197,7 @@ make_addr_expr (MIPSImage &img, int offs, char *sym, int reg_no)
   else
     {
       expr->reg_no = (unsigned char)reg_no;
-      expr->imm = make_imm_expr (img, offs, (sym ? str_copy (img, sym) : sym), false);
+      expr->imm = make_imm_expr (img, offs, sym, false);
     }
   return (expr);
 }
