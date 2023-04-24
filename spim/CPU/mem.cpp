@@ -418,10 +418,17 @@ void
 set_mem_inst(MIPSImage &img, mem_addr addr, instruction* inst)
 {
   img.mem_image().text_modified = true;
-  if ((addr >= TEXT_BOT) && (addr < img.mem_image().text_top) && !(addr & 0x3))
+  if ((addr >= TEXT_BOT) && (addr < img.mem_image().text_top) && !(addr & 0x3)) {
+    if (img.mem_image().text_seg [(addr - TEXT_BOT) >> 2]) {
+        free_inst(img.mem_image().text_seg [(addr - TEXT_BOT) >> 2]);
+    }
     img.mem_image().text_seg [(addr - TEXT_BOT) >> 2] = inst;
-  else if ((addr >= K_TEXT_BOT) && (addr < img.mem_image().k_text_top) && !(addr & 0x3))
+  } else if ((addr >= K_TEXT_BOT) && (addr < img.mem_image().k_text_top) && !(addr & 0x3)) {
+    if (img.mem_image().k_text_seg [(addr - K_TEXT_BOT) >> 2]) {
+        free_inst(img.mem_image().k_text_seg [(addr - K_TEXT_BOT) >> 2]);
+    }
     img.mem_image().k_text_seg [(addr - K_TEXT_BOT) >> 2] = inst;
+  }
   else
     bad_text_write (img, addr, inst);
 }
