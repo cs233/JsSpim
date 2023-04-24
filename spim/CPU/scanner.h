@@ -31,6 +31,13 @@
 */
 
 #include "image.h"
+#include "instruction.h"
+#include "inst.h"
+
+#include <memory>
+#include <variant>
+
+typedef std::variant<int, void *, addr_expr *, imm_expr *, std::shared_ptr<char>> intptr_union;
 
 /* Exported functions (besides yylex): */
 
