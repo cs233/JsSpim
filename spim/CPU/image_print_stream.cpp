@@ -21,7 +21,7 @@ MIPSImagePrintStream::~MIPSImagePrintStream() {
     sync(); // Flush the buffer on exit
 }
 
-MIPSImagePrintStream::MIPSImagePrintStream(const MIPSImagePrintStream &&other) :
+MIPSImagePrintStream::MIPSImagePrintStream(MIPSImagePrintStream &&other) :
     ctx(other.ctx),
     sink(other.sink),
     buf(std::move(other.buf))
@@ -29,8 +29,9 @@ MIPSImagePrintStream::MIPSImagePrintStream(const MIPSImagePrintStream &&other) :
     char *base = &buf.front();
     setp(base, base + buf.size() - 1);
 
-    size_t offset = other.pptr() - other.pbase();
+    int offset = other.pptr() - other.pbase();
     pbump(offset);
+    other.pbump(-offset);
 }
 
 std::streamsize MIPSImagePrintStream::xsputn(const char *s, std::streamsize n) {
@@ -63,6 +64,9 @@ MIPSImagePrintStream::int_type MIPSImagePrintStream::overflow(MIPSImagePrintStre
 int MIPSImagePrintStream::sync() {
     std::ptrdiff_t n = pptr() - pbase();
     pbump(-n);
+    if (!n) {
+        return 0;
+    }
 #ifdef WASM
     char *s = new char[n + 1];
     strncpy(s, pbase(), n);
