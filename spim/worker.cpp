@@ -73,18 +73,13 @@ void reset(unsigned int max_contexts, std::set<unsigned int> &active_ctxs) {
             continue;
         }
         MIPSImage new_image(i);
-        /* ctxs.emplace(i, i); */
-        /* MIPSImage &new_image = ctxs.at(i); */
         initialize_world(new_image, DEFAULT_EXCEPTION_HANDLER, false);
         initialize_run_stack(new_image, 0, nullptr);
         char file_name[64];
         sprintf(file_name, "./input_%d.s", i);
         if (read_assembly_file(new_image, file_name)) { // check if the file exists
             new_image.reg_image().PC = starting_address(new_image);
-            /* ctxs.emplace(i, std::move(new_image)); */
             ctxs.emplace(i, std::move(new_image));
-        } else {
-            /* ctxs.erase(i); */
         }
         yylex_destroy();
     }
