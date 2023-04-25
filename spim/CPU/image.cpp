@@ -1,12 +1,18 @@
+#include "image.h"
 #include "inst.h"
 #include "spim.h"
 #include "spim-utils.h"
-#include "image.h"
 #include "sym-tbl.h"
 
 #include <iostream>
 
-MIPSImage::MIPSImage(int ctx) : ctx(ctx), std_out(ctx, std::cout), std_err(ctx, std::cerr) {}
+MIPSImage::MIPSImage(int ctx) :
+    ctx(ctx),
+    std_out(ctx, std::cout),
+    std_err(ctx, std::cerr)
+{
+    label_hash_table = (label **) zmalloc(*this, LABEL_HASH_TABLE_SIZE * sizeof(label *));
+}
 
 MIPSImage::~MIPSImage() {
     initialize_symbol_table(*this);
@@ -14,20 +20,21 @@ MIPSImage::~MIPSImage() {
         free((*it)->name);
         free(*it);
     }
+    if (label_hash_table)
+        free(label_hash_table);
 }
 
 MIPSImage::MIPSImage(const MIPSImage &&other) :
     ctx(other.ctx),
+    mem_img(other.mem_img),
+    reg_img(other.reg_img),
     bkpt_map(std::move(other.bkpt_map)),
     local_labels(other.local_labels),
+    label_hash_table(other.label_hash_table),
     labels_to_free(std::move(other.labels_to_free)),
     std_out(std::move(other.std_out)),
     std_err(std::move(other.std_err))
-{
-    for (size_t i = 0; i < LABEL_HASH_TABLE_SIZE; i++) {
-        label_hash_table[i] = other.label_hash_table[i];
-    }
-}
+{}
 
 int MIPSImage::get_ctx() const {
     return ctx;
