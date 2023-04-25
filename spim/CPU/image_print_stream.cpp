@@ -21,6 +21,18 @@ MIPSImagePrintStream::~MIPSImagePrintStream() {
     sync(); // Flush the buffer on exit
 }
 
+MIPSImagePrintStream::MIPSImagePrintStream(const MIPSImagePrintStream &&other) :
+    ctx(other.ctx),
+    sink(other.sink),
+    buf(std::move(other.buf))
+{
+    char *base = &buf.front();
+    setp(base, base + buf.size() - 1);
+
+    size_t offset = other.pptr() - other.pbase();
+    pbump(offset);
+}
+
 std::streamsize MIPSImagePrintStream::xsputn(const char *s, std::streamsize n) {
     std::streamsize char_pos = 0;
     while (char_pos < n) {
