@@ -24,17 +24,24 @@ MIPSImage::~MIPSImage() {
         free(label_hash_table);
 }
 
-MIPSImage::MIPSImage(const MIPSImage &&other) :
+MIPSImage::MIPSImage(MIPSImage &&other) :
     ctx(other.ctx),
-    mem_img(other.mem_img),
-    reg_img(other.reg_img),
+    mem_img(std::move(other.mem_img)),
+    reg_img(std::move(other.reg_img)),
     bkpt_map(std::move(other.bkpt_map)),
     local_labels(other.local_labels),
     label_hash_table(other.label_hash_table),
     labels_to_free(std::move(other.labels_to_free)),
     std_out(std::move(other.std_out)),
     std_err(std::move(other.std_err))
-{}
+{
+    other.mem_img = {};
+    other.reg_img = {};
+    other.bkpt_map.clear();
+    other.local_labels = NULL;
+    other.label_hash_table = NULL;
+    other.labels_to_free.clear();
+}
 
 int MIPSImage::get_ctx() const {
     return ctx;

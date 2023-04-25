@@ -39,7 +39,7 @@ class MIPSImage {
     MIPSImage(int ctx);
     ~MIPSImage();
     MIPSImage(const MIPSImage&) = delete;
-    MIPSImage(const MIPSImage&&);
+    MIPSImage(MIPSImage&&);
 
     int get_ctx() const;
 
