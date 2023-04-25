@@ -16,6 +16,19 @@ MIPSImage::~MIPSImage() {
     }
 }
 
+MIPSImage::MIPSImage(const MIPSImage &&other) :
+    ctx(other.ctx),
+    bkpt_map(std::move(other.bkpt_map)),
+    local_labels(other.local_labels),
+    labels_to_free(std::move(other.labels_to_free)),
+    std_out(std::move(other.std_out)),
+    std_err(std::move(other.std_err))
+{
+    for (size_t i = 0; i < LABEL_HASH_TABLE_SIZE; i++) {
+        label_hash_table[i] = other.label_hash_table[i];
+    }
+}
+
 int MIPSImage::get_ctx() const {
     return ctx;
 }

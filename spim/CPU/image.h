@@ -38,6 +38,8 @@ class MIPSImage {
   public:
     MIPSImage(int ctx);
     ~MIPSImage();
+    MIPSImage(const MIPSImage&) = delete;
+    MIPSImage(const MIPSImage&&);
 
     int get_ctx() const;
 
