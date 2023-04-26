@@ -29,7 +29,7 @@ MIPSImagePrintStream::MIPSImagePrintStream(MIPSImagePrintStream &&other) :
     char *base = &buf.front();
     setp(base, base + buf.size() - 1);
 
-    reset_other_buffer(std::move(other));
+    move_buffer_pointers(std::move(other));
 }
 
 MIPSImagePrintStream& MIPSImagePrintStream::operator=(MIPSImagePrintStream &&other) {
@@ -40,10 +40,11 @@ MIPSImagePrintStream& MIPSImagePrintStream::operator=(MIPSImagePrintStream &&oth
     char *base = &buf.front();
     setp(base, base + buf.size() - 1);
 
-    reset_other_buffer(std::move(other));
+    move_buffer_pointers(std::move(other));
+    return *this;
 }
 
-void inline MIPSImagePrintStream::reset_other_buffer(MIPSImagePrintStream &&other) {
+inline void MIPSImagePrintStream::move_buffer_pointers(MIPSImagePrintStream &&other) {
     int offset = other.pptr() - other.pbase();
     pbump(offset);
     other.pbump(-offset);

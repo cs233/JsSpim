@@ -28,7 +28,7 @@ class MIPSImagePrintStream : public std::streambuf {
         ~MIPSImagePrintStream();
 
     private:
-        void reset_other_buffer(MIPSImagePrintStream &&other);
+        inline void move_buffer_pointers(MIPSImagePrintStream &&other);
         std::streamsize xsputn(const char *s, std::streamsize n);
         int_type overflow(int_type ch);
         int sync();
