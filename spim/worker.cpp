@@ -50,7 +50,7 @@ void start_simulator(unsigned int max_contexts, std::set<unsigned int> active_ct
     // Actually, what if we can use the proxy queue? Idk how useful that would be
 }
 
-void reset(unsigned int max_contexts, std::set<unsigned int> &active_ctxs) {
+void shutdown() {
     {
         std::lock_guard<std::mutex> lock(settings_mtx);
         finished = true;
@@ -60,6 +60,10 @@ void reset(unsigned int max_contexts, std::set<unsigned int> &active_ctxs) {
     if (simulator_thread.joinable()) {
         simulator_thread.join();
     }
+}
+
+void reset(unsigned int max_contexts, std::set<unsigned int> &active_ctxs) {
+    shutdown();
 
     // Since we join if a thread already exists, we dont need to lock. YIPPEE!
     /* std::lock(simulator_mtx, settings_mtx); */

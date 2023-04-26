@@ -20,6 +20,7 @@ extern bool simulator_ready;
 void start_simulator(unsigned int max_contexts, std::set<unsigned int> active_ctxs);
 
 void reset(unsigned int max_contexts, std::set<unsigned int> &active_ctxs);
+void shutdown();
 void step_simulation(unsigned additional_steps);
 void play_simulation();
 void pause_simulation();
