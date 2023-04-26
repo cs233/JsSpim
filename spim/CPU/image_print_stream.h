@@ -14,9 +14,6 @@
  * will append it to the frontend div and append it to an array for the ctx's stdout or stderr.
  *
  * If compiled for unix, it will simply forward it to std::cout/std::cerr.
- *
- * It's unclear if we currently want to add std::ostream to the constructor, but that's an idea that
- * can be implemented if needed.
  */
 class MIPSImagePrintStream : public std::streambuf {
     public:
@@ -34,6 +31,12 @@ class MIPSImagePrintStream : public std::streambuf {
         int sync();
 
         unsigned int ctx;
+        // Note that this cannot be a reference type as std::ostream doesn't implement a public
+        // copy/move constructor. As such, when it comes to the assignment overloads, if sink was a
+        // `std::ostream &`, we cannot simply assign `this->sink = other.sink`. A pointer achieves
+        // the desired result without having using ostream's protected move assignment.
+        // Note: The use of a pointer rather than a reference makes no difference if the original
+        // ostream goes out of scope and gets destroyed.
         std::ostream *sink;
         std::vector<char> buf;
 };
