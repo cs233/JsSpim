@@ -10,7 +10,7 @@
 
 MIPSImagePrintStream::MIPSImagePrintStream(unsigned int ctx, std::ostream &sink, std::size_t buffer_size) :
     ctx(ctx),
-    sink(sink),
+    sink(&sink),
     buf(buffer_size + 1)
 {
     char *base = &buf.front();
@@ -29,6 +29,21 @@ MIPSImagePrintStream::MIPSImagePrintStream(MIPSImagePrintStream &&other) :
     char *base = &buf.front();
     setp(base, base + buf.size() - 1);
 
+    reset_other_buffer(std::move(other));
+}
+
+MIPSImagePrintStream& MIPSImagePrintStream::operator=(MIPSImagePrintStream &&other) {
+    ctx = other.ctx;
+    sink = other.sink;
+    buf = std::move(other.buf);
+
+    char *base = &buf.front();
+    setp(base, base + buf.size() - 1);
+
+    reset_other_buffer(std::move(other));
+}
+
+void inline MIPSImagePrintStream::reset_other_buffer(MIPSImagePrintStream &&other) {
     int offset = other.pptr() - other.pbase();
     pbump(offset);
     other.pbump(-offset);
@@ -71,13 +86,13 @@ int MIPSImagePrintStream::sync() {
     char *s = new char[n + 1];
     strncpy(s, pbase(), n);
     s[n] = 0;
-    if (&sink == &std::cout) {
+    if (sink == &std::cout) {
         MAIN_THREAD_ASYNC_EM_ASM({
             writeStdOut($0, UTF8ToString($1));
         }, ctx, s);
         return 0;
     }
-    if (&sink == &std::cerr) {
+    if (sink == &std::cerr) {
         MAIN_THREAD_ASYNC_EM_ASM({
             writeStdErr($0, UTF8ToString($1));
         }, ctx, s);
@@ -86,6 +101,6 @@ int MIPSImagePrintStream::sync() {
     delete[] s;
     return -1;
 #else
-    return !((bool) sink.write(pbase(), n));
+    return !((bool) sink->write(pbase(), n));
 #endif
 }

@@ -35,11 +35,16 @@ class MIPSImage {
 
     MIPSImagePrintStream std_out;
     MIPSImagePrintStream std_err;
+
+    void free_internals();
   public:
     MIPSImage(int ctx);
     ~MIPSImage();
     MIPSImage(const MIPSImage&) = delete;
     MIPSImage(MIPSImage&&);
+
+    MIPSImage &operator=(MIPSImage &) = delete;
+    MIPSImage &operator=(MIPSImage &&);
 
     int get_ctx() const;
 

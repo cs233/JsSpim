@@ -15,13 +15,7 @@ MIPSImage::MIPSImage(int ctx) :
 }
 
 MIPSImage::~MIPSImage() {
-    initialize_symbol_table(*this);
-    for (auto it = labels_to_free.begin(); it != labels_to_free.end(); it ++) {
-        free((*it)->name);
-        free(*it);
-    }
-    if (label_hash_table)
-        free(label_hash_table);
+    free_internals();
 }
 
 MIPSImage::MIPSImage(MIPSImage &&other) :
@@ -41,6 +35,37 @@ MIPSImage::MIPSImage(MIPSImage &&other) :
     other.local_labels = NULL;
     other.label_hash_table = NULL;
     other.labels_to_free.clear();
+}
+
+MIPSImage &MIPSImage::operator=(MIPSImage &&other) {
+    free_internals();
+    ctx = other.ctx;
+    mem_img = std::move(other.mem_img);
+    reg_img = std::move(other.reg_img);
+    bkpt_map = std::move(other.bkpt_map);
+    local_labels = other.local_labels;
+    label_hash_table = other.label_hash_table;
+    labels_to_free = std::move(other.labels_to_free);
+    std_out = std::move(other.std_out);
+    std_err = std::move(other.std_err);
+
+    other.mem_img = {};
+    other.reg_img = {};
+    other.local_labels = NULL;
+    other.label_hash_table = NULL;
+    other.labels_to_free.clear();
+
+    return *this;
+}
+
+void MIPSImage::free_internals() {
+    initialize_symbol_table(*this);
+    for (auto it = labels_to_free.begin(); it != labels_to_free.end(); it ++) {
+        free((*it)->name);
+        free(*it);
+    }
+    if (label_hash_table)
+        free(label_hash_table);
 }
 
 int MIPSImage::get_ctx() const {

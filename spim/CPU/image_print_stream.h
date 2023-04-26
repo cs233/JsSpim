@@ -24,15 +24,17 @@ class MIPSImagePrintStream : public std::streambuf {
         MIPSImagePrintStream(const MIPSImagePrintStream&) = delete;
         MIPSImagePrintStream(MIPSImagePrintStream&&);
         MIPSImagePrintStream& operator=(const MIPSImagePrintStream&) = delete;
+        MIPSImagePrintStream& operator=(MIPSImagePrintStream&&);
         ~MIPSImagePrintStream();
 
     private:
+        void reset_other_buffer(MIPSImagePrintStream &&other);
         std::streamsize xsputn(const char *s, std::streamsize n);
         int_type overflow(int_type ch);
         int sync();
 
         unsigned int ctx;
-        std::ostream &sink;
+        std::ostream *sink;
         std::vector<char> buf;
 };
 
