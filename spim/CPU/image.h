@@ -2,6 +2,7 @@
 #define IMAGE_H
 
 #include <unordered_map>
+#include <optional>
 
 #include "image_print_stream.h"
 #include "mem_image.h"
@@ -59,19 +60,50 @@ class MIPSImage {
     std::unordered_map<mem_addr, breakpoint> &breakpoints();
 
     /**
-     * @brief Override this method to implement custom memory read behavior
+     * @brief Override this method to implement custom memory read word behavior
      * @param addr The address to read from
-     * @returns true if the read was successful, false otherwise
+     * @returns The value at the address, or std::nullopt if the read was unsuccessful
      */
-    virtual bool custom_memory_read(mem_addr) { return false; }
+    virtual std::optional<mem_word> custom_memory_read_word(mem_addr) { return std::nullopt; }
 
     /**
-     * @brief Override this method to implement custom memory write behavior
+     * @brief Override this method to implement custom memory write word behavior
      * @param addr The address to write to
      * @param value The value to write
      * @returns true if the write was successful, false otherwise
      */
-    virtual bool custom_memory_write(mem_addr, mem_word) { return false; }
+    virtual bool custom_memory_write_word(mem_addr, mem_word) { return false; }
+
+    /**
+     * @brief Override this method to implement custom memory read half behavior
+     * @param addr The address to read from
+     * @returns The value at the address, or std::nullopt if the read was unsuccessful
+     */
+    virtual std::optional<mem_word> custom_memory_read_half(mem_addr) { return std::nullopt; }
+
+    /**
+     * @brief Override this method to implement custom memory write half behavior
+     * @param addr The address to write to
+     * @param value The value to write
+     * @returns true if the write was successful, false otherwise
+     */
+    virtual bool custom_memory_write_half(mem_addr, mem_word) { return false; }
+
+    /**
+     * @brief Override this method to implement custom memory read byte behavior
+     * @param addr The address to read from
+     * @returns The value at the address, or std::nullopt if the read was unsuccessful
+     */
+    virtual std::optional<mem_word> custom_memory_read_byte(mem_addr) { return std::nullopt; }
+
+    /**
+     * @brief Override this method to implement custom memory write byte behavior
+     * @param addr The address to write to
+     * @param value The value to write
+     * @returns true if the write was successful, false otherwise
+     */
+    virtual bool custom_memory_write_byte(mem_addr, mem_word) { return false; }
+
 
     std::streambuf *get_std_out_buf();
     std::streambuf *get_std_err_buf();
