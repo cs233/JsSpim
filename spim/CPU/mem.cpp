@@ -227,6 +227,8 @@ void mem_dump_profile(MIPSImage &img) {
 void
 free_instructions (instruction **inst, int n)
 {
+  if (!inst)
+    return;
   for ( ; n > 0; n --, inst ++)
     if (*inst)
       free_inst (*inst);

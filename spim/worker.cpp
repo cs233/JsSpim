@@ -4,6 +4,7 @@
 #include <optional>
 #include <thread>
 #include <condition_variable>
+#include <utility>
 
 #include "CPU/scanner.h"
 #include "CPU/spim-utils.h"
@@ -49,7 +50,7 @@ void start_simulator(unsigned int max_contexts, std::set<unsigned int> active_ct
     // Actually, what if we can use the proxy queue? Idk how useful that would be
 }
 
-void reset(unsigned int max_contexts, std::set<unsigned int> &active_ctxs) {
+void shutdown() {
     {
         std::lock_guard<std::mutex> lock(settings_mtx);
         finished = true;
@@ -59,6 +60,10 @@ void reset(unsigned int max_contexts, std::set<unsigned int> &active_ctxs) {
     if (simulator_thread.joinable()) {
         simulator_thread.join();
     }
+}
+
+void reset(unsigned int max_contexts, std::set<unsigned int> &active_ctxs) {
+    shutdown();
 
     // Since we join if a thread already exists, we dont need to lock. YIPPEE!
     /* std::lock(simulator_mtx, settings_mtx); */
@@ -71,16 +76,14 @@ void reset(unsigned int max_contexts, std::set<unsigned int> &active_ctxs) {
         if (i >= max_contexts) {
             continue;
         }
-        ctxs.emplace(i, i);
-        MIPSImage &new_image = ctxs.at(i);
+        MIPSImage new_image(i);
         initialize_world(new_image, DEFAULT_EXCEPTION_HANDLER, false);
         initialize_run_stack(new_image, 0, nullptr);
         char file_name[64];
         sprintf(file_name, "./input_%d.s", i);
         if (read_assembly_file(new_image, file_name)) { // check if the file exists
             new_image.reg_image().PC = starting_address(new_image);
-        } else {
-            ctxs.erase(i);
+            ctxs.emplace(i, std::move(new_image));
         }
         yylex_destroy();
     }

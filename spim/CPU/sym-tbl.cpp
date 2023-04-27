@@ -70,6 +70,8 @@ static void resolve_a_label_sub (MIPSImage &img, label *sym, instruction *inst, 
 void
 initialize_symbol_table (MIPSImage &img)
 {
+  if (!img.get_label_hash_table())
+    return;
   int i;
 
   for (i = 0; i < LABEL_HASH_TABLE_SIZE; i ++)
