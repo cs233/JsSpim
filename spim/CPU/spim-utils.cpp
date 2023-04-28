@@ -157,6 +157,7 @@ initialize_world (MIPSImage &img, const char *exception_files, bool print_messag
 	(void)record_label (img, "main", 0, 0);
       }
     }
+  yylex_destroy();
   initialize_scanner (stdin, "");
   delete_all_breakpoints (img); // bruh TODO: this function is meant to be contextual-based and then we have THIS here?!?!
 }
@@ -223,6 +224,7 @@ read_assembly_file (MIPSImage &img, const char *fpath)
       file_name = strrchr(fpath, '/');
       file_name = file_name == NULL ? fpath : file_name + 1;
     
+      yylex_destroy();
       initialize_scanner (file, file_name);
       initialize_parser (fpath);
 
@@ -705,18 +707,24 @@ zmalloc (MIPSImage &img, int size)
 }
 
 std::string string_vformat(const std::string& format, va_list args) {
+    va_list args_copy;
+    va_copy(args_copy, args);
     int size_s = std::vsnprintf(nullptr, 0, format.c_str(), args) + 1; // Extra space for '\0'
     if( size_s <= 0 ){ throw std::runtime_error( "Error during formatting." ); }
     auto size = static_cast<size_t>(size_s);
     std::unique_ptr<char[]> buf( new char[ size ] );
-    std::vsnprintf(buf.get(), size, format.c_str(), args);
-    return std::string( buf.get(), buf.get() + size - 1 ); // We don't want the '\0' inside
+    std::vsnprintf(buf.get(), size, format.c_str(), args_copy);
+    va_end(args_copy);
+    return std::string( buf.get(), buf.get() + size - 1); // We don't want the '\0' inside
 }
 
 std::pair<char *, int> vformat_alloc(const char *format, va_list args) {
+    va_list args_copy;
+    va_copy(args_copy, args);
     int size = vsnprintf(NULL, 0, format, args) + 1;
     char *formatted_string = new char[size];
-    vsprintf(formatted_string, format, args);
+    vsnprintf(formatted_string, size, format, args_copy);
+    va_end(args_copy);
     return std::make_pair(formatted_string, size - 1);
 }
 

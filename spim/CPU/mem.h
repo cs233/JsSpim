@@ -41,31 +41,6 @@
 
 #include "image.h"
 
-/* The text boundaries. */
-#define TEXT_BOT ((mem_addr) 0x400000)
-/* Amount to grow text segment when we run out of space for instructions. */
-#define TEXT_CHUNK_SIZE	4096
-
-/* The data boundaries. */
-#define DATA_BOT ((mem_addr) 0x10000000)
-
-/* The stack boundaries. */
-/* Exclusive, but include 4K at top of stack. */
-#define STACK_TOP ((mem_addr) 0x80000000)
-
-/* The kernel text boundaries. */
-#define K_TEXT_BOT ((mem_addr) 0x80000000)
-
-/* The Kernel data boundaries. */
-#define K_DATA_BOT ((mem_addr) 0x90000000)
-
-/* Memory-mapped IO area: */
-#define MM_IO_BOT		((mem_addr) 0xffff0000)
-#define MM_IO_TOP		((mem_addr) 0xffffffff)
-
-#define SPECIAL_BOT		((mem_addr) 0xfffe0000)
-#define SPECIAL_TOP		((mem_addr) 0xffff0000)
-
 
 
 

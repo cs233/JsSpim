@@ -10,7 +10,7 @@
 
 MIPSImagePrintStream::MIPSImagePrintStream(unsigned int ctx, std::ostream &sink, std::size_t buffer_size) :
     ctx(ctx),
-    sink(sink),
+    sink(&sink),
     buf(buffer_size + 1)
 {
     char *base = &buf.front();
@@ -19,6 +19,35 @@ MIPSImagePrintStream::MIPSImagePrintStream(unsigned int ctx, std::ostream &sink,
 
 MIPSImagePrintStream::~MIPSImagePrintStream() {
     sync(); // Flush the buffer on exit
+}
+
+MIPSImagePrintStream::MIPSImagePrintStream(MIPSImagePrintStream &&other) :
+    ctx(other.ctx),
+    sink(other.sink),
+    buf(std::move(other.buf))
+{
+    char *base = &buf.front();
+    setp(base, base + buf.size() - 1);
+
+    move_buffer_pointers(std::move(other));
+}
+
+MIPSImagePrintStream& MIPSImagePrintStream::operator=(MIPSImagePrintStream &&other) {
+    ctx = other.ctx;
+    sink = other.sink;
+    buf = std::move(other.buf);
+
+    char *base = &buf.front();
+    setp(base, base + buf.size() - 1);
+
+    move_buffer_pointers(std::move(other));
+    return *this;
+}
+
+inline void MIPSImagePrintStream::move_buffer_pointers(MIPSImagePrintStream &&other) {
+    int offset = other.pptr() - other.pbase();
+    pbump(offset);
+    other.pbump(-offset);
 }
 
 std::streamsize MIPSImagePrintStream::xsputn(const char *s, std::streamsize n) {
@@ -51,17 +80,20 @@ MIPSImagePrintStream::int_type MIPSImagePrintStream::overflow(MIPSImagePrintStre
 int MIPSImagePrintStream::sync() {
     std::ptrdiff_t n = pptr() - pbase();
     pbump(-n);
+    if (!n) {
+        return 0;
+    }
 #ifdef WASM
     char *s = new char[n + 1];
     strncpy(s, pbase(), n);
     s[n] = 0;
-    if (&sink == &std::cout) {
+    if (sink == &std::cout) {
         MAIN_THREAD_ASYNC_EM_ASM({
             writeStdOut($0, UTF8ToString($1));
         }, ctx, s);
         return 0;
     }
-    if (&sink == &std::cerr) {
+    if (sink == &std::cerr) {
         MAIN_THREAD_ASYNC_EM_ASM({
             writeStdErr($0, UTF8ToString($1));
         }, ctx, s);
@@ -70,6 +102,6 @@ int MIPSImagePrintStream::sync() {
     delete[] s;
     return -1;
 #else
-    return !((bool) sink.write(pbase(), n));
+    return !((bool) sink->write(pbase(), n));
 #endif
 }

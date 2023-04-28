@@ -20,25 +20,16 @@ if (EMSCRIPTEN)
     endif ()
 
     set(MIN_VERSION "3.1.14")
-    set(MAX_VERSION "3.1.25")
+    set(MAX_VERSION "3.2.0")
     if (${EMSCRIPTEN_VERSION} VERSION_LESS MIN_VERSION)
         message(FATAL_ERROR "EMSCRIPTEN version looks too old. Was ${EMSCRIPTEN_VERSION}, should be at least ${MIN_VERSION}.")
     endif ()
-    if (${EMSCRIPTEN_VERSION} VERSION_GREATER MAX_VERSION)
+    if (${EMSCRIPTEN_VERSION} VERSION_GREATER_EQUAL MAX_VERSION)
         message(FATAL_ERROR "EMSCRIPTEN version is too new. Was ${EMSCRIPTEN_VERSION}, should be at least ${MAX_VERSION}.")
     endif ()
 
     set(DEFAULT_EXCEPTION_HANDLER "\"/usr/share/spim/exceptions.s\"")
-    set(LINKER_FLAGS "-s EXIT_RUNTIME=0 -s PROXY_TO_PTHREAD -s PTHREAD_POOL_SIZE_STRICT=0 -s NO_DISABLE_EXCEPTION_CATCHING -s INITIAL_MEMORY=256MB -s DEFAULT_PTHREAD_STACK_SIZE=64KB -s TOTAL_STACK=64KB -pthread -lm -lembind -s WASM=1 -s ALLOW_MEMORY_GROWTH -s FORCE_FILESYSTEM=1 -s ENVIRONMENT=web,worker -s EXPORTED_RUNTIME_METHODS=['ccall','cwrap'] --preload-file spim/CPU/exceptions.s@${DEFAULT_EXCEPTION_HANDLER}") # -s INITIAL_MEMORY=576mb -fsanitize=undefined -s MAXIMUM_MEMORY=4gb -s IMPORTED_MEMORY -s SAFE_HEAP=1 -s SAFE_HEAP_LOG=1 -s INITIAL_MEMORY=512mb -fsanitize=address # --post-js ${CMAKE_SOURCE_DIR}/src/JS/JavaScriptLoader.js --no-entry
-    # When we switch to ...
-    # emcc version 3.1.25, change TOTAL_STACK to STACK_SIZE
 
-    if (CMAKE_BUILD_TYPE AND ${CMAKE_BUILD_TYPE} IN_LIST DEBUG_PROFILES)
-        message("Adding additional Emscripten debug flags")
-        string(JOIN " " ${LINKER_FLAGS} ${LINKER_FLAGS} "-gdwarf-5 -s ASSERTIONS=2" ${EXTRA_DEBUG_LINKER_FLAGS})
-    endif()
-
-    set(CMAKE_REQUIRED_FLAGS "${LINKER_FLAGS}")
     add_compile_definitions(WASM)
     set(DIST_DIR "dist")
     add_custom_target(build-dist-directory ALL
@@ -52,11 +43,17 @@ if (EMSCRIPTEN)
     )
 else()
     message("Preparing native Makefile")
-    set(DEFAULT_EXCEPTION_HANDLER "\"spim/CPU/exceptions.s\"")
-    set(LINKER_FLAGS "-pthread") # -g
-    if (CMAKE_BUILD_TYPE AND ${CMAKE_BUILD_TYPE} IN_LIST DEBUG_PROFILES)
-        string(JOIN " " ${LINKER_FLAGS} ${LINKER_FLAGS} ${EXTRA_DEBUG_LINKER_FLAGS})
+    if (NOT DEFINED IDGAF)
+        message(FATAL_ERROR
+            "Compiling JsSpim natively is not supported as it serves zero functionality. It should\
+            be able to, but there will be no interface to go with it, so it is only really good for\
+            checking for compilation errors.
+
+            To override this message, add the \"IDGAF\" define.
+        ")
     endif()
+    unset(IDGAF)
+    set(DEFAULT_EXCEPTION_HANDLER "\"spim/CPU/exceptions.s\"")
     # add spim.cpp and spim.h
 endif()
 
@@ -79,17 +76,49 @@ add_subdirectory(spim/CPU)
 
 target_link_libraries(wasm spim)
 
-add_compile_options(-I. -I$CPU -Wall -pedantic -Wextra -Wunused -Wno-write-strings -x c++)
-set_target_properties(wasm PROPERTIES LINK_FLAGS "${LINKER_FLAGS}")
+target_compile_options(wasm PRIVATE -pthread -I. -I$CPU -Wall -pedantic -Wextra -Wunused -Wno-write-strings -x c++)
+target_link_options(wasm PRIVATE -pthread)
 
 if (EMSCRIPTEN)
+    target_link_options(wasm PRIVATE
+        -lm
+        -lembind
+        "SHELL:-s EXIT_RUNTIME=0"
+        "SHELL:-s PROXY_TO_PTHREAD"
+        "SHELL:-s PTHREAD_POOL_SIZE_STRICT=0"
+        "SHELL:-s NO_DISABLE_EXCEPTION_CATCHING"
+        "SHELL:-s INITIAL_MEMORY=256MB"
+        "SHELL:-s DEFAULT_PTHREAD_STACK_SIZE=64KB"
+        "SHELL:-s TOTAL_STACK=64KB" # TODO: Once the minimum version of em++ > 3.1.25, please change this to STACK_SIZE
+        "SHELL:-s WASM=1"
+        "SHELL:-s ALLOW_MEMORY_GROWTH"
+        "SHELL:-s FORCE_FILESYSTEM=1"
+        "SHELL:-s ENVIRONMENT=web,worker"
+        "SHELL:-s EXPORTED_RUNTIME_METHODS=['ccall','cwrap']"
+        "SHELL:--preload-file spim/CPU/exceptions.s@${DEFAULT_EXCEPTION_HANDLER}"
+    )
+
+    if (CMAKE_BUILD_TYPE IN_LIST DEBUG_PROFILES)
+        message("Adding additional Emscripten debug flags")
+        target_link_options(wasm PRIVATE
+            -gdwarf-5
+            "SHELL:-s ASSERTIONS=2"
+            "SHELL:${EXTRA_DEBUG_LINKER_FLAGS}"
+        )
+    endif()
+
+    target_compile_options(wasm PRIVATE
+        "SHELL:-s NO_DISABLE_EXCEPTION_CATCHING"
+    )
+
     add_custom_command(TARGET wasm
         POST_BUILD
-        # COMMAND sed -i"" "s/throw 'getitimer\(\) is not implemented yet'//g" wasm.js
-        # COMMAND sed -i"" "s/throw 'setitimer\(\) is not implemented yet'//g" wasm.js
         COMMAND mv wasm.* ../${DIST_DIR}/
     )
 else()
+    if (CMAKE_BUILD_TYPE IN_LIST DEBUG_PROFILES)
+        target_link_options(wasm PRIVATE "${EXTRA_DEBUG_LINKER_FLAGS}")
+    endif()
     add_custom_command(TARGET wasm
         POST_BUILD
         COMMAND mv wasm* ../

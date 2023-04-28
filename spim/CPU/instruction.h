@@ -51,8 +51,8 @@ typedef struct inst_s
     } r_t;
 
   int32 encoding;
-  imm_expr *expr;
-  char *source_line;
+  imm_expr *expr = 0;
+  char *source_line = 0;
 } instruction;
 
 #endif
