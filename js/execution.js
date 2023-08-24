@@ -106,7 +106,7 @@ class Execution {
             Execution.step(Math.floor(Execution.draw_cycle)); // This number refers to the number of cycles to elapse before the program draws to the screen
         }
         // window.requestAnimationFrame(Execution.play);
-        window.requestAnimationFrame(Execution.updateUI);
+       // window.requestAnimationFrame(Execution.updateUI);
     }
 
     static updateUI(_timestamp) {
