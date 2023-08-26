@@ -266,6 +266,10 @@ const median = arr => {
     return arr.length % 2 !== 0 ? nums[mid] : (nums[mid - 1] + nums[mid]) / 2;
 };
 
+function updateFramerate(fps) {
+    document.getElementById("fps-counter").innerText = "Frametime: " + (Math.floor(fps * 1e3) / 1e3) + "ms (FPS: "+ (Math.floor(1e6 / fps) / 1e3) +")";
+}
+
 Elements.resetButton.onclick = () => Execution.init(true, Execution.ctx);
 Elements.stepButton.onclick = () => Execution.step(1);
 Elements.playButton.onclick = () => Execution.togglePlay();
