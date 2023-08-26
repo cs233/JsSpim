@@ -34,6 +34,21 @@
 
 <nav class="navbar navbar-light bg-light" id="toolbar">
     <div class="form-inline">
+        <div>Program&nbsp</div>
+        <div class="form-check">
+        <input class="form-check-input" type="checkbox" value="" id="context-enabler0" onchange="initModule()" checked>
+        <label class="form-check-label" for="enabled-ctx0">
+            1
+        </label>
+        </div>
+        <div>&nbsp</div>
+        <div class="form-check">
+        <input class="form-check-input" type="checkbox" value="" id="context-enabler1" onchange="initModule()" checked>
+        <label class="form-check-label" for="enabled-ctx1">
+            2
+        </label>
+        </div>
+        <div>&nbsp</div>
         <div>
             <select id="context-selector" onchange="changeContext(this.value)" class="form-control form-control"></select>
         </div>
@@ -225,6 +240,8 @@
         output: document.getElementById('output-content'),
         log: document.getElementById('log-content'),
         contextSelector: document.getElementById('context-selector'),
+        contextEnabler0: document.getElementById('context-enabler0'),
+        contextEnabler1: document.getElementById('context-enabler1'),
         fileSelector0: document.getElementById('file-selector0'),
         fileSelector1: document.getElementById('file-selector1'),
         playButton: document.getElementById('play-button'),
